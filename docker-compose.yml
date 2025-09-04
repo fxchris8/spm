@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: 
+      context: ./back-end
+      dockerfile: DockerFile
+    container_name: flask-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./back-end:/app
+      - ./data:/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: DockerFile
+    container_name: vite-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
