@@ -53,10 +53,11 @@ export function ContainerRotation({
   const [mutasiTable, setMutasiTable] = useState<TableJson | null>(null);
   const [error, setError] = useState<string>("");
   const [loadingGroup, setLoadingGroup] = useState(false);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch cadangan
   useEffect(() => {
-    fetch(`http://192.168.16.44:8080/api/get_cadangan_${job}`)
+    fetch(`${API_BASE_URL}/get_cadangan_${job}`)
       .then((res) => res.json())
       .then((data) => setCadanganData(data))
       .catch((err) => {
@@ -75,7 +76,7 @@ export function ContainerRotation({
   
     const formattedJob = job.toUpperCase();
   
-    fetch(`http://192.168.16.44:8080/api/mutasi_filtered?job=${formattedJob}`)
+    fetch(`${API_BASE_URL}/mutasi_filtered?job=${formattedJob}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
@@ -95,7 +96,7 @@ export function ContainerRotation({
                 matchCount,
               };
             })
-            .filter((item) => item.matchCount >= 1)
+            .filter((item) => item.matchCount >= 0)
             .sort((a, b) => b.matchCount - a.matchCount)
             .slice(0, 10);
   
@@ -126,7 +127,7 @@ export function ContainerRotation({
     const groupShips = groups[selectedGroup] || [];
     const queryParams = groupShips.map(g => `group=${encodeURIComponent(g)}`).join("&");
   
-    fetch(`http://192.168.16.44:8080/api/filter_history?${queryParams}`)
+    fetch(`${API_BASE_URL}/filter_history?${queryParams}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
@@ -197,7 +198,7 @@ export function ContainerRotation({
         part: part,
       };
   
-      const response = await fetch("http://192.168.16.44:8080/api/container_rotation", {
+      const response = await fetch(`${API_BASE_URL}/container_rotation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

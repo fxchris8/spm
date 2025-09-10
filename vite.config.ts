@@ -1,10 +1,12 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+// vite.config.ts
+import { defineConfig } from "vite";
 
-// https://vite.dev/config/
 export default defineConfig({
-  server:{
-    host: true,
+  server: {
+    allowedHosts: ["pe.spil.co.id"],
+    watch: {
+      usePolling: true,
+      interval: 1000, // cek setiap 1 detik biar tidak makan CPU
+    },
   },
-  plugins: [react()],
-})
+});

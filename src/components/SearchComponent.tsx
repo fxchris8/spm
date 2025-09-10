@@ -52,11 +52,13 @@ export function SearchComponent({ type, part }: SearchProps) {
   // Utility function: capitalize (misal "container" → "Container")
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
   // useEffect untuk mengambil options dan menginisialisasi data setiap kali type/part berubah
   useEffect(() => {
     async function fetchOptions() {
       try {
-        const res = await fetch("http://192.168.16.44:8080/api/options", {
+        const res = await fetch(`${API_BASE_URL}/options`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: type, part: part }),
@@ -130,7 +132,7 @@ export function SearchComponent({ type, part }: SearchProps) {
     };
 
     try {
-      const res = await fetch("http://192.168.16.44:8080/api/get-manual-search", {
+      const res = await fetch(`${API_BASE_URL}/get-manual-search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

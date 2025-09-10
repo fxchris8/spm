@@ -38,6 +38,7 @@ export function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // status yang tidak dihitung sebagai onboard
   const excludedStatus = [
@@ -50,7 +51,7 @@ export function Dashboard() {
   // Fetch data
   useEffect(() => {
     const fetchData = () => {
-      fetch("http://192.168.16.44:8080/api/dashboard-data")
+      fetch(`${API_BASE_URL}/dashboard-data`)
         .then((res) => {
           if (!res.ok) throw new Error("Gagal memuat data");
           return res.json();
@@ -104,7 +105,7 @@ export function Dashboard() {
   // Show similar
   const showSimilar = async (seamanCode: string) => {
     try {
-      const response = await fetch(`http://192.168.16.44:8080/similarity/${seamanCode}`);
+      const response = await fetch(`http://localhost:8080/similarity/${seamanCode}`);
       if (!response.ok) throw new Error("Gagal mengambil data similar");
 
       const data = await response.json();

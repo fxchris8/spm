@@ -19,12 +19,13 @@ export function PromotionKKM() {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [saving, setSaving] = useState(false);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch seaman data from backend API
   useEffect(() => {
     const fetchSeamen = async () => {
       try {
-        const res = await fetch("http://192.168.16.44:8080/api/seamen/promotion_candidates_kkm");
+        const res = await fetch(`${API_BASE_URL}/seamen/promotion_candidates_kkm`);
         const json = await res.json();
         if (json.status === "success") {
           const formatted = json.data.map((item: any) => ({
@@ -63,7 +64,7 @@ export function PromotionKKM() {
   async function saveToExcel() {
     setSaving(true);
     try {
-      const res = await fetch("http://192.168.16.44:8080/api/save-excel", {
+      const res = await fetch(`${API_BASE_URL}/save-excel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selectedSeamen),

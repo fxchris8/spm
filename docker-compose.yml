@@ -5,7 +5,7 @@ services:
       dockerfile: DockerFile
     container_name: flask-backend
     ports:
-      - "5000:5000"
+      - "8048:5000"
     volumes:
       - ./back-end:/app
       - ./data:/data
@@ -16,6 +16,14 @@ services:
       dockerfile: DockerFile
     container_name: vite-frontend
     ports:
-      - "5173:5173"
+      - "8047:5173"
     depends_on:
       - backend
+networks:
+  spm-net:
+    name: spm-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.3.0/24
+          gateway: 172.19.3.1
