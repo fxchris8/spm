@@ -844,12 +844,9 @@ def filter_history():
             "message": str(e)
         }), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
-
 if __name__ == '__main__':
     # Start the scheduler as soon as the app runs
     fetch_and_save_data()
     fetch_and_save_mutasi_data()
     schedule_fetch_task()
-    app.run(debug=True, port=8080, host='0.0.0.0')
+    app.run(debug=True, port=8048, host='0.0.0.0')
