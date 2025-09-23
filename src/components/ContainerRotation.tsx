@@ -123,40 +123,69 @@ export function ContainerRotation({
       setPotentialTable(null);
       return;
     }
-  
+
+    const controller = new AbortController();
+
     const groupShips = groups[selectedGroup] || [];
     const queryParams = groupShips.map(g => `group=${encodeURIComponent(g)}`).join("&");
-  
-    fetch(`${API_BASE_URL}/filter_history?${queryParams}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success") {
-          const rawData = data.data;
-  
-          const rows = rawData
-            .map((item: any): PotentialPromotionItem => ({
-              seamancode: item.seamancode,
-              name: item.name,
-              history: item.history,
-              matchCount: item.matchCount,
-            }))
-            .filter((item: PotentialPromotionItem) => item.matchCount >= 0)  // ganti > 1 ke > 0
-            .sort((a: PotentialPromotionItem, b: PotentialPromotionItem) => b.matchCount - a.matchCount)
-            .slice(0, 10);
-  
-          setPotentialTable({
-            columns: ["seamancode", "name", "history", "matchCount"],  // hapus last_location
-            data: rows,
-          });
-        } else {
+
+    const historyUrl = `${API_BASE_URL}/filter_history?${queryParams}`;
+
+    const candidateUrl =
+      (job?.toUpperCase?.() === "KKM")
+        ? `${API_BASE_URL}/seamen/promotion_candidates_kkm`
+        : `${API_BASE_URL}/seamen/promotion_candidates`;
+
+    const getCode = (x: any) =>
+      String(
+        x?.seamancode ??
+        x?.code ??
+        x?.seaman_code ??
+        x?.seamanCode ??
+        ""
+      ).trim();
+
+    Promise.all([
+      fetch(historyUrl, { signal: controller.signal }).then(r => r.json()),
+      fetch(candidateUrl, { signal: controller.signal }).then(r => r.json()),
+    ])
+      .then(([hist, cand]) => {
+        if (controller.signal.aborted) return;
+
+        const histRowsRaw = Array.isArray(hist?.data) ? hist.data : [];
+        const candRowsRaw = Array.isArray(cand?.data) ? cand.data : [];
+
+        const allowed = new Set(candRowsRaw.map(getCode));
+
+        let rows = histRowsRaw
+          .map((item: any) => ({
+            seamancode: getCode(item),
+            name: item?.name,
+            history: item?.history,
+            matchCount: item?.matchCount ?? 0,
+          }))
+          .filter((r: any) => r.seamancode && allowed.has(r.seamancode))
+          .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
+          .slice(0, 10);
+
+        if (!rows.length) {
           setPotentialTable(null);
+          return;
         }
+        setPotentialTable({
+          columns: ["seamancode", "name", "history", "matchCount"],
+          data: rows,
+        });
       })
-      .catch((err) => {
-        console.error("Gagal load data filter history:", err);
+
+      .catch(err => {
+        if (controller.signal.aborted) return;
+        console.error("Gagal load potential:", err);
         setPotentialTable(null);
       });
-  }, [selectedGroup]);
+
+    return () => controller.abort();
+  }, [selectedGroup, job]);
 
   // Auto-pilih DARAT STAND-BY
   useEffect(() => {
@@ -210,66 +239,98 @@ export function ContainerRotation({
       }
   
       const data: ApiResponse = await response.json();
-  
+
       const rawScheduleTable = data.schedule || null;
       if (rawScheduleTable) {
         console.log("Schedule Columns:", rawScheduleTable.columns);
       }
   
       let cleanedScheduleTable = rawScheduleTable;
-      if (cleanedScheduleTable?.columns.includes("First Rotation Date")) {
+      if (cleanedScheduleTable?.columns?.includes("First Rotation Date")) {
         cleanedScheduleTable = {
           ...cleanedScheduleTable,
-          columns: cleanedScheduleTable.columns.filter(
-            (col) => col !== "First Rotation Date"
-          ),  
-          data: cleanedScheduleTable.data.map(({ "First Rotation Date": _, ...rest }) => rest), // Remove first_rotation_date from rows
+          columns: cleanedScheduleTable.columns.filter((c: string) => c !== "First Rotation Date"),
+          data: cleanedScheduleTable.data.map(({ ["First Rotation Date"]: _drop, ...rest }: any) => rest),
         };
       }
-  
+
       let updatedNahkodaTable = data.nahkoda || null;
-  
+      
       if (updatedNahkodaTable && rawScheduleTable) {
-        const hasRotationCol = updatedNahkodaTable.columns.includes("first_rotation_date");
-      
-        if (!hasRotationCol) {
-          const groupShips = groups[selectedGroup] || [];
-          const monthsToAdd = groupShips.length;
-      
-          let baseDate: Date | null = null;
-      
+        const monthToNum: Record<string, string> = {
+          JANUARY:"01", JAN:"01", JANUARI:"01",
+          FEBRUARY:"02", FEB:"02", FEBRUARI:"02",
+          MARCH:"03", MAR:"03", MARET:"03",
+          APRIL:"04", APR:"04",
+          MAY:"05", MEI:"05",
+          JUNE:"06", JUN:"06", JUNI:"06",
+          JULY:"07", JUL:"07", JULI:"07",
+          AUGUST:"08", AUG:"08", AGUSTUS:"08",
+          SEPTEMBER:"09", SEP:"09", SEPT:"09",
+          OCTOBER:"10", OCT:"10", OKTOBER:"10",
+          NOVEMBER:"11", NOV:"11",
+          DECEMBER:"12", DEC:"12", DESEMBER:"12",
+        };
+
+        const normalize = (s: any) =>
+          String(s ?? "")
+            .replace(/\u00A0/g, " ")  
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const monthColsInfo = (rawScheduleTable.columns || [])
+          .map((col: string) => {
+            const hdr = normalize(col);
+            const m = hdr.match(/^([A-Za-zÀ-ÿ\.]+)\s+(\d{4})$/); 
+            if (!m) return null;
+            let mon = m[1].toUpperCase().replace(/\.$/, "");
+            if (!monthToNum[mon]) {
+              let abbr = mon.slice(0, 3);
+              if (abbr === "SEP" || abbr === "SEPT") abbr = "SEP";
+              mon = monthToNum[abbr] ? abbr : mon;
+            }
+            const mm = monthToNum[mon];
+            if (!mm) return null;
+            return { col, mm, year: m[2] };
+          })
+          .filter(Boolean) as { col: string; mm: string; year: string }[];
+
+        const firstSeen: Record<string, { mm: string; year: string; idx: number }> = {};
+        const toIndex = (mm: string, year: string) =>
+          (parseInt(year, 10) * 12) + (parseInt(mm, 10) - 1);
+
+        for (const { col, mm, year } of monthColsInfo) {
+          const t = toIndex(mm, year);
+          for (const row of (rawScheduleTable.data || [])) {
+            const cell = normalize((row as any)[col]);
+            if (!cell) continue;
+            const letter = cell.toUpperCase(); 
+
+            const cur = firstSeen[letter];
+            if (!cur || t < cur.idx) {
+              firstSeen[letter] = { mm, year, idx: t };
+            }
+          }
+        }
+
+        if (!updatedNahkodaTable.columns.includes("first_rotation_date")) {
           updatedNahkodaTable = {
             ...updatedNahkodaTable,
-            columns: [
-              ...updatedNahkodaTable.columns,
-              "first_rotation_date",
-            ],
-            data: updatedNahkodaTable.data.map((row, idx) => {
-              let rotationDate: Date;
-      
-              if (idx === 0) {
-                // Baris pertama: bulan ini + 1
-                const today = new Date();
-                rotationDate = new Date(today.getFullYear(), today.getMonth() + 1, 1); 
-                baseDate = new Date(rotationDate);
-              } else {
-                // Baris selanjutnya: +1 bulan dari baris pertama
-                if (!baseDate) return { ...row, first_rotation_date: "-" };
-                rotationDate = new Date(baseDate);
-                rotationDate.setMonth(rotationDate.getMonth() + idx);
-              }
-      
-              // Format mm-yyyy
-              const formattedDate =
-                String(rotationDate.getMonth() + 1).padStart(2, "0") +
-                "-" +
-                rotationDate.getFullYear();
-      
-              return { ...row, first_rotation_date: formattedDate };
-            }),
+            columns: [...updatedNahkodaTable.columns, "first_rotation_date"],
           };
         }
+
+        updatedNahkodaTable = {
+          ...updatedNahkodaTable,
+          data: updatedNahkodaTable.data.map((r: any) => {
+            const idx = normalize(r.index ?? r.INDEX ?? r.Index).toUpperCase();
+            const seen = firstSeen[idx];
+            const firstDate = seen ? `${seen.mm}-${seen.year}` : "-";
+            return { ...r, first_rotation_date: firstDate };
+          }),
+        };
       }
+
       
       
   

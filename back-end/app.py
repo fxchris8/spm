@@ -817,20 +817,20 @@ def filter_history():
             match_count = sum(1 for v in history_vessels if v in group_vessels)
 
             # Filter: hanya tampilkan kalau matchCount lebih dari 0
-            if match_count > 0:
+            # if match_count >= 0:
                 # Buang kata-kata allowed_status dari history_str supaya tidak tampil di tabel
-                filtered_history = history_str
-                for status in allowed_status:
-                    filtered_history = filtered_history.replace(status, "")
-                # Hilangkan koma ekstra dan spasi berlebih setelah penghapusan kata status
-                filtered_history = ",".join([v.strip() for v in filtered_history.split(",") if v.strip()])
+            filtered_history = history_str
+            for status in allowed_status:
+                filtered_history = filtered_history.replace(status, "")
+            # Hilangkan koma ekstra dan spasi berlebih setelah penghapusan kata status
+            filtered_history = ",".join([v.strip() for v in filtered_history.split(",") if v.strip()])
 
-                result.append({
-                    "seamancode": row.get("code", ""),
-                    "name": row.get("name", ""),
-                    "history": filtered_history,
-                    "matchCount": match_count,
-                })
+            result.append({
+                "seamancode": row.get("code", ""),
+                "name": row.get("name", ""),
+                "history": filtered_history,
+                "matchCount": match_count,
+            })
 
         return jsonify({
             "status": "success",
