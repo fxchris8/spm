@@ -421,7 +421,19 @@ def get_cadangan_KKM():
 def get_cadangan_nakhoda():
     df = get_nganggur("NAKHODA") 
     data = df.to_dict(orient='records') 
-    return jsonify(data)     
+    return jsonify(data)
+
+@app.route('/api/get_cadangan_mualimI')
+def get_cadangan_mualimI():
+    df = get_nganggur("MUALIM I") 
+    data = df.to_dict(orient='records') 
+    return jsonify(data)
+
+@app.route('/api/get_cadangan_masinisII')
+def get_cadangan_masinisII():
+    df = get_nganggur("MASINIS II") 
+    data = df.to_dict(orient='records') 
+    return jsonify(data)        
 
 @app.route('/api/mutasi_filtered', methods=['GET'])
 def get_mutasi_filtered():
@@ -430,10 +442,10 @@ def get_mutasi_filtered():
         job = request.args.get('job', default=None)
 
         # Validasi job yang diterima
-        if job not in ['NAKHODA', 'KKM']:
+        if job not in ['NAKHODA', 'KKM', 'MUALIMI', 'MASINISII']:
             return jsonify({
                 "status": "error",
-                "message": "Job tidak valid. Pilih antara 'NAKHODA' atau 'KKM'."
+                "message": "Job tidak valid. Pilih antara 'NAKHODA', 'KKM', 'MUALIM I' atau 'MASINIS II'."
             }), 400
 
         # Load Excel
@@ -702,7 +714,7 @@ def get_promotion_candidates_kkm():
 
         # Filter seamen berdasarkan posisi
         seamancode_terfilter = df_seamen[
-            (df_seamen["last_position"] == "MASINIS I")
+            (df_seamen["last_position"] == "MASINIS II")
         ]["seamancode"].unique()
 
         # Filter df_history untuk pengalaman lebih dari 2 tahun
