@@ -5,40 +5,23 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
+from database import get_mutations_as_data, get_seamen_as_data
 from model import (
     filter_in_vessel,
     getRecommendation,
     search_candidate,
     vessel_group_id_deck,
 )
-from request_api import fetch_and_save_data  # Import the function from request_api.py
-from request_api import (
-    fetch_and_save_mutasi_data,
-    get_nahkoda,
-    get_nganggur,
-    get_schedule,
-)
+from request_api import get_nahkoda, get_nganggur, get_schedule
 
 app = Flask(__name__)
 CORS(app=app)
 app.secret_key = "supersecretkey"
-
-
-# Function to schedule the fetch task
-def schedule_fetch_task():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_and_save_data, "interval", hours=24)  # Runs every 24 hours
-    scheduler.add_job(
-        fetch_and_save_mutasi_data, "interval", hours=24
-    )  # Runs every 24 hours
-    scheduler.start()
-    print("Scheduler started. Task will run every 24 hours.")
 
 
 # Route to check if the app is working
@@ -227,7 +210,8 @@ SHIP_GROUPS = {
     ],
 }
 
-combined_df = pd.read_excel("../data/Data_Seamen_API.xlsx", sheet_name="Sheet1")
+# Load data from Supabase instead of Excel
+combined_df = get_seamen_as_data()
 
 timestamp_file = "../last_request_time.txt"
 
@@ -382,7 +366,8 @@ def get_top_5_similar(target_seaman_code):
 # Route to serve the main dashboard
 @app.route("/api/dashboard-data")
 def get_dashboard_data():
-    data = pd.read_excel("../data/Data_Seamen_API.xlsx")
+    # Load from Supabase instead of Excel
+    data = get_seamen_as_data()
     data = data.rename(
         columns={
             "age": "UMUR",
@@ -712,9 +697,9 @@ def get_mutasi_filtered():
                 400,
             )
 
-        # Load Excel
-        df_history = pd.read_excel("../data/Data_Mutasi_API.xlsx")
-        df_seamen = pd.read_excel("../data/Data_Seamen_API.xlsx")
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
 
         # Filter lokasi tertentu
         lokasi_filter = [
@@ -968,12 +953,9 @@ def get_promotion_candidates():
     try:
         from datetime import datetime, timedelta, timezone
 
-        import pandas as pd
-        from flask import jsonify
-
-        # Load Excel files
-        df_history = pd.read_excel("../data/Data_Mutasi_API.xlsx")
-        df_seamen = pd.read_excel("../data/Data_Seamen_API.xlsx")
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
 
         # Tanggal cutoff pengalaman 2 tahun
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
@@ -989,35 +971,6 @@ def get_promotion_candidates():
             (df_history["seamancode"].isin(seamancode_terfilter))
             & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
         ]
-
-        # Daftar kapal yang menjadi syarat
-        # kapal_disyaratkan = {
-        #     "KM. ORIENTAL EMERALD", "KM. ORIENTAL RUBY", "KM. ORIENTAL SILVER",
-        #     "KM. ORIENTAL GOLD", "KM. ORIENTAL JADE", "KM. ORIENTAL DIAMOND",
-        #     "KM. LUZON", "KM. VERIZON", "KM. ORIENTAL GALAXY",
-        #     "KM. HIJAU SAMUDRA", "KM. ARMADA PERMATA"
-        # }
-
-        # # Ambil kapal terkait dari from dan to vessel name
-        # df_kapal = df_mutasi_filtered.copy()
-        # df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
-        #     df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
-        # )
-        # df_kapal.loc[df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"] = df_kapal["tovesselname"]
-
-        # # Hitung jumlah kapal unik terkait
-        # df_kapal_valid = (
-        #     df_kapal.dropna(subset=["kapal_terkait"])
-        #     .groupby("seamancode")["kapal_terkait"]
-        #     .nunique()
-        #     .reset_index()
-        # )
-        # df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
-
-        # # Filter df_mutasi_filtered berdasarkan hasil di atas
-        # df_mutasi_filtered = df_mutasi_filtered[
-        #     df_mutasi_filtered["seamancode"].isin(df_kapal_valid["seamancode"])
-        # ]
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
@@ -1056,12 +1009,9 @@ def get_promotion_candidates_kkm():
     try:
         from datetime import datetime, timedelta, timezone
 
-        import pandas as pd
-        from flask import jsonify
-
-        # Load Excel files
-        df_history = pd.read_excel("../data/Data_Mutasi_API.xlsx")
-        df_seamen = pd.read_excel("../data/Data_Seamen_API.xlsx")
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
 
         # Tanggal cutoff pengalaman 2 tahun
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
@@ -1206,18 +1156,12 @@ def filter_history():
         for _, row in df.iterrows():
             history_str = str(row.get("history", ""))
 
-            # Filter baris: hanya yang memiliki status di allowed_status (cek substring)
-            # if not any(status in history_str for status in allowed_status):
-            #     continue
-
             # Split kapal dari history (pisah koma, trim spasi)
             history_vessels = [v.strip() for v in history_str.split(",") if v.strip()]
 
             # Hitung match kapal yang ada di group_vessels dan history_vessels
             match_count = sum(1 for v in history_vessels if v in group_vessels)
 
-            # Filter: hanya tampilkan kalau matchCount lebih dari 0
-            # if match_count >= 0:
             # Buang kata-kata allowed_status dari history_str supaya tidak tampil di tabel
             filtered_history = history_str
             for status in allowed_status:
@@ -1243,8 +1187,8 @@ def filter_history():
 
 
 if __name__ == "__main__":
-    # Start the scheduler as soon as the app runs
-    fetch_and_save_data()
-    fetch_and_save_mutasi_data()
-    schedule_fetch_task()
-    app.run(debug=True, port=8048, host="0.0.0.0")
+    port = 8048
+    host = "0.0.0.0"
+    print(f"Flask app running on oort {port}")
+
+    app.run(debug=True, port=port, host=host)

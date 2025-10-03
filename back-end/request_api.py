@@ -1,10 +1,7 @@
-import json
-import os
-
 import pandas as pd
-import requests
 
-from test_module import filter_in_vessel, vessel_group_id_deck
+from database import get_seamen_as_data
+from model import filter_in_vessel, vessel_group_id_deck
 
 KELOMPOK = {
     "container": [
@@ -127,136 +124,6 @@ KELOMPOK = {
 
 
 # Fungsi untuk mengonversi bulan dan tahun menjadi indeks bulan_list
-def fetch_and_save_data():
-    print("Fetching data from the API...")
-
-    url = "http://nanika.spil.co.id:3021/get-seamen"
-
-    payload = json.dumps(
-        {
-            "age": 0,
-            "status": "",
-            "education": "",
-            "experience": "",
-            "certificate": "",
-            "last_location": "",
-            "last_position": "",
-        }
-    )
-
-    headers = {"Content-Type": "application/json"}
-
-    response = requests.get(url, headers=headers, data=payload)
-
-    # Detailed logging
-    print(f"Response status code: {response.status_code}")
-    print(f"Response content: {response.text}")
-    print(f"Response headers: {response.headers}")
-
-    if response.status_code == 200:
-        response_dict = response.json()  # Parse the response into a dictionary
-        data_seamen = response_dict.get("data_seamen", [])
-
-        if data_seamen:
-            df = pd.DataFrame(data_seamen)
-
-            # 💡 Use absolute path to main project-level "data" folder
-            output_dir = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "data")
-            )
-            os.makedirs(output_dir, exist_ok=True)
-
-            output_file = os.path.join(output_dir, "Data_Seamen_API.xlsx")
-
-            df.to_excel(output_file, index=False)
-            print(f"Data successfully saved to {output_file}")
-            return True
-        else:
-            print("No seamen data available.")
-            return False
-    else:
-        print(f"Request failed with status code: {response.status_code}")
-        return False
-
-
-def fetch_and_save_mutasi_data():
-    print("Fetching data from the API...")
-
-    url = "http://nanika.spil.co.id:3021/get-mutation"
-
-    payload = json.dumps(
-        {
-            "seaman_name": "",
-            "transaction_date_1": "01/01/2020",
-            "transaction_date_2": "01/01/2025",
-            "from_rank_name": "",
-            "to_rank_name": "",
-            "from_vessel_code": "",
-            "to_vessel_code": "",
-            "jenis": "",
-        }
-    )
-
-    headers = {"Content-Type": "application/json"}
-
-    response = requests.get(url, headers=headers, data=payload)
-
-    # Detailed logging
-    print(f"Response status code: {response.status_code}")
-    print(f"Response content: {response.text}")
-    print(f"Response headers: {response.headers}")
-
-    if response.status_code == 200:
-        response_dict = response.json()  # Parse the response into a dictionary
-        data_mutation = response_dict.get("data_mutation", [])
-
-        if data_mutation:
-            df = pd.DataFrame(data_mutation)
-
-            # 💡 Use absolute path to main project-level "data" folder
-            output_dir = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "data")
-            )
-            os.makedirs(output_dir, exist_ok=True)
-
-            output_file = os.path.join(output_dir, "Data_Mutasi_API.xlsx")
-
-            df.to_excel(output_file, index=False)
-            print(f"Data successfully saved to {output_file}")
-            return True
-        else:
-            print("No seamen data available.")
-            return False
-    else:
-        print(f"Request failed with status code: {response.status_code}")
-        return False
-
-
-# def test_fetch():
-#     url = "http://nanika.spil.co.id:3021/get-seamen"
-#     payload = json.dumps({
-#         "age": 0, "status": "", "education": "", "experience": "",
-#         "certificate": "", "last_location": "", "last_position": ""
-#     })
-#     headers = {'Content-Type': 'application/json'}
-
-#     response = requests.get(url, headers=headers, data=payload)
-
-#     print(f"Status: {response.status_code}")
-#     print(f"Success: {response.json().get('success')}")
-#     print(f"Seamen count: {len(response.json().get('data_seamen', []))}")
-
-#     data = response.json().get("data_seamen", [])
-#     if data:
-#         df = pd.DataFrame(data)
-#         print(f"Saving {len(df)} rows...")
-#         os.makedirs("data", exist_ok=True)
-#         df.to_excel("data/Data_Seamen_API1.xlsx", index=False)
-#         print("Saved successfully.")
-#     else:
-#         print("No data returned.")
-
-
 def get_month_index(month_name, year):
     month_dict = {
         "January": 0,
@@ -276,7 +143,8 @@ def get_month_index(month_name, year):
 
 
 def get_nganggur(job):
-    local_df = pd.read_excel("../data/Data_Seamen_API.xlsx")
+    # Load from Supabase instead of Excel
+    local_df = get_seamen_as_data()
     filtered_cadangan = filter_in_vessel(local_df, "others", KELOMPOK)
     filtered_cadangan = filtered_cadangan[(filtered_cadangan["last_position"] == job)]
     filtered_cadangan = filtered_cadangan.sort_values(by="last_location")
@@ -285,7 +153,8 @@ def get_nganggur(job):
 
 
 def get_schedule(vessel_group_id_filter, new_nahkoda, type, part):
-    local_df = pd.read_excel("../data/Data_Seamen_API.xlsx")
+    # Load from Supabase instead of Excel
+    local_df = get_seamen_as_data()
 
     filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
 
@@ -295,30 +164,6 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part):
         (filtered_df["last_position"] == "NAKHODA")
         & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
     ]
-
-    # Data baru yang ingin ditambahkan (cadangan)
-    # new_nahkoda = {
-    #     "age": 35,
-    #     "certificate": "ANT-I",
-    #     "day_remains": 200,
-    #     "edu_level": "S1",
-    #     "end_date": "31/12/2025",
-    #     "experience": ">5 Tahun",
-    #     "gender": "Pria",
-    #     "last_location": "Pelabuhan XYZ",
-    #     "VESSEL GROUP ID": vessel_group_id_filter,  # Sama dengan grup filter
-    #     "last_position": "NAKHODA",
-    #     "name": "- (cadangan)",
-    #     "no": "999",
-    #     "phone_number_1": "081234567890",
-    #     "phone_number_2": "",
-    #     "phone_number_3": "",
-    #     "phone_number_4": "",
-    #     "seafarercode": "999999",
-    #     "seamancode": "999999",
-    #     "start_date": "01/01/2024",
-    #     "status": "OFF"
-    # }
 
     # Pastikan end_date dalam format datetime
     filtered_df_nahkoda["end_date"] = pd.to_datetime(
@@ -366,7 +211,7 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part):
         for code in new_nahkoda:
             row = {
                 "seamancode": code,
-                "VESSEL GROUP ID": vessel_group_id_filter,  # Sesuaikan dengan kebutuhan
+                "VESSEL GROUP ID": vessel_group_id_filter,
                 "last_position": "NAKHODA",
             }
             cadangan_list.append(row)
@@ -461,16 +306,11 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part):
 
 
 def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
-
-    import pandas as pd
-
-    # Load data
-    local_df = pd.read_excel("../data/Data_Seamen_API.xlsx")
+    # Load from Supabase instead of Excel
+    local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(
-            local_df, type, KELOMPOK
-        )  # Ganti KELOMPOK sesuai konteksmu
+        filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
         filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
         filtered_df_nahkoda = filtered_df[
