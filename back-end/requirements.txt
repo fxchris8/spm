@@ -32,6 +32,5 @@ wrapt==1.17.3
 black==24.4.2
 isort==5.13.2
 ruff==0.6.8
-mypy==1.11.2
 pre-commit==3.8.0
 types-requests==2.32.0.20240914
