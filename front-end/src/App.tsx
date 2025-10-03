@@ -69,6 +69,8 @@ export function App() {
               <Route path="/search_off_duty" element={
                 <SearchOffDuty/>
               }/>
+
+              {/* Kalau mau dipake, buka lagi aja */}
               {/* <Route path="/promotion_nahkoda" element={
                 <PromotionNahkoda/>
               }/>
