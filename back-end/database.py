@@ -1,10 +1,12 @@
 # @faw_sd
 # Untuk koneksi dan operasi database menggunakan SQLAlchemy Supabase/PostgreSQL
 
+import os
+
+import pandas as pd
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -18,18 +20,21 @@ if not DATABASE_URL:
 engine = create_engine(
     DATABASE_URL,
     poolclass=NullPool,  # Untuk serverless environment
-    echo=False  # Set True untuk debug SQL queries
+    echo=False,  # Set True untuk debug SQL queries
 )
+
 
 def get_connection():
     """Get database connection"""
     return engine.connect()
+
 
 def execute_query(query, params=None):
     """Execute SELECT query dan return results"""
     with engine.connect() as conn:
         result = conn.execute(text(query), params or {})
         return result.fetchall()
+
 
 def execute_update(query, params=None):
     """Execute INSERT/UPDATE/DELETE query"""
@@ -38,13 +43,33 @@ def execute_update(query, params=None):
         conn.commit()
         return result
 
+
+def get_seamen_as_data():
+    """Fetch all seamen data"""
+    query = "SELECT * FROM seamen"
+    with engine.connect() as conn:
+        df = pd.read_sql_query(text(query), conn)
+        print(f"Successfully fetched {len(df)} rows from seamen table.")
+    return df
+
+
+def get_mutations_as_data():
+    """Fetch all mutations data"""
+    query = "SELECT * FROM mutations"
+    with engine.connect() as conn:
+        df = pd.read_sql_query(text(query), conn)
+        print(f"Successfully fetched {len(df)} rows from mutations table.")
+    return df
+
+
 # Test connection
 def test_connection():
     try:
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1"))
+            conn.execute(text("SELECT 1"))
             print("Database connection successful")
             return True
+
     except Exception as e:
         print(f"Database connection failed: {e}")
         return False
