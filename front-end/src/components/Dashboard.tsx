@@ -38,7 +38,8 @@ export function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8048";
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8048";
 
   // status yang tidak dihitung sebagai onboard
   const excludedStatus = [
@@ -105,7 +106,9 @@ export function Dashboard() {
   // Show similar
   const showSimilar = async (seamanCode: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/similarity/${seamanCode}`);
+      const response = await fetch(
+        `http://localhost:8080/similarity/${seamanCode}`
+      );
       if (!response.ok) throw new Error("Gagal mengambil data similar");
 
       const data = await response.json();
@@ -130,43 +133,60 @@ export function Dashboard() {
   );
 
   // Hitung seaman onboard (VESSEL bukan status excluded)
-  const offboardSeamen = seamenData.filter(
-    (s) => excludedStatus.includes(s.VESSEL?.toUpperCase())
+  const offboardSeamen = seamenData.filter((s) =>
+    excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Ship Personnel Management</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+        Ship Personnel Management
+      </h1>
 
       {/* === Dashboard Cards === */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-r from-red-500 to-indigo-600 text-white rounded-2xl shadow-lg p-6 flex items-center">
-          <div className="p-4 bg-white bg-opacity-20 rounded-full mr-4">
-            <FontAwesomeIcon icon={faUsers} className="text-3xl" />
+        {/* Total Seamen */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-red-100 rounded-xl mr-4">
+            <FontAwesomeIcon icon={faUsers} className="text-3xl text-red-600" />
           </div>
           <div>
-            <p className="text-sm opacity-80">Total Seamen</p>
-            <h2 className="text-3xl font-bold">{seamenData.length}</h2>
+            <p className="text-sm text-gray-600 font-medium">Total Seamen</p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {seamenData.length}
+            </h2>
           </div>
         </div>
+
         {/* Total Onboard */}
-        <div className="bg-gradient-to-r from-green-500 to-indigo-600 text-white rounded-2xl shadow-lg p-6 flex items-center">
-          <div className="p-4 bg-white bg-opacity-20 rounded-full mr-4">
-            <FontAwesomeIcon icon={faShip} className="text-3xl" />
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-green-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faShip}
+              className="text-3xl text-green-600"
+            />
           </div>
           <div>
-            <p className="text-sm opacity-80">Total Onboard</p>
-            <h2 className="text-3xl font-bold">{onboardSeamen.length}</h2>
+            <p className="text-sm text-gray-600 font-medium">Total Onboard</p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {onboardSeamen.length}
+            </h2>
           </div>
         </div>
+
         {/* Total Offboard */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl shadow-lg p-6 flex items-center">
-          <div className="p-4 bg-white bg-opacity-20 rounded-full mr-4">
-            <FontAwesomeIcon icon={faHouse} className="text-3xl" />
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-blue-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faHouse}
+              className="text-3xl text-blue-600"
+            />
           </div>
           <div>
-            <p className="text-sm opacity-80">Total Offboard</p>
-            <h2 className="text-3xl font-bold">{offboardSeamen.length}</h2>
+            <p className="text-sm text-gray-600 font-medium">Total Offboard</p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {offboardSeamen.length}
+            </h2>
           </div>
         </div>
       </div>

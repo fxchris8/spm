@@ -12,7 +12,7 @@ type Seaman = {
 
 export function PromotionNahkoda() {
   const tabsRef = useRef<TabsRef>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [, setActiveTab] = useState(0);
   const [selectedSeamen, setSelectedSeamen] = useState<Seaman[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [seamanList, setSeamanList] = useState<Seaman[]>([]);

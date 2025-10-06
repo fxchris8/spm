@@ -7,7 +7,7 @@ import { ContainerRotation } from "./ContainerRotation";
 
 export function RotationKKM() {
   const tabsRef = useRef<TabsRef>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [, setActiveTab] = useState(0);
 
   return (
     <div className="flex flex-col gap-3 mb-0">

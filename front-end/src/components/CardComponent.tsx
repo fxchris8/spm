@@ -11,16 +11,25 @@ export function CardComponent({ groupName, listShip, isActive, onClick }: CardPr
   return (
     <Card
       onClick={onClick}
-      className={`max-w-sm h-full cursor-pointer transition-transform duration-300 flex flex-col ${
-        isActive ? "bg-gray-200 scale-105" : "hover:bg-gray-100"
-      }`}
+      className={`
+        h-full cursor-pointer transition-all duration-200
+        ${isActive 
+          ? "bg-red-50 border-2 border-red-600 shadow-md" 
+          : "bg-white border border-gray-200 shadow-sm hover:border-red-300"
+        }
+      `}
     >
-      <h5 className="text-xl font-bold tracking-tight text-red-800 dark:text-white">
-        {groupName}
-      </h5>
-      <p className="text-xs font-normal text-gray-700 dark:text-gray-400 flex-grow">
-        {listShip}
-      </p>
+      <div className="flex flex-col h-full">
+        <h5 className={`
+          text-lg font-semibold mb-3
+          ${isActive ? "text-red-700" : "text-gray-900"}
+        `}>
+          {groupName}
+        </h5>
+        <p className="text-sm text-gray-600">
+          {listShip}
+        </p>
+      </div>
     </Card>
   );
 }

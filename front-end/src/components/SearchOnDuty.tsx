@@ -6,7 +6,7 @@ import { SearchComponent } from "./SearchComponent";
 
 export function SearchOnDuty() {
   const tabsRef = useRef<TabsRef>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [, setActiveTab] = useState(0);
 
   return (
     <div className="flex flex-col gap-3">
