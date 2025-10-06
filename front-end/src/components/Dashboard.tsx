@@ -1,22 +1,22 @@
-"use client";
-import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+'use client';
+import { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass,
   faUsers,
   faShip,
   faHouse,
-} from "@fortawesome/free-solid-svg-icons";
+} from '@fortawesome/free-solid-svg-icons';
 
 interface Seaman {
-  "SEAMAN CODE": string;
-  "SEAFARER CODE": string;
-  "SEAMAN NAME": string;
+  'SEAMAN CODE': string;
+  'SEAFARER CODE': string;
+  'SEAMAN NAME': string;
   RANK: string;
   VESSEL: string;
   UMUR: number;
   CERTIFICATE: string;
-  "DAY REMAINS": number;
+  'DAY REMAINS': number;
 }
 
 interface SimilarSeaman {
@@ -27,7 +27,7 @@ interface SimilarSeaman {
   last_location: string;
   age: number;
   certificate: string;
-  "DAY REMAINS DIFF": number;
+  'DAY REMAINS DIFF': number;
 }
 
 export function Dashboard() {
@@ -37,27 +37,27 @@ export function Dashboard() {
   const [similarSeamen, setSimilarSeamen] = useState<SimilarSeaman[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8048";
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8048';
 
   // status yang tidak dihitung sebagai onboard
   const excludedStatus = [
-    "PENDING CUTI",
-    "DARAT BIASA",
-    "DARAT STAND-BY",
-    "PENDING GAJI",
+    'PENDING CUTI',
+    'DARAT BIASA',
+    'DARAT STAND-BY',
+    'PENDING GAJI',
   ];
 
   // Fetch data
   useEffect(() => {
     const fetchData = () => {
       fetch(`${API_BASE_URL}/dashboard-data`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Gagal memuat data");
+        .then(res => {
+          if (!res.ok) throw new Error('Gagal memuat data');
           return res.json();
         })
-        .then((data) => {
+        .then(data => {
           setSeamenData(data);
           setFilteredData(data);
         })
@@ -71,9 +71,9 @@ export function Dashboard() {
 
   // Fungsi pencarian
   useEffect(() => {
-    const results = seamenData.filter((item) =>
-      Object.values(item).some((val) =>
-        (val ?? "").toString().toLowerCase().includes(searchTerm.toLowerCase())
+    const results = seamenData.filter(item =>
+      Object.values(item).some(val =>
+        (val ?? '').toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
     setFilteredData(results);
@@ -90,7 +90,7 @@ export function Dashboard() {
     const pages = [];
     const range = 2;
     pages.push(1);
-    if (currentPage - range > 2) pages.push("...");
+    if (currentPage - range > 2) pages.push('...');
     for (
       let i = Math.max(2, currentPage - range);
       i <= Math.min(totalPages - 1, currentPage + range);
@@ -98,7 +98,7 @@ export function Dashboard() {
     ) {
       pages.push(i);
     }
-    if (currentPage + range < totalPages - 1) pages.push("...");
+    if (currentPage + range < totalPages - 1) pages.push('...');
     if (totalPages > 1) pages.push(totalPages);
     return pages;
   };
@@ -109,16 +109,16 @@ export function Dashboard() {
       const response = await fetch(
         `http://localhost:8080/similarity/${seamanCode}`
       );
-      if (!response.ok) throw new Error("Gagal mengambil data similar");
+      if (!response.ok) throw new Error('Gagal mengambil data similar');
 
       const data = await response.json();
-      if (data.status === "error") throw new Error(data.message);
+      if (data.status === 'error') throw new Error(data.message);
 
       setSimilarSeamen(data.data);
       setModalOpen(true);
     } catch (error) {
-      console.error("Error:", error);
-      alert("Error: " + (error as Error).message);
+      console.error('Error:', error);
+      alert('Error: ' + (error as Error).message);
     }
   };
 
@@ -129,11 +129,11 @@ export function Dashboard() {
 
   // Hitung seaman onboard (VESSEL bukan status excluded)
   const onboardSeamen = seamenData.filter(
-    (s) => !excludedStatus.includes(s.VESSEL?.toUpperCase())
+    s => !excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
 
   // Hitung seaman onboard (VESSEL bukan status excluded)
-  const offboardSeamen = seamenData.filter((s) =>
+  const offboardSeamen = seamenData.filter(s =>
     excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
 
@@ -198,7 +198,7 @@ export function Dashboard() {
           placeholder="Search..."
           className="w-full p-2 border rounded-lg shadow-sm"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -208,16 +208,16 @@ export function Dashboard() {
           <thead className="bg-gray-800 text-white">
             <tr>
               {[
-                "SEAMAN CODE",
-                "SEAFARER CODE",
-                "SEAMAN NAME",
-                "RANK",
-                "VESSEL",
-                "UMUR",
-                "CERTIFICATE",
-                "DAY REMAINS",
-                "ACTION",
-              ].map((header) => (
+                'SEAMAN CODE',
+                'SEAFARER CODE',
+                'SEAMAN NAME',
+                'RANK',
+                'VESSEL',
+                'UMUR',
+                'CERTIFICATE',
+                'DAY REMAINS',
+                'ACTION',
+              ].map(header => (
                 <th key={header} className="p-3 border text-sm font-semibold">
                   {header}
                 </th>
@@ -234,7 +234,7 @@ export function Dashboard() {
                 ))}
                 <td className="p-2 border text-center">
                   <button
-                    onClick={() => showSimilar(item["SEAMAN CODE"])}
+                    onClick={() => showSimilar(item['SEAMAN CODE'])}
                     className="text-blue-600 hover:text-blue-800"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -250,7 +250,7 @@ export function Dashboard() {
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
             className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50"
           >
@@ -258,7 +258,7 @@ export function Dashboard() {
           </button>
 
           {generatePageNumbers().map((page, index) =>
-            page === "..." ? (
+            page === '...' ? (
               <span key={index} className="px-2">
                 ...
               </span>
@@ -267,7 +267,7 @@ export function Dashboard() {
                 key={index}
                 onClick={() => setCurrentPage(page as number)}
                 className={`px-3 py-1 border rounded-lg shadow-sm ${
-                  currentPage === page ? "bg-blue-500 text-white" : ""
+                  currentPage === page ? 'bg-blue-500 text-white' : ''
                 }`}
               >
                 {page}
@@ -277,7 +277,7 @@ export function Dashboard() {
 
           <button
             onClick={() =>
-              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              setCurrentPage(prev => Math.min(totalPages, prev + 1))
             }
             disabled={currentPage === totalPages}
             className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50"
@@ -290,13 +290,13 @@ export function Dashboard() {
           <span>Items per page:</span>
           <select
             value={itemsPerPage}
-            onChange={(e) => {
+            onChange={e => {
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
             className="p-1 border rounded-lg shadow-sm"
           >
-            {[10, 20, 50].map((num) => (
+            {[10, 20, 50].map(num => (
               <option key={num} value={num}>
                 {num}
               </option>
@@ -322,15 +322,15 @@ export function Dashboard() {
                 <thead className="bg-gray-200">
                   <tr>
                     {[
-                      "SEAMAN CODE",
-                      "SEAFARER CODE",
-                      "SEAMAN NAME",
-                      "LAST POSITION",
-                      "LAST LOCATION",
-                      "AGE",
-                      "CERTIFICATE",
-                      "DAY REMAINS DIFF",
-                    ].map((header) => (
+                      'SEAMAN CODE',
+                      'SEAFARER CODE',
+                      'SEAMAN NAME',
+                      'LAST POSITION',
+                      'LAST LOCATION',
+                      'AGE',
+                      'CERTIFICATE',
+                      'DAY REMAINS DIFF',
+                    ].map(header => (
                       <th key={header} className="p-2 border text-sm">
                         {header}
                       </th>
@@ -349,7 +349,7 @@ export function Dashboard() {
                         <td className="p-2 border">{seaman.age}</td>
                         <td className="p-2 border">{seaman.certificate}</td>
                         <td className="p-2 border">
-                          {seaman["DAY REMAINS DIFF"]}
+                          {seaman['DAY REMAINS DIFF']}
                         </td>
                       </tr>
                     ))

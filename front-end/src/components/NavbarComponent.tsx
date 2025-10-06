@@ -1,25 +1,28 @@
-"use client";
+'use client';
 
-import { Button, Navbar, Avatar, Dropdown } from "flowbite-react";
-import { HiLogout } from "react-icons/hi";
+import { Button, Navbar, Avatar, Dropdown } from 'flowbite-react';
+import { HiLogout } from 'react-icons/hi';
 
 export function NavbarComponent() {
   const handleLogout = () => {
     // logout logic
-    alert("Logout Clicked");
-    console.log("Logout clicked");
+    alert('Logout Clicked');
+    console.log('Logout clicked');
   };
 
   return (
-    <Navbar 
-      fluid 
+    <Navbar
+      fluid
       className="bg-gradient-to-r from-red-700 to-red-900 shadow-lg border-red-950"
     >
-      <Navbar.Brand href="/dashboard" className="hover:opacity-90 transition-opacity">
-        <img 
-          src="/logo.ico" 
-          className="mr-4 h-8 sm:h-10" 
-          alt="SPIL Fleet Logo" 
+      <Navbar.Brand
+        href="/dashboard"
+        className="hover:opacity-90 transition-opacity"
+      >
+        <img
+          src="/logo.ico"
+          className="mr-4 h-8 sm:h-10"
+          alt="SPIL Fleet Logo"
         />
         <div className="flex flex-col">
           <span className="text-white text-xl sm:text-2xl font-bold tracking-tight">
@@ -38,8 +41,8 @@ export function NavbarComponent() {
             arrowIcon={false}
             inline
             label={
-              <Avatar 
-                alt="User" 
+              <Avatar
+                alt="User"
                 img="https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff"
                 rounded
               />
@@ -58,7 +61,7 @@ export function NavbarComponent() {
         </div>
 
         {/* Logout Button - Mobile */}
-        <Button 
+        <Button
           color="failure"
           size="sm"
           className="md:hidden"

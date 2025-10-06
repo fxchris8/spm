@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { NavbarComponent } from "./components/NavbarComponent";
-import { SidebarComponent } from "./components/SidebarComponent";
-import { Dashboard } from "./components/Dashboard";
-import { RotationContainer } from "./components/RotationContainer";
-import { RotationKKM } from "./components/RotationKKM";
-import { SearchOnDuty } from "./components/SearchOnDuty";
-import { SearchOffDuty } from "./components/SearchOffDuty";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { NavbarComponent } from './components/NavbarComponent';
+import { SidebarComponent } from './components/SidebarComponent';
+import { Dashboard } from './components/Dashboard';
+import { RotationContainer } from './components/RotationContainer';
+import { RotationKKM } from './components/RotationKKM';
+import { SearchOnDuty } from './components/SearchOnDuty';
+import { SearchOffDuty } from './components/SearchOffDuty';
+import { Route, Routes, Navigate } from 'react-router-dom';
 
 export function App() {
-  const NAVBAR_HEIGHT = "4rem";
+  const NAVBAR_HEIGHT = '4rem';
 
   return (
     <div className="min-h-screen relative">
@@ -31,7 +31,7 @@ export function App() {
           className="fixed left-0 bottom-0 bg-gray-100 overflow-y-auto z-40"
           style={{
             top: NAVBAR_HEIGHT,
-            width: "16rem",
+            width: '16rem',
           }}
         >
           <SidebarComponent />
@@ -39,7 +39,7 @@ export function App() {
 
         <main
           className="flex-1 p-4 overflow-x-hidden"
-          style={{ marginLeft: "16rem" }}
+          style={{ marginLeft: '16rem' }}
         >
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />

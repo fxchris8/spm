@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Tabs, TabsRef, Modal, Button, TextInput } from "flowbite-react";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { Tabs, TabsRef, Modal, Button, TextInput } from 'flowbite-react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 
 type Seaman = {
   code: string;
@@ -17,7 +17,7 @@ export function PromotionNahkoda() {
   const [showModal, setShowModal] = useState(false);
   const [seamanList, setSeamanList] = useState<Seaman[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [saving, setSaving] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -27,21 +27,27 @@ export function PromotionNahkoda() {
       try {
         const res = await fetch(`${API_BASE_URL}/seamen/promotion_candidates`);
         const json = await res.json();
-        if (json.status === "success") {
+        if (json.status === 'success') {
           const formatted = json.data.map((item: any) => ({
             code: String(item.code),
             name: item.name,
             rank: item.rank,
             history: item.history
-            .filter((h: string) => h !== "PENDING GAJI" && h !== "PENDING CUTI" && h !== "DARAT STAND-BY" && h !== "DARAT BIASA")
-            .join(", "),
+              .filter(
+                (h: string) =>
+                  h !== 'PENDING GAJI' &&
+                  h !== 'PENDING CUTI' &&
+                  h !== 'DARAT STAND-BY' &&
+                  h !== 'DARAT BIASA'
+              )
+              .join(', '),
           }));
           setSeamanList(formatted);
         } else {
-          console.error("Gagal memuat data:", json.message);
+          console.error('Gagal memuat data:', json.message);
         }
       } catch (err) {
-        console.error("Error fetching seamen:", err);
+        console.error('Error fetching seamen:', err);
       } finally {
         setLoading(false);
       }
@@ -50,33 +56,33 @@ export function PromotionNahkoda() {
   }, []);
 
   const handleAddFromModal = (seaman: Seaman) => {
-    if (!selectedSeamen.some((s) => s.code === seaman.code)) {
+    if (!selectedSeamen.some(s => s.code === seaman.code)) {
       setSelectedSeamen([...selectedSeamen, seaman]);
     }
     // setShowModal(false);
-    setSearchTerm("");
+    setSearchTerm('');
   };
 
   const handleRemove = (code: string) => {
-    setSelectedSeamen(selectedSeamen.filter((s) => s.code !== code));
+    setSelectedSeamen(selectedSeamen.filter(s => s.code !== code));
   };
 
   async function saveToExcel() {
     setSaving(true);
     try {
       const res = await fetch(`${API_BASE_URL}/save-excel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedSeamen),
       });
       const json = await res.json();
-      if (json.status === "success") {
-        alert("Berhasil simpan data!");
+      if (json.status === 'success') {
+        alert('Berhasil simpan data!');
       } else {
-        alert("Gagal simpan: " + json.message);
+        alert('Gagal simpan: ' + json.message);
       }
     } catch (error: any) {
-      alert("Error: " + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -86,7 +92,7 @@ export function PromotionNahkoda() {
   const filteredSeamanList = useMemo(() => {
     if (!searchTerm.trim()) return seamanList;
     return seamanList.filter(
-      (s) =>
+      s =>
         s.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.rank.toLowerCase().includes(searchTerm.toLowerCase())
@@ -99,7 +105,7 @@ export function PromotionNahkoda() {
         aria-label="Default tabs"
         variant="default"
         ref={tabsRef}
-        onActiveTabChange={(tab) => setActiveTab(tab)}
+        onActiveTabChange={tab => setActiveTab(tab)}
       >
         <Tabs.Item active title="Nahkoda">
           <div className="space-y-6">
@@ -122,7 +128,7 @@ export function PromotionNahkoda() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {selectedSeamen.length > 0 ? (
-                    selectedSeamen.map((seaman) => (
+                    selectedSeamen.map(seaman => (
                       <tr key={seaman.code}>
                         <td className="px-4 py-2">{seaman.code}</td>
                         <td className="px-4 py-2">{seaman.name}</td>
@@ -141,7 +147,10 @@ export function PromotionNahkoda() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="text-center py-4 text-gray-400">
+                      <td
+                        colSpan={5}
+                        className="text-center py-4 text-gray-400"
+                      >
                         Belum ada seaman terpilih.
                       </td>
                     </tr>
@@ -154,11 +163,15 @@ export function PromotionNahkoda() {
               disabled={selectedSeamen.length === 0 || saving}
               color="success"
             >
-              {saving ? "Menyimpan..." : "Submit"}
+              {saving ? 'Menyimpan...' : 'Submit'}
             </Button>
 
             {/* Modal untuk memilih seaman */}
-            <Modal show={showModal} onClose={() => setShowModal(false)} size="4xl">
+            <Modal
+              show={showModal}
+              onClose={() => setShowModal(false)}
+              size="4xl"
+            >
               <Modal.Header>Pilih Seaman</Modal.Header>
               <Modal.Body>
                 {loading ? (
@@ -170,7 +183,7 @@ export function PromotionNahkoda() {
                         type="search"
                         placeholder="Cari berdasarkan code, nama, atau rank"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={e => setSearchTerm(e.target.value)}
                         aria-label="Cari seaman"
                       />
                     </div>
@@ -187,7 +200,7 @@ export function PromotionNahkoda() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {filteredSeamanList.length > 0 ? (
-                            filteredSeamanList.map((seaman) => (
+                            filteredSeamanList.map(seaman => (
                               <tr key={seaman.code}>
                                 <td className="px-4 py-2">{seaman.code}</td>
                                 <td className="px-4 py-2">{seaman.name}</td>
@@ -196,24 +209,37 @@ export function PromotionNahkoda() {
                                 <td className="px-4 py-2">
                                   <button
                                     className={`text-xs px-3 py-1 rounded ${
-                                      selectedSeamen.some((s) => s.code === seaman.code)
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-blue-500 hover:bg-blue-600 text-white"
+                                      selectedSeamen.some(
+                                        s => s.code === seaman.code
+                                      )
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
                                     }`}
-                                    onClick={() => !selectedSeamen.some((s) => s.code === seaman.code) && handleAddFromModal(seaman)}
-                                    disabled={selectedSeamen.some((s) => s.code === seaman.code)}
+                                    onClick={() =>
+                                      !selectedSeamen.some(
+                                        s => s.code === seaman.code
+                                      ) && handleAddFromModal(seaman)
+                                    }
+                                    disabled={selectedSeamen.some(
+                                      s => s.code === seaman.code
+                                    )}
                                     aria-label={`Pilih seaman ${seaman.name}`}
                                   >
-                                    {selectedSeamen.some((s) => s.code === seaman.code)
-                                      ? "Sudah Dipilih"
-                                      : "Pilih"}
+                                    {selectedSeamen.some(
+                                      s => s.code === seaman.code
+                                    )
+                                      ? 'Sudah Dipilih'
+                                      : 'Pilih'}
                                   </button>
                                 </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-4 text-gray-400">
+                              <td
+                                colSpan={5}
+                                className="text-center py-4 text-gray-400"
+                              >
                                 Tidak ada data seaman tersedia.
                               </td>
                             </tr>

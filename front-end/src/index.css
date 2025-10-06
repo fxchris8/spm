@@ -1,15 +1,15 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "flowbite";
-@import "tailwindcss/utilities";
-@import "select2/dist/css/select2.css";
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'flowbite';
+@import 'tailwindcss/utilities';
+@import 'select2/dist/css/select2.css';
 
 /* @import '~select2/dist/css/select2.css'; */
 
 /* Tambahkan di file CSS global */
 svg {
-    width: 1em;
-    height: 1em;
+  width: 1em;
+  height: 1em;
 }
 .react-select-container {
   @apply rounded-lg border-gray-300;

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Tabs, TabsRef } from "flowbite-react";
-import { useRef, useState } from "react";
-import { SearchComponent } from "./SearchComponent";
+import { Tabs, TabsRef } from 'flowbite-react';
+import { useRef, useState } from 'react';
+import { SearchComponent } from './SearchComponent';
 
 export function SearchOnDuty() {
   const tabsRef = useRef<TabsRef>(null);
@@ -14,7 +14,7 @@ export function SearchOnDuty() {
         aria-label="Default tabs"
         variant="default"
         ref={tabsRef}
-        onActiveTabChange={(tab) => setActiveTab(tab)}
+        onActiveTabChange={tab => setActiveTab(tab)}
       >
         <Tabs.Item active title="Container Deck">
           <SearchComponent key="Container-Deck" type="container" part="deck" />

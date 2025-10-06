@@ -683,10 +683,19 @@ def get_cadangan_masinisII():
 def get_mutasi_filtered():
     try:
         # Ambil parameter 'job' dari query string
-        job = request.args.get("job", default=None)
+        job_raw = request.args.get("job", default=None)
+
+        job_mapping = {
+            "NAKHODA": "NAKHODA",
+            "KKM": "KKM",
+            "MUALIMI": "MUALIM I",
+            "MASINISII": "MASINIS II",
+        }
+
+        job = job_mapping.get(job_raw.upper() if job_raw else None)
 
         # Validasi job yang diterima
-        if job not in ["NAKHODA", "KKM", "MUALIMI", "MASINISII"]:
+        if job not in ["NAKHODA", "KKM", "MUALIM I", "MASINIS II"]:
             return (
                 jsonify(
                     {
@@ -1098,6 +1107,156 @@ def get_promotion_candidates_kkm():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/seamen/promotion_candidates_mualimI", methods=["GET"])
+def get_promotion_candidates_mualimI():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
+
+        # Filter seamen berdasarkan posisi dan sertifikat (sertifikat mualin 2 itu apa?)
+        seamancode_terfilter = df_seamen[
+            (df_seamen["last_position"] == "MUALIM II")
+            & (df_seamen["certificate"] == "ANT-I")
+        ]["seamancode"].unique()
+
+        # Filter df_history untuk pengalaman lebih dari 2 tahun
+        df_mutasi_filtered = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict dan hilangkan history yang tidak relevan
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g[
+                        ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
+                    ]["fromvesselname"]
+                    .dropna()
+                    .unique()
+                    .tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_masinisII", methods=["GET"])
+def get_promotion_candidates_masinisII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
+
+        # Filter seamen berdasarkan posisi
+        seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS III")][
+            "seamancode"
+        ].unique()
+
+        # Filter df_history untuk pengalaman lebih dari 2 tahun
+        df_mutasi_filtered = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]
+
+        # Daftar kapal yang disyaratkan
+        kapal_disyaratkan = {
+            "KM. HIJAU SEJUK",
+            "KM. ORIENTAL DIAMOND",
+            "KM. ORIENTAL RUBY",
+            "KM. ORIENTAL JADE",
+            "KM. VERIZON",
+            "KM. SPIL HANA",
+            "KM. SPIL HAPSRI",
+            "KM. SPIL HAYU",
+            "KM. SPIL HASYA",
+            "KM. HIJAU JELITA",
+            "KM. HIJAU SAMUDERA",
+            "KM. ORIENTAL GOLD",
+            "KM. ORIENTAL GALAXY",
+            "KM. LUZON",
+            "KM. ARMADA PERMATA",
+            "KM. ORIENTAL SILVER",
+            "KM. ORIENTAL EMERALD",
+        }
+
+        # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
+        df_kapal = df_mutasi_filtered.copy()
+        df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
+            df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
+        )
+        df_kapal.loc[
+            df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"
+        ] = df_kapal["tovesselname"]
+
+        # Ambil hanya yang punya >= 2 kapal unik dari daftar
+        df_kapal_valid = (
+            df_kapal.dropna(subset=["kapal_terkait"])
+            .groupby("seamancode")["kapal_terkait"]
+            .nunique()
+            .reset_index()
+        )
+        df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
+
+        # Filter df_mutasi_filtered berdasarkan hasil di atas
+        df_mutasi_filtered = df_mutasi_filtered[
+            df_mutasi_filtered["seamancode"].isin(df_kapal_valid["seamancode"])
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g["fromvesselname"].dropna().unique().tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/save-excel", methods=["POST"])
 def save_excel():
     data = request.get_json()
@@ -1121,10 +1280,74 @@ def save_excel():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# Kode lama, pake Excel
+# @app.route("/api/filter_history", methods=["GET"])
+# def filter_history():
+#     file_path = "../data/seaman_selected.xlsx"
+
+#     allowed_status = [
+#         "PENDING CUTI",
+#         "PENDING GAJI",
+#         "DARAT BIASA",
+#         "DARAT",
+#         "DARAT STAND-BY",
+#     ]
+
+#     try:
+#         df = pd.read_excel(file_path)
+
+#         # Cek kolom wajib
+#         if "history" not in df.columns or "code" not in df.columns:
+#             return (
+#                 jsonify(
+#                     {
+#                         "status": "error",
+#                         "message": "Kolom 'history' atau 'code' tidak ditemukan.",
+#                     }
+#                 ),
+#                 400,
+#             )
+
+#         # Ambil parameter group kapal dari frontend, multiple ?group=xxx&group=yyy
+#         group_vessels = request.args.getlist("group")
+
+#         result = []
+
+#         for _, row in df.iterrows():
+#             history_str = str(row.get("history", ""))
+
+#             # Split kapal dari history (pisah koma, trim spasi)
+#             history_vessels = [v.strip() for v in history_str.split(",") if v.strip()]
+
+#             # Hitung match kapal yang ada di group_vessels dan history_vessels
+#             match_count = sum(1 for v in history_vessels if v in group_vessels)
+
+#             # Buang kata-kata allowed_status dari history_str supaya tidak tampil di tabel
+#             filtered_history = history_str
+#             for status in allowed_status:
+#                 filtered_history = filtered_history.replace(status, "")
+#             # Hilangkan koma ekstra dan spasi berlebih setelah penghapusan kata status
+#             filtered_history = ",".join(
+#                 [v.strip() for v in filtered_history.split(",") if v.strip()]
+#             )
+
+#             result.append(
+#                 {
+#                     "seamancode": row.get("code", ""),
+#                     "name": row.get("name", ""),
+#                     "history": filtered_history,
+#                     "matchCount": match_count,
+#                 }
+#             )
+
+#         return jsonify({"status": "success", "data": result, "count": len(result)})
+
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/filter_history", methods=["GET"])
 def filter_history():
-    file_path = "../data/seaman_selected.xlsx"
-
     allowed_status = [
         "PENDING CUTI",
         "PENDING GAJI",
@@ -1134,48 +1357,63 @@ def filter_history():
     ]
 
     try:
-        df = pd.read_excel(file_path)
+        # Ganti Excel dengan fetch dari database
+        df_history = get_mutations_as_data()  # Ini fungsi yang sudah ada
+        df_seamen = get_seamen_as_data()  # Untuk ambil nama
 
-        # Cek kolom wajib
-        if "history" not in df.columns or "code" not in df.columns:
+        # Merge untuk dapat nama
+        df = df_history.merge(
+            df_seamen[["seamancode", "name"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Cek kolom wajib - sesuaikan dengan struktur data Anda
+        if "seamancode" not in df.columns:
             return (
                 jsonify(
                     {
                         "status": "error",
-                        "message": "Kolom 'history' atau 'code' tidak ditemukan.",
+                        "message": "Kolom 'seamancode' tidak ditemukan.",
                     }
                 ),
                 400,
             )
 
-        # Ambil parameter group kapal dari frontend, multiple ?group=xxx&group=yyy
+        # Ambil parameter group kapal dari frontend
         group_vessels = request.args.getlist("group")
+
+        # Group by seamancode untuk gabungkan history
+        grouped = (
+            df.groupby("seamancode")
+            .agg(
+                {
+                    "name": "first",
+                    "fromvesselname": lambda x: x.dropna().tolist(),  # Collect all vessels
+                }
+            )
+            .reset_index()
+        )
 
         result = []
 
-        for _, row in df.iterrows():
-            history_str = str(row.get("history", ""))
+        for _, row in grouped.iterrows():
+            history_vessels = row.get("fromvesselname", [])
 
-            # Split kapal dari history (pisah koma, trim spasi)
-            history_vessels = [v.strip() for v in history_str.split(",") if v.strip()]
+            # Filter allowed_status dari history
+            filtered_vessels = [v for v in history_vessels if v not in allowed_status]
 
-            # Hitung match kapal yang ada di group_vessels dan history_vessels
-            match_count = sum(1 for v in history_vessels if v in group_vessels)
+            # Hitung match dengan group
+            match_count = sum(1 for v in filtered_vessels if v in group_vessels)
 
-            # Buang kata-kata allowed_status dari history_str supaya tidak tampil di tabel
-            filtered_history = history_str
-            for status in allowed_status:
-                filtered_history = filtered_history.replace(status, "")
-            # Hilangkan koma ekstra dan spasi berlebih setelah penghapusan kata status
-            filtered_history = ",".join(
-                [v.strip() for v in filtered_history.split(",") if v.strip()]
-            )
+            # Join jadi string
+            history_str = ", ".join(filtered_vessels)
 
             result.append(
                 {
-                    "seamancode": row.get("code", ""),
+                    "seamancode": row.get("seamancode", ""),
                     "name": row.get("name", ""),
-                    "history": filtered_history,
+                    "history": history_str,
                     "matchCount": match_count,
                 }
             )

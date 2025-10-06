@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Tabs, TabsRef } from "flowbite-react";
-import { useRef, useState } from "react";
-import { HiUserCircle } from "react-icons/hi";
-import { ContainerRotation } from "./ContainerRotation";
+import { Tabs, TabsRef } from 'flowbite-react';
+import { useRef, useState } from 'react';
+import { HiUserCircle } from 'react-icons/hi';
+import { ContainerRotation } from './ContainerRotation';
 
 export function RotationKKM() {
   const tabsRef = useRef<TabsRef>(null);
@@ -15,7 +15,7 @@ export function RotationKKM() {
         aria-label="Default tabs"
         variant="default"
         ref={tabsRef}
-        onActiveTabChange={(tab) => setActiveTab(tab)}
+        onActiveTabChange={tab => setActiveTab(tab)}
       >
         <Tabs.Item active title="Nakhoda" icon={HiUserCircle}>
           <ContainerRotation
@@ -25,21 +25,21 @@ export function RotationKKM() {
             job="nakhoda"
             groups={{
               container_rotation1: [
-                "KM. MANALAGI PRITA",
-                "KM. MANALAGI ASTA",
-                "KM. MANALAGI ASTI",
-                "KM. MANALAGI DASA",
-                "KM. MANALAGI ENZI",
-                "KM. MANALAGI TARA",
-                "KM. MANALAGI WANDA",
+                'KM. MANALAGI PRITA',
+                'KM. MANALAGI ASTA',
+                'KM. MANALAGI ASTI',
+                'KM. MANALAGI DASA',
+                'KM. MANALAGI ENZI',
+                'KM. MANALAGI TARA',
+                'KM. MANALAGI WANDA',
               ],
               container_rotation2: [
-                "KM. MANALAGI TISYA",
-                "KM. MANALAGI SAMBA",
-                "KM. MANALAGI HITA",
-                "KM. MANALAGI VIRA",
-                "KM. MANALAGI YASA",
-                "KM. XYS SATU",
+                'KM. MANALAGI TISYA',
+                'KM. MANALAGI SAMBA',
+                'KM. MANALAGI HITA',
+                'KM. MANALAGI VIRA',
+                'KM. MANALAGI YASA',
+                'KM. XYS SATU',
               ],
             }}
           />
@@ -52,21 +52,21 @@ export function RotationKKM() {
             job="KKM"
             groups={{
               manalagi_kkm1: [
-                "KM. MANALAGI ASTA",
-                "KM. MANALAGI ASTI",
-                "KM. MANALAGI SAMBA",
-                "KM. MANALAGI YASA",
-                "KM. XYS SATU",
-                "KM. MANALAGI WANDA",
+                'KM. MANALAGI ASTA',
+                'KM. MANALAGI ASTI',
+                'KM. MANALAGI SAMBA',
+                'KM. MANALAGI YASA',
+                'KM. XYS SATU',
+                'KM. MANALAGI WANDA',
               ],
               manalagi_kkm2: [
-                "KM. MANALAGI TISYA",
-                "KM. MANALAGI PRITA",
-                "KM. MANALAGI DASA",
-                "KM. MANALAGI HITA",
-                "KM. MANALAGI ENZI",
-                "KM. MANALAGI TARA",
-                "KM. MANALAGI VIRA",
+                'KM. MANALAGI TISYA',
+                'KM. MANALAGI PRITA',
+                'KM. MANALAGI DASA',
+                'KM. MANALAGI HITA',
+                'KM. MANALAGI ENZI',
+                'KM. MANALAGI TARA',
+                'KM. MANALAGI VIRA',
               ],
             }}
           />

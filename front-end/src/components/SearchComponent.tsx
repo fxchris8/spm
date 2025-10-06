@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   Label,
@@ -9,9 +9,9 @@ import {
   Button,
   Table,
   Pagination,
-} from "flowbite-react";
+} from 'flowbite-react';
 
-import { CallComponent } from "./CallComponent";
+import { CallComponent } from './CallComponent';
 
 interface SearchProps {
   type: string;
@@ -33,13 +33,13 @@ export function SearchComponent({ type, part }: SearchProps) {
   // Controlled state untuk input form
   const [ageMin, setAgeMin] = useState<number>(0);
   const [ageMax, setAgeMax] = useState<number>(0);
-  const [certificate, setCertificate] = useState<string>("");
-  const [rank, setRank] = useState<string>("");
+  const [certificate, setCertificate] = useState<string>('');
+  const [rank, setRank] = useState<string>('');
   // Jika prop part tidak kosong, gunakan part; jika tidak, gunakan type.
-  const [bagian, setBagian] = useState<string>(part !== "" ? part : type);
+  const [bagian, setBagian] = useState<string>(part !== '' ? part : type);
 
   // State untuk vessel input dan dropdown
-  const [vesselInput, setVesselInput] = useState<string>("");
+  const [vesselInput, setVesselInput] = useState<string>('');
   const [filteredVessels, setFilteredVessels] = useState<string[]>([]);
 
   // State untuk hasil pencarian (candidates)
@@ -59,17 +59,17 @@ export function SearchComponent({ type, part }: SearchProps) {
     async function fetchOptions() {
       try {
         const res = await fetch(`${API_BASE_URL}/options`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: type, part: part }),
         });
         if (!res.ok) {
-          throw new Error("Failed to fetch options");
+          throw new Error('Failed to fetch options');
         }
         const data = await res.json();
         setOptions(data);
       } catch (error) {
-        console.error("Error fetching options:", error);
+        console.error('Error fetching options:', error);
       } finally {
         setLoadingOptions(false);
       }
@@ -77,9 +77,9 @@ export function SearchComponent({ type, part }: SearchProps) {
     // Reset semua state saat type/part berubah
     setAgeMin(0);
     setAgeMax(0);
-    setCertificate("");
-    setRank("");
-    setVesselInput("");
+    setCertificate('');
+    setRank('');
+    setVesselInput('');
     setFilteredVessels([]);
     setSearchResults([]);
     setCurrentPage(1);
@@ -95,7 +95,7 @@ export function SearchComponent({ type, part }: SearchProps) {
       setFilteredVessels([]);
       return;
     }
-    const filtered = options.vessel_option.filter((vessel) =>
+    const filtered = options.vessel_option.filter(vessel =>
       vessel.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredVessels(filtered);
@@ -112,7 +112,7 @@ export function SearchComponent({ type, part }: SearchProps) {
     e.preventDefault();
 
     if (isNaN(ageMin) || isNaN(ageMax)) {
-      alert("Age must be a valid number");
+      alert('Age must be a valid number');
       return;
     }
     const sheetName = `${capitalize(type)}-${capitalize(part)}`;
@@ -133,17 +133,17 @@ export function SearchComponent({ type, part }: SearchProps) {
 
     try {
       const res = await fetch(`${API_BASE_URL}/get-manual-search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Network response was not ok");
+      if (!res.ok) throw new Error('Network response was not ok');
       const data = await res.json();
       setSearchResults(data);
       setCurrentPage(1); // Reset halaman ke 1 pada pencarian baru
     } catch (error) {
-      console.error("Error fetching search results:", error);
-      alert("Failed to fetch search results");
+      console.error('Error fetching search results:', error);
+      alert('Failed to fetch search results');
     }
   };
 
@@ -183,7 +183,7 @@ export function SearchComponent({ type, part }: SearchProps) {
                   required
                   disabled
                   value={bagian}
-                  onChange={(e) => setBagian(e.target.value)}
+                  onChange={e => setBagian(e.target.value)}
                 >
                   <option value={bagian}>{bagian}</option>
                 </Select>
@@ -198,7 +198,7 @@ export function SearchComponent({ type, part }: SearchProps) {
                   max={85}
                   required
                   value={ageMin}
-                  onChange={(e) => setAgeMin(parseInt(e.target.value))}
+                  onChange={e => setAgeMin(parseInt(e.target.value))}
                 />
               </div>
               {/* Age Max */}
@@ -211,7 +211,7 @@ export function SearchComponent({ type, part }: SearchProps) {
                   max={85}
                   required
                   value={ageMax}
-                  onChange={(e) => setAgeMax(parseInt(e.target.value))}
+                  onChange={e => setAgeMax(parseInt(e.target.value))}
                 />
               </div>
               {/* Certificate */}
@@ -221,7 +221,7 @@ export function SearchComponent({ type, part }: SearchProps) {
                   id="certif-input"
                   required
                   defaultValue=""
-                  onChange={(e) => setCertificate(e.target.value)}
+                  onChange={e => setCertificate(e.target.value)}
                 >
                   <option value="" disabled>
                     Select Option
@@ -240,7 +240,7 @@ export function SearchComponent({ type, part }: SearchProps) {
                   id="rank-input"
                   required
                   defaultValue=""
-                  onChange={(e) => setRank(e.target.value)}
+                  onChange={e => setRank(e.target.value)}
                 >
                   <option value="" disabled>
                     Select Option
