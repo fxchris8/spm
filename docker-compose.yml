@@ -2,7 +2,7 @@ services:
   backend:
     build: 
       context: ./back-end
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     container_name: flask-backend
     ports:
       - "8048:5000"
@@ -16,7 +16,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     container_name: vite-frontend
     ports:
       - "8047:5173"
