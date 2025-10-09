@@ -15,10 +15,7 @@ export function NavbarComponent() {
       fluid
       className="bg-gradient-to-r from-red-700 to-red-900 shadow-lg border-red-950"
     >
-      <Navbar.Brand
-        href="/dashboard"
-        className="hover:opacity-90 transition-opacity"
-      >
+      <Navbar.Brand href="/" className="hover:opacity-90 transition-opacity">
         <img
           src="/logo.ico"
           className="mr-4 h-8 sm:h-10"

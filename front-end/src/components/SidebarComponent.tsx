@@ -26,9 +26,9 @@ export function SidebarComponent() {
       <Sidebar.Items>
         <Sidebar.ItemGroup>
           <Sidebar.Item
-            onClick={() => handleNavigation('/dashboard')}
+            onClick={() => handleNavigation('/')}
             icon={() => <HiChartPie className="w-5 h-5" />}
-            active={isActive('/dashboard')}
+            active={isActive('/')}
             className="cursor-pointer"
           >
             Dashboard

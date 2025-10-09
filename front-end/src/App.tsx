@@ -42,12 +42,12 @@ export function App() {
           style={{ marginLeft: '16rem' }}
         >
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/search_on_duty" element={<SearchOnDuty />} />
             <Route path="/search_off_duty" element={<SearchOffDuty />} />
             <Route path="/container_rotation" element={<RotationContainer />} />
             <Route path="/manalagi_rotation" element={<RotationKKM />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
