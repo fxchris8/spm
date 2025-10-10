@@ -50,7 +50,7 @@ export function InputComponent({
           onChange(selectedOptions.map(item => item.value));
         }
       }}
-      placeholder="Pilih atau ketik nama nahkoda..."
+      placeholder="Pilih atau ketik nama..."
       noOptionsMessage={() => 'Tidak ada pilihan'}
       className="react-select-container"
       classNamePrefix="react-select"

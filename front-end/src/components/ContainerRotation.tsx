@@ -5,7 +5,13 @@ import { useState, useEffect } from 'react';
 import { CardComponent } from './CardComponent';
 import { InputComponent } from './InputComponent';
 import { TableComponent } from './TableComponent';
-import { HiUserGroup, HiStar } from 'react-icons/hi';
+import {
+  HiUserGroup,
+  HiStar,
+  HiLockClosed,
+  HiLockOpen,
+  HiSave,
+} from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
 
@@ -27,6 +33,15 @@ interface ContainerProps {
   type: string;
   part: string;
   job: string;
+}
+
+interface LockedItem {
+  seamancode: string;
+  name: string;
+  groupKey: string;
+  vessels: string;
+  matchCount: number;
+  lockedAt: string;
 }
 
 export function ContainerRotation({
@@ -55,6 +70,13 @@ export function ContainerRotation({
   const [loadingPotential, setLoadingPotential] = useState(false);
   const [showOnlyMatchMutasi, setShowOnlyMatchMutasi] = useState(false);
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
+
+  // State untuk locked items
+  const [lockedItems, setLockedItems] = useState<Record<string, LockedItem>>(
+    {}
+  );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch cadangan job
@@ -71,7 +93,7 @@ export function ContainerRotation({
       });
   }, [job]);
 
-  // Fetch promotion candidates (merged dari PromotionNahkoda)
+  // Fetch promotion candidates
   useEffect(() => {
     const fetchPromotionCandidates = async () => {
       try {
@@ -150,6 +172,11 @@ export function ContainerRotation({
                 matchCount,
               };
             })
+            // Filter out items yang sudah locked di group lain
+            .filter(row => {
+              const locked = lockedItems[row.seamancode];
+              return !locked || locked.groupKey === selectedGroup;
+            })
             .sort((a, b) => b.matchCount - a.matchCount)
             .slice(0, 10);
           setMutasiRawData(rows);
@@ -164,7 +191,7 @@ export function ContainerRotation({
       .finally(() => {
         setLoadingGroup(false);
       });
-  }, [selectedGroup, job, API_BASE_URL, groups]);
+  }, [selectedGroup, job, API_BASE_URL, groups, lockedItems]);
 
   // Filter mutasi data (history/existing)
   useEffect(() => {
@@ -178,7 +205,7 @@ export function ContainerRotation({
       : mutasiRawData;
 
     setMutasiTable({
-      columns: ['seamancode', 'name', 'vessels', 'matchCount'],
+      columns: ['seamancode', 'name', 'vessels', 'matchCount', 'aksi'],
       data: filteredRows,
     });
   }, [mutasiRawData, showOnlyMatchMutasi]);
@@ -276,6 +303,58 @@ export function ContainerRotation({
   const handleCardClick = async (groupKey: string) => {
     setSelectedGroup(groupKey);
     setLoadingGroup(true);
+  };
+
+  // Handle Lock Item
+  const handleLockItem = (item: any) => {
+    if (!selectedGroup) return;
+
+    const lockedItem: LockedItem = {
+      seamancode: item.seamancode,
+      name: item.name,
+      groupKey: selectedGroup,
+      vessels: item.vessels,
+      matchCount: item.matchCount,
+      lockedAt: new Date().toISOString(),
+    };
+
+    setLockedItems(prev => ({
+      ...prev,
+      [item.seamancode]: lockedItem,
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Handle Unlock Item
+  const handleUnlockItem = (seamancode: string) => {
+    setLockedItems(prev => {
+      const newLocked = { ...prev };
+      delete newLocked[seamancode];
+      return newLocked;
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  // Handle Save Locked Items (Placeholder)
+  const handleSaveLockedItems = async () => {
+    try {
+      // TODO: Implement API call to save locked items
+      console.log('Saving locked items:', lockedItems);
+
+      // Placeholder untuk API call
+      // const response = await fetch(`${API_BASE_URL}/save_locked_items`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ lockedItems, job }),
+      // });
+
+      // Simulasi success
+      alert('Data berhasil disimpan! (Placeholder)');
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      console.error('Error saving locked items:', err);
+      alert('Gagal menyimpan data!');
+    }
   };
 
   // Generate schedule
@@ -382,12 +461,15 @@ export function ContainerRotation({
             return { col, mm, year: m[2] };
           })
           .filter(Boolean) as { col: string; mm: string; year: string }[];
+
         const firstSeen: Record<
           string,
           { mm: string; year: string; idx: number }
         > = {};
+
         const toIndex = (mm: string, year: string) =>
           parseInt(year, 10) * 12 + (parseInt(mm, 10) - 1);
+
         for (const { col, mm, year } of monthColsInfo) {
           const t = toIndex(mm, year);
           for (const row of rawScheduleTable.data || []) {
@@ -453,7 +535,7 @@ export function ContainerRotation({
       };
     }) || [];
 
-  // Tambahkan promotion candidates ke daftar (merged dari PromotionNahkoda)
+  // Tambahkan promotion candidates ke daftar
   const promotionItems = promotionCandidatesData.map(item => ({
     seamancode: String(item.seamancode).trim(),
     name: item.name,
@@ -515,6 +597,14 @@ export function ContainerRotation({
     }
   };
 
+  // Get locked items untuk group yang dipilih
+  const getLockedItemsForCurrentGroup = () => {
+    if (!selectedGroup) return [];
+    return Object.values(lockedItems).filter(
+      item => item.groupKey === selectedGroup
+    );
+  };
+
   return (
     <>
       <div className="text-3xl mb-3 font-bold">Generate Ship Crew Schedule</div>
@@ -522,6 +612,24 @@ export function ContainerRotation({
       {error && (
         <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50">
           {error}
+        </div>
+      )}
+
+      {/* Save Button - tampil jika ada perubahan yang belum disimpan */}
+      {hasUnsavedChanges && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-yellow-800">
+              Ada perubahan yang belum disimpan
+            </span>
+          </div>
+          <Button
+            gradientMonochrome="info"
+            size="sm"
+            onClick={handleSaveLockedItems}
+          >
+            Simpan Data Lock
+          </Button>
         </div>
       )}
 
@@ -569,51 +677,188 @@ export function ContainerRotation({
                     Tampilkan matchCount &gt; 0 saja
                   </label>
                 </div>
-                <TableComponent table={mutasiTable} />
-              </div>
-            )}
 
-            {/* POTENTIAL PROMOTION - Hanya tampil di group 7 & 8 untuk semua job */}
-            {(selectedGroup === 'container_rotation7' ||
-              selectedGroup === 'container_rotation8') && (
-              <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
-                <div className="flex items-center justify-between gap-3 mb-4 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <HiStar className="h-5 w-5 text-yellow-600" />
-                    </div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      POTENTIAL PROMOTION
-                    </h2>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={showOnlyMatchPotential}
-                      onChange={e =>
-                        setShowOnlyMatchPotential(e.target.checked)
-                      }
-                      className="rounded"
-                    />
-                    Tampilkan matchCount &gt; 0 saja
-                  </label>
+                {/* Custom Table with Lock/Unlock Actions */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left text-gray-700">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3">Seaman Code</th>
+                        <th className="px-4 py-3">Name</th>
+                        <th className="px-4 py-3">Vessels</th>
+                        <th className="px-4 py-3">Match Count</th>
+                        <th className="px-4 py-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mutasiTable.data.map((item, idx) => {
+                        const isLocked = !!lockedItems[item.seamancode];
+                        const isLockedInCurrentGroup =
+                          lockedItems[item.seamancode]?.groupKey ===
+                          selectedGroup;
+
+                        return (
+                          <tr
+                            key={idx}
+                            className={`border-b hover:bg-gray-50 ${
+                              isLocked && isLockedInCurrentGroup
+                                ? 'bg-green-50'
+                                : ''
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-medium">
+                              {item.seamancode}
+                            </td>
+                            <td className="px-4 py-3">{item.name}</td>
+                            <td className="px-4 py-3 text-xs">
+                              {item.vessels}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {item.matchCount}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isLocked && isLockedInCurrentGroup ? (
+                                <button
+                                  onClick={() =>
+                                    handleUnlockItem(item.seamancode)
+                                  }
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                  title="Unlock"
+                                >
+                                  <HiLockOpen className="h-4 w-4" />
+                                  Unlock
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleLockItem(item)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                                  title="Lock"
+                                >
+                                  <HiLockClosed className="h-4 w-4" />
+                                  Lock
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                {loadingPotential ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Spinner color="info" size="md" />
-                    <span className="ml-2 text-gray-700">Loading data...</span>
-                  </div>
-                ) : potentialTable && potentialTable.data.length > 0 ? (
-                  <TableComponent table={potentialTable} />
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    Tidak ada {getJobDisplayName(job)} yang mendapatkan
-                    potensial promosi
+                {/* Display locked items for current group */}
+                {getLockedItemsForCurrentGroup().length > 0 && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <h3 className="text-sm font-semibold text-green-800 mb-2">
+                      Locked Items ({getLockedItemsForCurrentGroup().length}
+                      ):
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {getLockedItemsForCurrentGroup().map(item => (
+                        <span
+                          key={item.seamancode}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-green-300 rounded-md text-xs"
+                        >
+                          <HiLockClosed className="h-3 w-3 text-green-600" />
+                          {item.seamancode} - {item.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
+
+            {/* POTENTIAL PROMOTION - Kondisi berbeda per job */}
+            {(() => {
+              // Untuk KKM dan masinisII: tampil di rotation6 dan rotation7
+              const isKKMorMasinisII = job === 'KKM' || job === 'masinisII';
+              const showForKKMorMasinisII =
+                isKKMorMasinisII &&
+                (selectedGroup === 'container_rotation6' ||
+                  selectedGroup === 'container_rotation7');
+
+              // Untuk nahkoda dan mualimI: tampil di rotation7 dan rotation8
+              const isNahkodaOrMualimI = job === 'nakhoda' || job === 'mualimI';
+              const showForNahkodaOrMualimI =
+                isNahkodaOrMualimI &&
+                (selectedGroup === 'container_rotation7' ||
+                  selectedGroup === 'container_rotation8');
+
+              return (
+                (showForKKMorMasinisII || showForNahkodaOrMualimI) && (
+                  <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
+                    <div className="flex items-center justify-between gap-3 mb-4 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-yellow-100 rounded-lg">
+                          <HiStar className="h-5 w-5 text-yellow-600" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                          POTENTIAL PROMOTION
+                        </h2>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={showOnlyMatchPotential}
+                          onChange={e =>
+                            setShowOnlyMatchPotential(e.target.checked)
+                          }
+                          className="rounded"
+                        />
+                        Tampilkan matchCount &gt; 0 saja
+                      </label>
+                    </div>
+
+                    {loadingPotential ? (
+                      <div className="flex justify-center items-center py-8">
+                        <Spinner color="info" size="md" />
+                        <span className="ml-2 text-gray-700">
+                          Loading data...
+                        </span>
+                      </div>
+                    ) : potentialTable && potentialTable.data.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-gray-700">
+                          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3">Seaman Code</th>
+                              <th className="px-4 py-3">Name</th>
+                              <th className="px-4 py-3">History</th>
+                              <th className="px-4 py-3">Match Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {potentialTable.data.map((item, idx) => (
+                              <tr
+                                key={idx}
+                                className="border-b hover:bg-gray-50"
+                              >
+                                <td className="px-4 py-3 font-medium">
+                                  {item.seamancode}
+                                </td>
+                                <td className="px-4 py-3">{item.name}</td>
+                                <td className="px-4 py-3 text-xs">
+                                  {item.history}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {item.matchCount}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        Tidak ada {getJobDisplayName(job)} yang mendapatkan
+                        potensial promosi
+                      </div>
+                    )}
+                  </div>
+                )
+              );
+            })()}
           </div>
         )
       )}
@@ -621,7 +866,7 @@ export function ContainerRotation({
       {/* Card for group selection */}
       <div className="mt-4 space-y-2">
         <label className="block text-sm font-medium text-gray-900">
-          Pilih Nahkoda Cadangan (Darat Stand By) [Wajib]:
+          Pilih {getJobDisplayName(job)} Cadangan (Darat Stand By) [Wajib]:
         </label>
         <InputComponent
           cadanganData={standByData}
@@ -634,7 +879,7 @@ export function ContainerRotation({
       {/* Card for optional standby selection */}
       <div className="mt-4 space-y-2">
         <label className="block text-sm font-medium text-gray-900">
-          Pilih Nahkoda Cadangan (Optional):
+          Pilih {getJobDisplayName(job)} Cadangan (Reliever):
         </label>
         <InputComponent
           cadanganData={optionalData}

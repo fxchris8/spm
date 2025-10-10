@@ -72,7 +72,7 @@ export function SidebarComponent() {
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/manalagi_rotation')}
-              icon={GoDotFill}
+              icon={() => <MdAutorenew className="w-5 h-5" />}
               active={isActive('/manalagi_rotation')}
               className="cursor-pointer"
             >
