@@ -4,7 +4,6 @@ import { Sidebar } from 'flowbite-react';
 import { HiChartPie } from 'react-icons/hi';
 import { FaSearch } from 'react-icons/fa';
 import { GiClockwiseRotation } from 'react-icons/gi';
-import { GoDotFill } from 'react-icons/go';
 import { MdWorkHistory, MdWorkOff, MdAutorenew } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
 

@@ -5,13 +5,7 @@ import { useState, useEffect } from 'react';
 import { CardComponent } from './CardComponent';
 import { InputComponent } from './InputComponent';
 import { TableComponent } from './TableComponent';
-import {
-  HiUserGroup,
-  HiStar,
-  HiLockClosed,
-  HiLockOpen,
-  HiSave,
-} from 'react-icons/hi';
+import { HiUserGroup, HiStar, HiLockClosed, HiLockOpen } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
 
