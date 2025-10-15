@@ -66,9 +66,7 @@ export function ContainerRotation({
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
 
   // State untuk locked items
-  const [lockedItems, setLockedItems] = useState<Record<string, LockedItem>>(
-    {}
-  );
+  const [lockedItems] = useState<Record<string, LockedItem>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
