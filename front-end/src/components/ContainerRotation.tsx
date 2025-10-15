@@ -199,7 +199,7 @@ export function ContainerRotation({
       : mutasiRawData;
 
     setMutasiTable({
-      columns: ['seamancode', 'name', 'vessels', 'matchCount', 'aksi'],
+      columns: ['seamancode', 'name', 'vessels', 'matchCount'],
       data: filteredRows,
     });
   }, [mutasiRawData, showOnlyMatchMutasi]);
@@ -681,7 +681,6 @@ export function ContainerRotation({
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3">Vessels</th>
                         <th className="px-4 py-3">Match Count</th>
-                        <th className="px-4 py-3 text-center">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -709,29 +708,6 @@ export function ContainerRotation({
                             </td>
                             <td className="px-4 py-3 text-center">
                               {item.matchCount}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {isLocked && isLockedInCurrentGroup ? (
-                                <button
-                                  onClick={() =>
-                                    handleUnlockItem(item.seamancode)
-                                  }
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                                  title="Unlock"
-                                >
-                                  <HiLockOpen className="h-4 w-4" />
-                                  Unlock
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleLockItem(item)}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                                  title="Lock"
-                                >
-                                  <HiLockClosed className="h-4 w-4" />
-                                  Lock
-                                </button>
-                              )}
                             </td>
                           </tr>
                         );
@@ -893,8 +869,12 @@ export function ContainerRotation({
       </Button>
 
       {nahkodaTable && (
-        <div className="mt-6 p-4 border rounded-lg bg-white overflow-x-auto">
-          <h2 className="text-lg font-semibold mb-2">NAHKODA:</h2>
+        <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-bold text-gray-900">
+              {getJobDisplayName(job)}
+            </h2>
+          </div>
           <TableComponent table={nahkodaTable} />
         </div>
       )}

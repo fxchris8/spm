@@ -123,7 +123,6 @@ export function PromotionNahkoda() {
                     <th className="px-4 py-3">Nama</th>
                     <th className="px-4 py-3">Rank</th>
                     <th className="px-4 py-3">History</th>
-                    <th className="px-4 py-3">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
