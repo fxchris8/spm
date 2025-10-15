@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { CardComponent } from './CardComponent';
 import { InputComponent } from './InputComponent';
 import { TableComponent } from './TableComponent';
-import { HiUserGroup, HiStar, HiLockClosed, HiLockOpen } from 'react-icons/hi';
+import { HiUserGroup, HiStar, HiLockClosed } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
 
@@ -297,36 +297,6 @@ export function ContainerRotation({
   const handleCardClick = async (groupKey: string) => {
     setSelectedGroup(groupKey);
     setLoadingGroup(true);
-  };
-
-  // Handle Lock Item
-  const handleLockItem = (item: any) => {
-    if (!selectedGroup) return;
-
-    const lockedItem: LockedItem = {
-      seamancode: item.seamancode,
-      name: item.name,
-      groupKey: selectedGroup,
-      vessels: item.vessels,
-      matchCount: item.matchCount,
-      lockedAt: new Date().toISOString(),
-    };
-
-    setLockedItems(prev => ({
-      ...prev,
-      [item.seamancode]: lockedItem,
-    }));
-    setHasUnsavedChanges(true);
-  };
-
-  // Handle Unlock Item
-  const handleUnlockItem = (seamancode: string) => {
-    setLockedItems(prev => {
-      const newLocked = { ...prev };
-      delete newLocked[seamancode];
-      return newLocked;
-    });
-    setHasUnsavedChanges(true);
   };
 
   // Handle Save Locked Items (Placeholder)
