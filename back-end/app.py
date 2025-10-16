@@ -215,7 +215,10 @@ combined_df = get_seamen_as_data()
 
 timestamp_file = "../last_request_time.txt"
 
-combined_df["DAY REMAINS DIFF"] = combined_df["day_remains"]
+# combined_df["DAY REMAINS DIFF"] = combined_df["day_remains"]
+combined_df["DAY REMAINS DIFF"] = pd.to_numeric(
+    combined_df["day_remains"], errors="coerce"
+)
 
 df_filtered = combined_df[combined_df["DAY REMAINS DIFF"] > 0][
     [
@@ -1427,6 +1430,6 @@ def filter_history():
 if __name__ == "__main__":
     port = 8048
     host = "0.0.0.0"
-    print(f"Flask app running on oort {port}")
+    print(f"Flask app running on port {port}")
 
     app.run(debug=True, port=port, host=host)
