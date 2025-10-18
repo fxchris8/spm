@@ -17,7 +17,14 @@ from model import (
     search_candidate,
     vessel_group_id_deck,
 )
-from request_api import get_nahkoda, get_nganggur, get_schedule
+from request_api import (
+    get_kkm,
+    get_masinisII,
+    get_mualimI,
+    get_nahkoda,
+    get_nganggur,
+    get_schedule,
+)
 
 app = Flask(__name__)
 CORS(app=app)
@@ -610,6 +617,41 @@ def df_to_json(df: pd.DataFrame):
 @app.route("/api/container_rotation", methods=["POST"])
 def container_rotation_api():
     try:
+        # Ambil parameter 'job' dari query string
+        job_raw = request.args.get("job", default="NAKHODA")
+
+        # LOGGING untuk debugging
+        print(f"[DEBUG] Query parameter 'job' yang diterima: '{job_raw}'")
+
+        # Mapping konsisten
+        job_mapping = {
+            "NAKHODA": "NAKHODA",
+            "KKM": "KKM",
+            "MUALIMI": "MUALIM I",
+            "MASINISII": "MASINIS II",
+        }
+
+        # Konversi ke uppercase dan validasi
+        job_raw_upper = job_raw.upper()
+
+        if job_raw_upper not in job_mapping:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Job '{job_raw}' tidak valid. Pilih antara: {', '.join(job_mapping.keys())}",
+                    }
+                ),
+                400,
+            )
+
+        # Ambil nilai job dari mapping
+        job = job_mapping[job_raw_upper]
+
+        # LOGGING
+        print(f"[DEBUG] Job setelah mapping: '{job}'")
+
+        # Ambil data dari request body
         data = request.get_json()
         if not data:
             return jsonify({"error": "Tidak ada data yang diterima"}), 400
@@ -623,35 +665,76 @@ def container_rotation_api():
         selected_group = data["selected_group"]
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
-        type = data.get("type")
+        type_vessel = data.get("type")
         part = data.get("part")
 
-        # Dapatkan DataFrame schedule & nahkoda
-        schedule_df = get_schedule(selected_group, cadangan, type, part)
-        nahkoda_df = get_nahkoda(selected_group, cadangan, type, part)
+        # LOGGING
+        print(f"[DEBUG] Memanggil get_schedule dengan job='{job}'")
+
+        # Dapatkan DataFrame schedule dengan parameter job
+        schedule_df = get_schedule(selected_group, cadangan, type_vessel, part, job)
+
+        # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
+        print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
+
+        if job == "NAKHODA":
+            crew_df = get_nahkoda(selected_group, cadangan, type_vessel, part)
+        elif job == "KKM":
+            crew_df = get_kkm(selected_group, cadangan, type_vessel, part)
+        elif job == "MUALIM I":
+            crew_df = get_mualimI(selected_group, cadangan, type_vessel, part)
+        elif job == "MASINIS II":
+            crew_df = get_masinisII(selected_group, cadangan, type_vessel, part)
+        else:
+            return jsonify({"error": f"Fungsi untuk job {job} belum tersedia"}), 400
+
+        print(f"[DEBUG] Crew DataFrame shape: {crew_df.shape}")
 
         # Konversi ke JSON
         schedule_json = df_to_json(schedule_df)
-        nahkoda_json = df_to_json(nahkoda_df)
+        nahkoda_json = df_to_json(crew_df)  # ← Tetap pakai nama variable "nahkoda_json"
 
         # Jika ada cadangan2
         darat_json = None
         if cadangan2:
-            darat_df = get_nahkoda(selected_group, cadangan2, type, part, "ONE")
-            darat_json = df_to_json(darat_df)
+            print(f"[DEBUG] Memproses cadangan2 untuk job='{job}'")
 
-        # Kembalikan JSON
+            if job == "NAKHODA":
+                darat_df = get_nahkoda(
+                    selected_group, cadangan2, type_vessel, part, "ONE"
+                )
+            elif job == "KKM":
+                darat_df = get_kkm(selected_group, cadangan2, type_vessel, part, "ONE")
+            elif job == "MUALIM I":
+                darat_df = get_mualimI(
+                    selected_group, cadangan2, type_vessel, part, "ONE"
+                )
+            elif job == "MASINIS II":
+                darat_df = get_masinisII(
+                    selected_group, cadangan2, type_vessel, part, "ONE"
+                )
+
+            darat_json = df_to_json(darat_df)
+            print(f"[DEBUG] Darat DataFrame shape: {darat_df.shape}")
+
+        # RESPONSE - TETAP GUNAKAN KEY "nahkoda"
+        print(f"[DEBUG] Mengirim response dengan job='{job}'")
+
         return jsonify(
             {
-                "schedule": schedule_json,  # data schedule
-                "nahkoda": nahkoda_json,  # data nahkoda
-                "darat": darat_json,  # data darat jika ada
+                "schedule": schedule_json,
+                "nahkoda": nahkoda_json,  # ← KEY TETAP "nahkoda"
+                "darat": darat_json,
             }
         )
 
     except Exception as e:
-        app.logger.error(f"Error: {str(e)}", exc_info=True)
-        return jsonify({"error": "Terjadi kesalahan internal"}), 500
+        app.logger.error(f"Error in container_rotation_api: {str(e)}", exc_info=True)
+        print(f"[ERROR] Exception: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"error": "Terjadi kesalahan internal", "message": str(e)}), 500
 
 
 @app.route("/api/get_cadangan_KKM")
@@ -722,7 +805,7 @@ def get_mutasi_filtered():
             "DARAT STAND-BY",
         ]
 
-        # Ambil seamancode berdasarkan job ('NAKHODA' atau 'KKM')
+        # Ambil seamancode berdasarkan job
         seamancode_terfilter = df_seamen[
             (df_seamen["last_location"].isin(lokasi_filter))
             & (df_seamen["last_position"] == job)  # Menyesuaikan filter dengan job
@@ -1412,12 +1495,18 @@ def filter_history():
             # Join jadi string
             history_str = ", ".join(filtered_vessels)
 
+            # Lihat last location
+            last_location = df_seamen[df_seamen["seamancode"] == row["seamancode"]][
+                "last_location"
+            ].values
+
             result.append(
                 {
                     "seamancode": row.get("seamancode", ""),
                     "name": row.get("name", ""),
                     "history": history_str,
                     "matchCount": match_count,
+                    "last_location": last_location[0] if len(last_location) > 0 else "",
                 }
             )
 

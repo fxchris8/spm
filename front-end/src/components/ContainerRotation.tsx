@@ -8,6 +8,7 @@ import { TableComponent } from './TableComponent';
 import { HiUserGroup, HiStar, HiLockClosed } from 'react-icons/hi';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
+import { data } from 'jquery';
 
 interface TableJson {
   columns: string[];
@@ -330,6 +331,7 @@ export function ContainerRotation({
       setError("Minimal 1 Nahkoda 'Darat Stand-By' harus dipilih!");
       return;
     }
+
     try {
       const mappedGroup = selectedGroup.replace('container_rotation', vessel);
       const payload = {
@@ -339,20 +341,34 @@ export function ContainerRotation({
         type: type,
         part: part,
       };
-      const response = await fetch(`${API_BASE_URL}/container_rotation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+
+      // Format job sama seperti di mutasi_filtered
+      const formattedJob = job.toUpperCase(); // ✅ Sama seperti contoh Anda
+
+      console.log('[DEBUG] Job yang digunakan:', formattedJob);
+
+      // Tambahkan query parameter job ke URL (sama seperti mutasi_filtered)
+      const response = await fetch(
+        `${API_BASE_URL}/container_rotation?job=${formattedJob}`, // ✅ Pattern yang sama!
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Gagal generate schedule');
       }
+
       const data: ApiResponse = await response.json();
+
       const rawScheduleTable = data.schedule || null;
       if (rawScheduleTable) {
         console.log('Schedule Columns:', rawScheduleTable.columns);
       }
+
       let cleanedScheduleTable = rawScheduleTable;
       if (cleanedScheduleTable?.columns?.includes('First Rotation Date')) {
         cleanedScheduleTable = {
@@ -365,7 +381,10 @@ export function ContainerRotation({
           ),
         };
       }
+
+      // Support kedua key: 'nahkoda' (backward compatibility) dan 'crew' (generic)
       let updatedNahkodaTable = data.nahkoda || null;
+
       if (updatedNahkodaTable && rawScheduleTable) {
         const monthToNum: Record<string, string> = {
           JANUARY: '01',
@@ -402,11 +421,13 @@ export function ContainerRotation({
           DEC: '12',
           DESEMBER: '12',
         };
+
         const normalize = (s: any) =>
           String(s ?? '')
             .replace(/\u00A0/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
+
         const monthColsInfo = (rawScheduleTable.columns || [])
           .map((col: string) => {
             const hdr = normalize(col);
@@ -462,6 +483,7 @@ export function ContainerRotation({
           }),
         };
       }
+
       setScheduleTable(cleanedScheduleTable);
       setNahkodaTable(updatedNahkodaTable);
       setDaratTable(data.darat || null);
@@ -657,6 +679,8 @@ export function ContainerRotation({
                         const isLockedInCurrentGroup =
                           lockedItems[item.seamancode]?.groupKey ===
                           selectedGroup;
+
+                        // console.log("DATA: ", mutasiTable.data);
 
                         return (
                           <tr
