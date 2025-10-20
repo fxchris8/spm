@@ -67,6 +67,186 @@ def get_mutations_as_data():
 
 
 # ============================================================================
+# BAGIAN 1B: LOCKED ROTATIONS MANAGEMENT (Untuk Lock/Unlock Feature)
+# ============================================================================
+
+
+def get_locked_rotations(job=None):
+    try:
+        if job:
+            query = """
+                SELECT id, group_key, job, schedule_data, crew_data, reliever_data, 
+                       locked_seaman_codes, locked_at, locked_by, is_active
+                FROM locked_rotation_schedules
+                WHERE job = :job AND is_active = TRUE
+                ORDER BY locked_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query), {"job": job})
+                rows = result.fetchall()
+        else:
+            query = """
+                SELECT id, group_key, job, schedule_data, crew_data, reliever_data, 
+                       locked_seaman_codes, locked_at, locked_by, is_active
+                FROM locked_rotation_schedules
+                WHERE is_active = TRUE
+                ORDER BY locked_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query))
+                rows = result.fetchall()
+
+        # Convert to list of dicts
+        # Parse JSON strings dari TEXT columns
+        records = []
+        for row in rows:
+            records.append(
+                {
+                    "id": row[0],
+                    "group_key": row[1],
+                    "job": row[2],
+                    "schedule_data": (
+                        json.loads(row[3]) if row[3] else None
+                    ),  # Parse JSON string
+                    "crew_data": (
+                        json.loads(row[4]) if row[4] else None
+                    ),  # Parse JSON string
+                    "reliever_data": (
+                        json.loads(row[5]) if row[5] else None
+                    ),  # Parse JSON string
+                    "locked_seaman_codes": row[6],
+                    "locked_at": row[7].isoformat() if row[7] else None,
+                    "locked_by": row[8],
+                    "is_active": row[9],
+                }
+            )
+
+        print(f"DONE - Fetched {len(records)} locked rotation records")
+        return records
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch locked rotations: {str(e)}")
+
+
+def save_locked_rotation(
+    group_key,
+    job,
+    schedule_data,
+    crew_data,
+    reliever_data,
+    locked_seaman_codes,
+    locked_by=None,
+):
+    try:
+        # Convert dict to JSON string (untuk TEXT column)
+        schedule_json = json.dumps(schedule_data)
+        crew_json = json.dumps(crew_data)
+        reliever_json = json.dumps(reliever_data) if reliever_data else None
+
+        # First, deactivate any existing active lock for this group+job
+        deactivate_query = """
+            UPDATE locked_rotation_schedules
+            SET is_active = FALSE, unlocked_at = NOW()
+            WHERE group_key = :group_key AND job = :job AND is_active = TRUE
+        """
+
+        # Then insert new lock
+        insert_query = """
+            INSERT INTO locked_rotation_schedules 
+            (group_key, job, schedule_data, crew_data, reliever_data, 
+             locked_seaman_codes, locked_by, is_active, locked_at)
+            VALUES (:group_key, :job, :schedule_data, :crew_data, :reliever_data, 
+                    :locked_seaman_codes, :locked_by, TRUE, NOW())
+            RETURNING id
+        """
+
+        with engine.connect() as conn:
+            # Deactivate existing
+            conn.execute(text(deactivate_query), {"group_key": group_key, "job": job})
+
+            # Insert new (dengan JSON string, bukan JSONB)
+            result = conn.execute(
+                text(insert_query),
+                {
+                    "group_key": group_key,
+                    "job": job,
+                    "schedule_data": schedule_json,  # JSON string
+                    "crew_data": crew_json,  # JSON string
+                    "reliever_data": reliever_json,  # JSON string or None
+                    "locked_seaman_codes": locked_seaman_codes,
+                    "locked_by": locked_by,
+                },
+            )
+
+            conn.commit()
+            new_id = result.fetchone()[0]
+
+        print(f"DONE - Saved locked rotation for {group_key} ({job}) with ID {new_id}")
+        return {
+            "success": True,
+            "message": f"Rotasi untuk {group_key} berhasil di-lock",
+            "id": new_id,
+        }
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to save locked rotation: {str(e)}")
+
+
+def unlock_rotation(group_key, job):
+    try:
+        query = """
+            UPDATE locked_rotation_schedules
+            SET is_active = FALSE, unlocked_at = NOW()
+            WHERE group_key = :group_key AND job = :job AND is_active = TRUE
+            RETURNING id
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), {"group_key": group_key, "job": job})
+            conn.commit()
+
+            unlocked = result.fetchone()
+
+            if unlocked:
+                print(f"DONE - Unlocked rotation for {group_key} ({job})")
+                return {
+                    "success": True,
+                    "message": f"Rotasi untuk {group_key} berhasil di-unlock",
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": f"Tidak ada rotasi aktif untuk {group_key}",
+                }
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to unlock rotation: {str(e)}")
+
+
+def get_all_locked_seaman_codes(job):
+    try:
+        query = """
+            SELECT DISTINCT UNNEST(locked_seaman_codes) as seamancode
+            FROM locked_rotation_schedules
+            WHERE job = :job AND is_active = TRUE
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), {"job": job})
+            codes = [row[0] for row in result.fetchall()]
+
+        print(f"DONE - Found {len(codes)} locked seaman codes for {job}")
+        return codes
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch locked seaman codes: {str(e)}")
+
+
+# ============================================================================
 # BAGIAN 2: FETCH DATA DARI API ASLI (Untuk Scheduler)
 # ============================================================================
 

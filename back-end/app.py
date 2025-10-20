@@ -10,7 +10,14 @@ from flask_cors import CORS
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
-from database import get_mutations_as_data, get_seamen_as_data
+from database import (
+    get_all_locked_seaman_codes,
+    get_locked_rotations,
+    get_mutations_as_data,
+    get_seamen_as_data,
+    save_locked_rotation,
+    unlock_rotation,
+)
 from model import (
     filter_in_vessel,
     getRecommendation,
@@ -771,6 +778,10 @@ def get_mutasi_filtered():
         # Ambil parameter 'job' dari query string
         job_raw = request.args.get("job", default=None)
 
+        # Ambil parameter 'locked_codes' dari query string (optional)
+        locked_codes_str = request.args.get("locked_codes", default="")
+        locked_codes = set(locked_codes_str.split(",")) if locked_codes_str else set()
+
         job_mapping = {
             "NAKHODA": "NAKHODA",
             "KKM": "KKM",
@@ -839,6 +850,14 @@ def get_mutasi_filtered():
             )
             .to_dict()
         )
+
+        # Filter out locked cadangan codes (not reliever)
+        if locked_codes:
+            mutasi_dict_filtered = {
+                seamancode: data
+                for seamancode, data in mutasi_dict_filtered.items()
+                if seamancode not in locked_codes
+            }
 
         # Kirim response JSON
         return jsonify({"status": "success", "data": mutasi_dict_filtered})
@@ -1366,72 +1385,6 @@ def save_excel():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# Kode lama, pake Excel
-# @app.route("/api/filter_history", methods=["GET"])
-# def filter_history():
-#     file_path = "../data/seaman_selected.xlsx"
-
-#     allowed_status = [
-#         "PENDING CUTI",
-#         "PENDING GAJI",
-#         "DARAT BIASA",
-#         "DARAT",
-#         "DARAT STAND-BY",
-#     ]
-
-#     try:
-#         df = pd.read_excel(file_path)
-
-#         # Cek kolom wajib
-#         if "history" not in df.columns or "code" not in df.columns:
-#             return (
-#                 jsonify(
-#                     {
-#                         "status": "error",
-#                         "message": "Kolom 'history' atau 'code' tidak ditemukan.",
-#                     }
-#                 ),
-#                 400,
-#             )
-
-#         # Ambil parameter group kapal dari frontend, multiple ?group=xxx&group=yyy
-#         group_vessels = request.args.getlist("group")
-
-#         result = []
-
-#         for _, row in df.iterrows():
-#             history_str = str(row.get("history", ""))
-
-#             # Split kapal dari history (pisah koma, trim spasi)
-#             history_vessels = [v.strip() for v in history_str.split(",") if v.strip()]
-
-#             # Hitung match kapal yang ada di group_vessels dan history_vessels
-#             match_count = sum(1 for v in history_vessels if v in group_vessels)
-
-#             # Buang kata-kata allowed_status dari history_str supaya tidak tampil di tabel
-#             filtered_history = history_str
-#             for status in allowed_status:
-#                 filtered_history = filtered_history.replace(status, "")
-#             # Hilangkan koma ekstra dan spasi berlebih setelah penghapusan kata status
-#             filtered_history = ",".join(
-#                 [v.strip() for v in filtered_history.split(",") if v.strip()]
-#             )
-
-#             result.append(
-#                 {
-#                     "seamancode": row.get("code", ""),
-#                     "name": row.get("name", ""),
-#                     "history": filtered_history,
-#                     "matchCount": match_count,
-#                 }
-#             )
-
-#         return jsonify({"status": "success", "data": result, "count": len(result)})
-
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
-
-
 @app.route("/api/filter_history", methods=["GET"])
 def filter_history():
     allowed_status = [
@@ -1513,6 +1466,140 @@ def filter_history():
         return jsonify({"status": "success", "data": result, "count": len(result)})
 
     except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ============================================================================
+# LOCKED ROTATIONS API ENDPOINTS
+# ============================================================================
+
+
+@app.route("/api/locked_rotations", methods=["GET"])
+def api_get_locked_rotations():
+    """Get all locked rotations for a specific job"""
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Fetch dari database menggunakan fungsi di database.py
+        locked_data = get_locked_rotations(job=job)
+
+        return jsonify({"status": "success", "data": locked_data})
+
+    except Exception as e:
+        app.logger.error(f"Error fetching locked rotations: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/locked_rotations", methods=["POST"])
+def api_save_locked_rotation():
+    """Save a locked rotation"""
+    try:
+        data = request.get_json()
+
+        # Validasi required fields
+        required_fields = [
+            "groupKey",
+            "job",
+            "scheduleTable",
+            "nahkodaTable",
+            "lockedSeamanCodes",
+        ]
+        for field in required_fields:
+            if field not in data:
+                return (
+                    jsonify({"status": "error", "message": f"Field {field} required"}),
+                    400,
+                )
+
+        group_key = data["groupKey"]
+        job = data["job"].upper()
+        schedule_table = data["scheduleTable"]
+        nahkoda_table = data["nahkodaTable"]
+        darat_table = data.get("daratTable")
+        locked_seaman_codes = data["lockedSeamanCodes"]
+        locked_by = data.get("lockedBy")  # Optional: user info
+
+        # Validasi seaman codes adalah list
+        if not isinstance(locked_seaman_codes, list):
+            return (
+                jsonify(
+                    {"status": "error", "message": "lockedSeamanCodes must be an array"}
+                ),
+                400,
+            )
+
+        # Simpan ke database menggunakan fungsi di database.py
+        result = save_locked_rotation(
+            group_key=group_key,
+            job=job,
+            schedule_data=schedule_table,
+            crew_data=nahkoda_table,
+            reliever_data=darat_table,
+            locked_seaman_codes=locked_seaman_codes,
+            locked_by=locked_by,
+        )
+
+        return jsonify(
+            {"status": "success", "message": result["message"], "id": result.get("id")}
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error saving locked rotation: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/locked_rotations/<group_key>", methods=["DELETE"])
+def api_unlock_rotation(group_key):
+    """Unlock a rotation"""
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Unlock menggunakan fungsi di database.py
+        result = unlock_rotation(group_key=group_key, job=job)
+
+        if result["success"]:
+            return jsonify({"status": "success", "message": result["message"]})
+        else:
+            return jsonify({"status": "error", "message": result["message"]}), 404
+
+    except Exception as e:
+        app.logger.error(f"Error unlocking rotation: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/locked_seaman_codes", methods=["GET"])
+def api_get_locked_seaman_codes():
+    """Get all locked seaman codes for filtering"""
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Fetch locked codes menggunakan fungsi di database.py
+        locked_codes = get_all_locked_seaman_codes(job=job)
+
+        return jsonify(
+            {"status": "success", "data": locked_codes, "count": len(locked_codes)}
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching locked seaman codes: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
