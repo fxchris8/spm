@@ -1,54 +1,82 @@
-# React + TypeScript + Vite
+<!-- @faw_sd -->
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Ship Personnel Management (SPM) System
 
-Currently, two official plugins are available:
+Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, dan penjadwalan awak kapal. Sistem ini membantu dalam perencanaan rotasi nahkoda, KKM (Kepala Kamar Mesin), dan crew lainnya di berbagai jenis kapal.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Deskripsi Repository
 
-## Expanding the ESLint configuration
+### Back-end
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Framework**: Flask (Python)
+- **Fungsi**:
+  - API untuk manajemen data seaman/awak kapal
+  - Sistem rekomendasi menggunakan Word2Vec dan similarity matching
+  - Penjadwalan otomatis rotasi crew
+  - Integrasi dengan data API eksternal
+  - Background scheduler untuk fetch data berkala
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### Front-end
+
+- **Framework**: React 19 + TypeScript
+- **UI Library**: Flowbite React + Tailwind CSS
+- **Fungsi**:
+  - Dashboard monitoring awak kapal
+  - Interface untuk rotasi container dan manalagi ships
+  - Manajemen promosi nahkoda dan KKM
+  - Export data ke Excel
+  - Search dan filter data crew
+
+## Cara Menjalankan
+
+### Menggunakan Docker Compose (Recommended)
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd spm
+
+# Build dan jalankan semua services
+docker-compose up --build
+
+# Akses aplikasi:
+# Frontend: http://localhost:8047
+# Backend API: http://localhost:8048
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Menjalankan di Localhost
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+#### 1. Setup Backend (Flask)
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+# Masuk ke direktori back-end
+cd back-end
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Jalankan Flask server
+python app.py
+
+# Server akan berjalan di http://localhost:5000
 ```
+
+#### 2. Setup Frontend (React)
+
+```bash
+# Masuk ke direktori front-end
+cd front-end
+
+# Install dependencies
+npm install
+
+# Jalankan development server
+npm run dev
+
+# Server akan berjalan di http://localhost:5173
+```
+
+### Environment Variables
+
+Pastikan mengatur environment variable dengan melihat file .env.example
+

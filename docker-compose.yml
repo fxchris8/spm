@@ -1,24 +1,79 @@
+version: '3.8'
+
 services:
+  # Backend API (app.py)
   backend:
     build: 
       context: ./back-end
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     container_name: flask-backend
     ports:
       - "8048:5000"
     volumes:
       - ./back-end:/app
       - ./data:/data
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - ./back-end/.env
+    command: python app.py
+    restart: unless-stopped
+    networks:
+      - spm-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # Scheduler (database.py) - Service terpisah!
+  scheduler:
+    build: 
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: seamen-scheduler
+    volumes:
+      - ./back-end:/app
+      - ./data:/data
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - ./back-end/.env
+    command: python database.py
+    restart: unless-stopped
+    networks:
+      - spm-net
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Frontend
   frontend:
     build:
-      context: .
-      dockerfile: DockerFile
+      context: ./front-end
+      dockerfile: Dockerfile
     container_name: vite-frontend
     ports:
       - "8047:5173"
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=$(VITE_API_BASE_URL)
     depends_on:
       - backend
+    restart: unless-stopped
+    networks:
+      - spm-net
+
 networks:
   spm-net:
     name: spm-net
