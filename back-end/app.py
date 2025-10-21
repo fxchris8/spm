@@ -780,7 +780,13 @@ def get_mutasi_filtered():
 
         # Ambil parameter 'locked_codes' dari query string (optional)
         locked_codes_str = request.args.get("locked_codes", default="")
+        # Convert ke set untuk filtering yang lebih cepat
         locked_codes = set(locked_codes_str.split(",")) if locked_codes_str else set()
+
+        # Remove empty strings dari set
+        locked_codes = {code.strip() for code in locked_codes if code.strip()}
+
+        print(f"[DEBUG] Locked codes received: {locked_codes}")  # Debugging
 
         job_mapping = {
             "NAKHODA": "NAKHODA",
@@ -819,12 +825,25 @@ def get_mutasi_filtered():
         # Ambil seamancode berdasarkan job
         seamancode_terfilter = df_seamen[
             (df_seamen["last_location"].isin(lokasi_filter))
-            & (df_seamen["last_position"] == job)  # Menyesuaikan filter dengan job
+            & (df_seamen["last_position"] == job)
         ]["seamancode"].unique()
 
-        # Filter df_history berdasarkan seamancode
+        # **FILTER OUT LOCKED CODES DI SINI**
+        print(f"[DEBUG] Before filtering: {len(seamancode_terfilter)} seamen")
+
+        # Convert seamancode_terfilter to strings untuk konsistensi
+        seamancode_terfilter = [str(code).strip() for code in seamancode_terfilter]
+
+        # Filter out locked codes
+        seamancode_terfilter = [
+            code for code in seamancode_terfilter if code not in locked_codes
+        ]
+
+        print(f"[DEBUG] After filtering: {len(seamancode_terfilter)} seamen")
+
+        # Filter df_history berdasarkan seamancode yang sudah difilter
         df_mutasi_filtered = df_history[
-            df_history["seamancode"].isin(seamancode_terfilter)
+            df_history["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
         ]
 
         # Merge untuk mendapatkan nama
@@ -851,18 +870,13 @@ def get_mutasi_filtered():
             .to_dict()
         )
 
-        # Filter out locked cadangan codes (not reliever)
-        if locked_codes:
-            mutasi_dict_filtered = {
-                seamancode: data
-                for seamancode, data in mutasi_dict_filtered.items()
-                if seamancode not in locked_codes
-            }
+        print(f"[DEBUG] Final result count: {len(mutasi_dict_filtered)}")
 
         # Kirim response JSON
         return jsonify({"status": "success", "data": mutasi_dict_filtered})
 
     except Exception as e:
+        app.logger.error(f"Error in mutasi_filtered: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

@@ -66,6 +66,7 @@ export function ContainerRotation({
   const [error, setError] = useState<string>('');
   const [loadingGroup, setLoadingGroup] = useState(false);
   const [loadingPotential, setLoadingPotential] = useState(false);
+  const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [showOnlyMatchMutasi, setShowOnlyMatchMutasi] = useState(false);
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
 
@@ -123,20 +124,42 @@ export function ContainerRotation({
         if (data.status === 'success') {
           const locksMap: Record<string, LockedRotation> = {};
           data.data.forEach((item: any) => {
-            // Parse locked codes with backward compatibility
+            // Parse locked codes
             const allLockedCodes = item.locked_seaman_codes || [];
             const nahkodaData = item.crew_data?.data || [];
             const daratData = item.reliever_data?.data || [];
 
-            // Extract cadangan codes from nahkoda table
-            const cadanganCodes = nahkodaData.map((row: any) =>
-              String(row.seamancode || row.SEAMANCODE || '')
-            );
+            // 🔍 FIX: Add all case variations including 'Seamancode'
+            const cadanganCodes = nahkodaData
+              .map((row: any) => {
+                const code = String(
+                  row.seamancode ||
+                    row.SEAMANCODE ||
+                    row.Seamancode || // ✅ ADD THIS
+                    row.SeamanCode ||
+                    row.seaman_code ||
+                    row.SEAMAN_CODE ||
+                    ''
+                ).trim();
+                return code;
+              })
+              .filter((code: string) => code !== '');
 
-            // Extract reliever codes from darat table
-            const relieverCodes = daratData.map((row: any) =>
-              String(row.seamancode || row.SEAMANCODE || '')
-            );
+            // 🔍 FIX: Same for reliever codes
+            const relieverCodes = daratData
+              .map((row: any) => {
+                const code = String(
+                  row.seamancode ||
+                    row.SEAMANCODE ||
+                    row.Seamancode || // ✅ ADD THIS
+                    row.SeamanCode ||
+                    row.seaman_code ||
+                    row.SEAMAN_CODE ||
+                    ''
+                ).trim();
+                return code;
+              })
+              .filter((code: string) => code !== '');
 
             locksMap[item.group_key] = {
               groupKey: item.group_key,
@@ -150,14 +173,23 @@ export function ContainerRotation({
               lockedAt: item.locked_at,
             };
           });
+
           setLockedRotations(locksMap);
           console.log(
-            `Loaded ${Object.keys(locksMap).length} locked rotations for ${job}`
+            `✅ Loaded ${
+              Object.keys(locksMap).length
+            } locked rotations for ${job}`
           );
+
+          // Log untuk verify
+          Object.entries(locksMap).forEach(([key, lock]) => {
+            console.log(
+              `${key}: ${lock.lockedCadanganCodes.length} cadangan codes`
+            );
+          });
         }
       } catch (err) {
         console.error('Error loading locked rotations:', err);
-        // Fallback: coba load dari localStorage jika API gagal
         try {
           const savedLocks = localStorage.getItem(`locked_rotations_${job}`);
           if (savedLocks) {
@@ -271,10 +303,22 @@ export function ContainerRotation({
     setLoadingGroup(true);
     const formattedJob = job.toUpperCase();
 
-    // Get ONLY locked CADANGAN codes (not reliever) for this job across all groups
+    // 🔍 FIX: Case-insensitive job comparison
     const lockedCadanganCodes = Object.values(lockedRotations)
-      .filter(lock => lock.job === job)
+      .filter(lock => lock.job?.toUpperCase() === job.toUpperCase()) // ✅ Compare uppercase
       .flatMap(lock => lock.lockedCadanganCodes || []);
+
+    // console.log('=== MUTASI FILTERING DEBUG ===');
+    // console.log('Selected Group:', selectedGroup);
+    // console.log('Job:', job);
+    // console.log('Locked Cadangan Codes:', lockedCadanganCodes);
+    // console.log('Number of locked codes:', lockedCadanganCodes.length);
+
+    // const gegoloCode = '20170046';
+    // console.log(
+    //   `Is ${gegoloCode} locked?`,
+    //   lockedCadanganCodes.includes(gegoloCode)
+    // );
 
     // Send locked codes to backend for filtering
     const params = new URLSearchParams({
@@ -286,7 +330,9 @@ export function ContainerRotation({
       params.append('locked_codes', lockedCadanganCodes.join(','));
     }
 
-    fetch(`${API_BASE_URL}/mutasi_filtered?${params.toString()}`)
+    const apiUrl = `${API_BASE_URL}/mutasi_filtered?${params.toString()}`;
+
+    fetch(apiUrl)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -307,11 +353,13 @@ export function ContainerRotation({
               };
             })
             .sort((a, b) => b.matchCount - a.matchCount)
-            .slice(0, 10);
+            .slice(0, 50);
+
           setMutasiRawData(rows);
         } else {
           setMutasiRawData([]);
         }
+        // console.log('=== END DEBUG ===');
       })
       .catch(err => {
         console.error('Gagal load mutasi data:', err);
@@ -389,7 +437,7 @@ export function ContainerRotation({
           }))
           .filter((r: any) => r.seamancode && allowed.has(r.seamancode))
           .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
-          .slice(0, 10);
+          .slice(0, 50);
         setPotentialRawData(rows);
       })
       .catch(err => {
@@ -451,14 +499,30 @@ export function ContainerRotation({
 
     // Extract seaman codes from nahkoda table (CADANGAN - will be filtered from EXISTING)
     const lockedCadanganCodes = nahkodaTable.data.map((row: any) =>
-      String(row.seamancode || row.SEAMANCODE || '')
+      String(
+        row.seamancode ||
+          row.SEAMANCODE ||
+          row.Seamancode || // ✅ ADD THIS
+          row.SeamanCode ||
+          row.seaman_code ||
+          row.SEAMAN_CODE ||
+          ''
+      )
     );
 
     // Extract seaman codes from darat table (RELIEVER - will NOT be filtered)
     const lockedRelieverCodes: string[] = [];
     if (daratTable) {
       const daratCodes = daratTable.data.map((row: any) =>
-        String(row.seamancode || row.SEAMANCODE || '')
+        String(
+          row.seamancode ||
+            row.SEAMANCODE ||
+            row.Seamancode || // ✅ ADD THIS
+            row.SeamanCode ||
+            row.seaman_code ||
+            row.SEAMAN_CODE ||
+            ''
+        )
       );
       lockedRelieverCodes.push(...daratCodes);
     }
@@ -475,7 +539,7 @@ export function ContainerRotation({
         },
         body: JSON.stringify({
           groupKey: selectedGroup,
-          job: job,
+          job: job.toUpperCase(),
           scheduleTable: scheduleTable,
           nahkodaTable: nahkodaTable,
           daratTable: daratTable,
@@ -586,6 +650,8 @@ export function ContainerRotation({
       );
       return;
     }
+
+    setLoadingGenerate(true);
 
     try {
       const mappedGroup = selectedGroup.replace('container_rotation', vessel);
@@ -734,9 +800,13 @@ export function ContainerRotation({
       setScheduleTable(cleanedScheduleTable);
       setNahkodaTable(updatedNahkodaTable);
       setDaratTable(data.darat || null);
+
+      showAlert('success', 'Schedule berhasil di-generate!');
     } catch (err: any) {
       console.error('Error:', err);
       setError(err.message || 'Terjadi kesalahan saat memproses');
+    } finally {
+      setLoadingGenerate(false);
     }
   };
 
@@ -785,7 +855,7 @@ export function ContainerRotation({
 
   // Filter out locked CADANGAN codes (not reliever) from select fields
   const lockedCadanganCodes = Object.values(lockedRotations)
-    .filter(lock => lock.job === job)
+    .filter(lock => lock.job?.toUpperCase() === job.toUpperCase()) // ✅ Case insensitive
     .flatMap(lock => lock.lockedCadanganCodes || []);
 
   const filteredCadanganItems = allCadanganItems.filter(
@@ -1085,8 +1155,16 @@ export function ContainerRotation({
                   gradientMonochrome="success"
                   className="mt-4 w-full sm:w-auto"
                   onClick={handleGenerateSchedule}
+                  disabled={loadingGenerate || isCurrentGroupLocked}
                 >
-                  Generate Schedule
+                  {loadingGenerate ? (
+                    <>
+                      <Spinner size="sm" light className="mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Schedule'
+                  )}
                 </Button>
               </>
             )}
