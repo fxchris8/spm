@@ -4,6 +4,7 @@ import { NavbarComponent } from './components/NavbarComponent';
 import { SidebarComponent } from './components/SidebarComponent';
 import { Dashboard } from './components/Dashboard';
 import { RotationContainer } from './components/RotationContainer';
+import { RotationSchedule } from './components/RotationSchedule';
 import { RotationKKM } from './components/RotationKKM';
 import { SearchOnDuty } from './components/SearchOnDuty';
 import { SearchOffDuty } from './components/SearchOffDuty';
@@ -46,6 +47,7 @@ export function App() {
             <Route path="/search_on_duty" element={<SearchOnDuty />} />
             <Route path="/search_off_duty" element={<SearchOffDuty />} />
             <Route path="/container_rotation" element={<RotationContainer />} />
+            <Route path="/schedule_rotation" element={<RotationSchedule />} />
             <Route path="/manalagi_rotation" element={<RotationKKM />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

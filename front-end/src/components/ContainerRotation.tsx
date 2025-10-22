@@ -387,7 +387,7 @@ export function ContainerRotation({
     });
   }, [mutasiRawData, showOnlyMatchMutasi]);
 
-  // Fetch potential promotion data - filter locked codes
+  // Fetch potential promotion data - filter out locked cadangan codes
   useEffect(() => {
     if (!selectedGroup) {
       setPotentialRawData([]);
@@ -403,6 +403,8 @@ export function ContainerRotation({
       .map(g => `group=${encodeURIComponent(g)}`)
       .join('&');
     const historyUrl = `${API_BASE_URL}/filter_history?${queryParams}`;
+
+    // Tentukan endpoint kandidat promosi berdasarkan job
     const getPromotionEndpoint = (job: string): string => {
       const endpoints: Record<string, string> = {
         nakhoda: `${API_BASE_URL}/seamen/promotion_candidates`,
@@ -413,32 +415,118 @@ export function ContainerRotation({
       return endpoints[job] || `${API_BASE_URL}/seamen/promotion_candidates`;
     };
     const candidateUrl = getPromotionEndpoint(job);
+
     const getCode = (x: any) =>
       String(
         x?.seamancode ?? x?.code ?? x?.seaman_code ?? x?.seamanCode ?? ''
       ).trim();
 
+    // Tentukan job sumber promosi (misal: Nakhoda <- Mualim I)
+    const getPromotionSourceJob = (targetJob: string): string | null => {
+      const normalized = targetJob.trim().toUpperCase();
+      switch (normalized) {
+        case 'NAKHODA':
+          return 'MUALIMI';
+        case 'KKM':
+          return 'MASINISII';
+        case 'MUALIMI':
+          return 'MUALIMII';
+        case 'MASINISII':
+          return 'MASINISIII';
+        default:
+          return null;
+      }
+    };
+
+    // Normalisasi teks untuk perbandingan aman
+    const normalizeJob = (str?: string) =>
+      str ? str.toUpperCase().replace(/\s+/g, '').trim() : '';
+
+    const sourceJob = getPromotionSourceJob(job);
+
+    // --- Tambahan utama di solusi ini ---
+    // Fetch locked rotations khusus untuk source job (misal MUALIMI)
+    const fetchLockedSourceJob = async (): Promise<string[]> => {
+      if (!sourceJob) return [];
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/locked_rotations?job=${sourceJob}`,
+          { signal: controller.signal }
+        );
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          // Asumsikan struktur backend: { <id>: { job: ..., lockedCadanganCodes: [...] } }
+          return Object.values(data.data)
+            .filter(
+              (lock: any) => normalizeJob(lock.job) === normalizeJob(sourceJob)
+            )
+            .flatMap((lock: any) => {
+              // Ambil nilai dari locked_seaman_codes (string atau array)
+              const raw =
+                lock.locked_seaman_codes ?? lock.lockedCadanganCodes ?? [];
+
+              if (Array.isArray(raw)) {
+                return raw;
+              }
+
+              // Kalau string JSON (misal: '["A123", "B456"]'), parse dulu
+              if (typeof raw === 'string') {
+                try {
+                  const parsed = JSON.parse(raw);
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  return [];
+                }
+              }
+
+              return [];
+            });
+        }
+        return [];
+      } catch (err) {
+        console.error('Gagal fetch locked source job:', err);
+        return [];
+      }
+    };
+
+    // --- Jalankan semua fetch bersamaan ---
     Promise.all([
       fetch(historyUrl, { signal: controller.signal }).then(r => r.json()),
       fetch(candidateUrl, { signal: controller.signal }).then(r => r.json()),
+      fetchLockedSourceJob(),
     ])
-      .then(([hist, cand]) => {
+      .then(([hist, cand, lockedCodes]) => {
         if (controller.signal.aborted) return;
+
         const histRowsRaw = Array.isArray(hist?.data) ? hist.data : [];
         const candRowsRaw = Array.isArray(cand?.data) ? cand.data : [];
         const allowed = new Set(candRowsRaw.map(getCode));
 
-        let rows = histRowsRaw
+        const rows = histRowsRaw
           .map((item: any) => ({
             seamancode: getCode(item),
             name: item?.name,
             history: item?.history,
             matchCount: item?.matchCount ?? 0,
           }))
-          .filter((r: any) => r.seamancode && allowed.has(r.seamancode))
+          .filter(
+            (r: any) =>
+              r.seamancode &&
+              allowed.has(r.seamancode) &&
+              !lockedCodes.includes(r.seamancode)
+          )
           .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
           .slice(0, 50);
+
         setPotentialRawData(rows);
+
+        // console.log('=== POTENTIAL FILTERING DEBUG ===');
+        // console.log('Selected Group:', selectedGroup);
+        // console.log('Job:', job);
+        // console.log('Source Job:', sourceJob);
+        // console.log('Locked Cadangan Codes (from backend fetch):', lockedCodes);
+        // console.log('Total filtered rows:', rows.length);
+        // console.log('=== END POTENTIAL FILTERING DEBUG ===');
       })
       .catch(err => {
         if (controller.signal.aborted) return;
@@ -448,6 +536,7 @@ export function ContainerRotation({
       .finally(() => {
         setLoadingPotential(false);
       });
+
     return () => controller.abort();
   }, [selectedGroup, job, API_BASE_URL, groups]);
 
