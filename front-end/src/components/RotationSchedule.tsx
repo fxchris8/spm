@@ -3,7 +3,7 @@
 import { Tabs, TabsRef } from 'flowbite-react';
 import { useRef, useState } from 'react';
 import { HiUserCircle } from 'react-icons/hi';
-import { ContainerRotation } from './ContainerRotation';
+import { ScheduleRotation } from './ScheduleRotation';
 
 export function RotationSchedule() {
   const tabsRef = useRef<TabsRef>(null);
@@ -19,7 +19,7 @@ export function RotationSchedule() {
       >
         {/* ================== MUALIM II ================== */}
         <Tabs.Item active title="Mualim II" icon={HiUserCircle}>
-          <ContainerRotation
+          <ScheduleRotation
             vessel="D"
             type="container"
             part="deck"
@@ -96,7 +96,7 @@ export function RotationSchedule() {
 
         {/* ================== MUALIM III ================== */}
         <Tabs.Item title="Mualim III" icon={HiUserCircle}>
-          <ContainerRotation
+          <ScheduleRotation
             vessel="D"
             type="container"
             part="deck"
@@ -173,7 +173,7 @@ export function RotationSchedule() {
 
         {/* ================== MASINIS III ================== */}
         <Tabs.Item title="Masinis III" icon={HiUserCircle}>
-          <ContainerRotation
+          <ScheduleRotation
             vessel="E"
             type="container"
             part="engine"
@@ -249,7 +249,7 @@ export function RotationSchedule() {
 
         {/* ================== MASINIS IV ================== */}
         <Tabs.Item title="Masinis IV" icon={HiUserCircle}>
-          <ContainerRotation
+          <ScheduleRotation
             vessel="E"
             type="container"
             part="engine"
