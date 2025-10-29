@@ -2,6 +2,7 @@
 # COMPLETE: Scheduler + Data Fetcher untuk Frontend
 # 1. Scheduler: Sync data dari API ASLI ke Supabase setiap 00:01
 # 2. Data Fetcher: Fungsi untuk Frontend fetch dari Supabase
+# 3. Orphaned Records Report: Track data yang di-drop karena tidak ada seamancode
 
 import json
 import os
@@ -67,7 +68,105 @@ def get_mutations_as_data():
 
 
 # ============================================================================
-# BAGIAN 1B: LOCKED ROTATIONS MANAGEMENT (Untuk Lock/Unlock Feature)
+# BAGIAN 1B: ORPHANED RECORDS MANAGEMENT (Untuk Report Dropped Data)
+# ============================================================================
+
+
+def save_orphaned_records_report(orphaned_records, deleted_count):
+    """
+    Simpan laporan orphaned mutation records ke file CSV dan TXT
+    (Sama seperti migrate.py - hanya simpan ke file, tidak ke database)
+
+    Args:
+        orphaned_records: List of tuples (seamancode, seamanname, mutation_count)
+        deleted_count: Total jumlah mutation records yang dihapus
+    """
+    if not orphaned_records:
+        print("INFO - No orphaned records to report")
+        return True
+
+    try:
+        # Create reports directory if not exists (outside back-end folder)
+        reports_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "data", "reports")
+        )
+        os.makedirs(reports_dir, exist_ok=True)
+
+        # Generate timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        date_str = datetime.now().strftime("%d %B %Y, %H:%M:%S")
+
+        # Prepare data for CSV
+        orphaned_df = pd.DataFrame(
+            orphaned_records,
+            columns=["seamancode", "seamanname", "mutation_count"],
+        )
+
+        # Save to CSV
+        csv_filename = f"orphaned_mutations_{timestamp}.csv"
+        csv_path = os.path.join(reports_dir, csv_filename)
+        orphaned_df.to_csv(csv_path, index=False)
+
+        # Save to TXT with detailed report
+        txt_filename = f"orphaned_mutations_{timestamp}.txt"
+        txt_path = os.path.join(reports_dir, txt_filename)
+
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("=" * 80 + "\n")
+            f.write("SYNC REPORT: ORPHANED MUTATION RECORDS\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(f"Generated: {date_str}\n")
+            f.write("Sync Script: database.py (scheduled sync)\n\n")
+            f.write("-" * 80 + "\n\n")
+            f.write("SUMMARY\n")
+            f.write("-" * 80 + "\n")
+            f.write(f"Total seamen with orphaned records: {len(orphaned_records)}\n")
+            f.write(f"Total orphaned mutation records: {deleted_count}\n\n")
+            f.write("-" * 80 + "\n\n")
+            f.write("DETAILED LIST\n")
+            f.write("-" * 80 + "\n")
+            f.write(f"{'SeamanCode':<15} {'Name':<40} {'Mutations':<10}\n")
+            f.write("-" * 80 + "\n")
+
+            for record in orphaned_records:
+                seamancode, seamanname, count = record
+                f.write(f"{seamancode:<15} {seamanname:<40} {count:<10}\n")
+
+            f.write("-" * 80 + "\n\n")
+            f.write("NOTES\n")
+            f.write("-" * 80 + "\n")
+            f.write(
+                "These seamen have mutation history but do not exist in the current\n"
+            )
+            f.write("seamen master data. This could mean:\n")
+            f.write("1. The seaman has resigned/left the company\n")
+            f.write("2. Data synchronization issue between systems\n")
+            f.write("3. The seaman data was removed from the source system\n\n")
+            f.write("ACTION TAKEN\n")
+            f.write("-" * 80 + "\n")
+            f.write(
+                "All orphaned mutation records have been filtered out during sync\n"
+            )
+            f.write("to maintain referential integrity.\n\n")
+            f.write("RECOMMENDATION\n")
+            f.write("-" * 80 + "\n")
+            f.write("Contact HR department to verify the status of these seamen and\n")
+            f.write("determine if their master data needs to be restored.\n")
+
+        print(f"DONE - Saved {len(orphaned_records)} orphaned records to files")
+        print(f"       CSV: {csv_path}")
+        print(f"       TXT: {txt_path}")
+        print(f"       Total mutations dropped: {deleted_count}")
+
+        return True
+
+    except Exception as e:
+        print(f"FAIL - Error saving orphaned records report: {str(e)}")
+        return False
+
+
+# ============================================================================
+# BAGIAN 1C: LOCKED ROTATIONS MANAGEMENT (Untuk Lock/Unlock Feature)
 # ============================================================================
 
 
@@ -472,6 +571,33 @@ def sync_mutations_to_database(df):
                 text("SELECT seamancode FROM seamen"), conn
             )["seamancode"].tolist()
             print(f"   Found {len(valid_seamancodes)} valid seamancodes")
+
+            # Identify orphaned records BEFORE filtering
+            print("IDENTIFYING - Checking for orphaned mutation records...")
+            orphaned_df = df[~df["seamancode"].isin(valid_seamancodes)]
+
+            if len(orphaned_df) > 0:
+                # Group by seamancode and get names
+                orphaned_summary = (
+                    orphaned_df.groupby(["seamancode", "seamanname"])
+                    .size()
+                    .reset_index(name="mutation_count")
+                )
+
+                orphaned_records = [
+                    (row["seamancode"], row["seamanname"], row["mutation_count"])
+                    for _, row in orphaned_summary.iterrows()
+                ]
+
+                print(
+                    f"WARNING - Found {len(orphaned_records)} seamen with orphaned mutations"
+                )
+                print(f"          Total orphaned mutation records: {len(orphaned_df)}")
+
+                # Save orphaned records report to database
+                save_orphaned_records_report(orphaned_records, len(orphaned_df))
+            else:
+                print("INFO - No orphaned mutation records found")
 
             # Filter mutations to only include valid seamancodes
             original_count = len(df)
