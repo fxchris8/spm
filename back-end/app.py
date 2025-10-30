@@ -1376,6 +1376,325 @@ def get_promotion_candidates_masinisII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ISSUE
+
+
+@app.route("/api/seamen/promotion_candidates_mualimII", methods=["GET"])
+def get_promotion_candidates_mualimII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
+
+        # Filter seamen berdasarkan posisi dan sertifikat
+        seamancode_terfilter = df_seamen[
+            (df_seamen["last_position"] == "MUALIM III")
+            & (df_seamen["certificate"] == "ANT-I")
+        ]["seamancode"].unique()
+
+        # Cari seamancode yang punya pengalaman >= 2 tahun
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_with_experience)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict dan hilangkan history yang tidak relevan
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g[
+                        ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
+                    ]["fromvesselname"]
+                    .dropna()
+                    .unique()
+                    .tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_masinisIII", methods=["GET"])
+def get_promotion_candidates_masinisIII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
+
+        # Filter seamen berdasarkan posisi
+        seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS IV")][
+            "seamancode"
+        ].unique()
+
+        # Daftar kapal yang disyaratkan
+        kapal_disyaratkan = {
+            "KM. HIJAU SEJUK",
+            "KM. ORIENTAL DIAMOND",
+            "KM. ORIENTAL RUBY",
+            "KM. ORIENTAL JADE",
+            "KM. VERIZON",
+            "KM. SPIL HANA",
+            "KM. SPIL HAPSRI",
+            "KM. SPIL HAYU",
+            "KM. SPIL HASYA",
+            "KM. HIJAU JELITA",
+            "KM. HIJAU SAMUDERA",
+            "KM. ORIENTAL GOLD",
+            "KM. ORIENTAL GALAXY",
+            "KM. LUZON",
+            "KM. ARMADA PERMATA",
+            "KM. ORIENTAL SILVER",
+            "KM. ORIENTAL EMERALD",
+        }
+
+        # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
+        df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
+
+        # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
+        df_kapal = df_all_history.copy()
+        df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
+            df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
+        )
+        df_kapal.loc[
+            df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"
+        ] = df_kapal["tovesselname"]
+
+        # Ambil hanya yang punya >= 2 kapal unik dari daftar
+        df_kapal_valid = (
+            df_kapal.dropna(subset=["kapal_terkait"])
+            .groupby("seamancode")["kapal_terkait"]
+            .nunique()
+            .reset_index()
+        )
+        df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
+
+        # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_with_experience)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g["fromvesselname"].dropna().unique().tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_mualimIII", methods=["GET"])
+def get_promotion_candidates_mualimIII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
+
+        # Filter seamen berdasarkan posisi dan sertifikat
+        seamancode_terfilter = df_seamen[
+            (df_seamen["last_position"] == "JURU MUDI")
+            & (df_seamen["certificate"] == "ANT-III")
+        ]["seamancode"].unique()
+
+        # Cari seamancode yang punya pengalaman >= 2 tahun
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_with_experience)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict dan hilangkan history yang tidak relevan
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g[
+                        ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
+                    ]["fromvesselname"]
+                    .dropna()
+                    .unique()
+                    .tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_masinisIV", methods=["GET"])
+def get_promotion_candidates_masinisIV():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
+
+        # Filter seamen berdasarkan posisi
+        seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "JURU MINYAK")][
+            "seamancode"
+        ].unique()
+
+        # Daftar kapal yang disyaratkan
+        kapal_disyaratkan = {
+            "KM. HIJAU SEJUK",
+            "KM. ORIENTAL DIAMOND",
+            "KM. ORIENTAL RUBY",
+            "KM. ORIENTAL JADE",
+            "KM. VERIZON",
+            "KM. SPIL HANA",
+            "KM. SPIL HAPSRI",
+            "KM. SPIL HAYU",
+            "KM. SPIL HASYA",
+            "KM. HIJAU JELITA",
+            "KM. HIJAU SAMUDERA",
+            "KM. ORIENTAL GOLD",
+            "KM. ORIENTAL GALAXY",
+            "KM. LUZON",
+            "KM. ARMADA PERMATA",
+            "KM. ORIENTAL SILVER",
+            "KM. ORIENTAL EMERALD",
+        }
+
+        # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
+        df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
+
+        # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
+        df_kapal = df_all_history.copy()
+        df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
+            df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
+        )
+        df_kapal.loc[
+            df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"
+        ] = df_kapal["tovesselname"]
+
+        # Ambil hanya yang punya >= 2 kapal unik dari daftar
+        df_kapal_valid = (
+            df_kapal.dropna(subset=["kapal_terkait"])
+            .groupby("seamancode")["kapal_terkait"]
+            .nunique()
+            .reset_index()
+        )
+        df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
+
+        # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_with_experience)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "history": g["fromvesselname"].dropna().unique().tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/save-excel", methods=["POST"])
 def save_excel():
     data = request.get_json()

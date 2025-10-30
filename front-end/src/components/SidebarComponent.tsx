@@ -77,7 +77,7 @@ export function SidebarComponent() {
               active={isActive('/container_rotation')}
               className="cursor-pointer"
             >
-              Container Rotation
+              Senior Rotation
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/schedule_rotation')}
@@ -85,7 +85,7 @@ export function SidebarComponent() {
               active={isActive('/schedule_rotation')}
               className="cursor-pointer"
             >
-              Schedule Rotation
+              Junior Rotation
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/manalagi_rotation')}

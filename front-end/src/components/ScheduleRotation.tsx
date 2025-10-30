@@ -19,6 +19,17 @@ interface ScheduleProps {
   job: string;
 }
 
+interface PromotionCandidate {
+  code: number;
+  name: string;
+  rank: string;
+  history: string[];
+}
+
+interface PromotionTableProps {
+  job: string;
+}
+
 interface CrewToRelieve {
   seamancode: string;
   name: string;
@@ -43,6 +54,174 @@ interface ReplacementOption {
   phoneNumber: string;
   age: string;
   daysSinceLastVessel: number;
+}
+
+// Component untuk tabel Potensial Promosi
+function PromotionCandidatesTable({ job }: PromotionTableProps) {
+  const [promotionCandidates, setPromotionCandidates] = useState<
+    PromotionCandidate[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+  useEffect(() => {
+    fetchPromotionCandidates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job]);
+
+  const fetchPromotionCandidates = async () => {
+    setLoading(true);
+    try {
+      // Map job to API endpoint - GUNAKAN ENDPOINT BARU (yang lama untuk ContainerRotation)
+      const getPromotionEndpoint = (job: string): string => {
+        const endpoints: Record<string, string> = {
+          mualimII: `${API_BASE_URL}/seamen/promotion_candidates_mualimII`,
+          mualimIII: `${API_BASE_URL}/seamen/promotion_candidates_mualimIII`,
+          masinisIII: `${API_BASE_URL}/seamen/promotion_candidates_masinisIII`,
+          masinisIV: `${API_BASE_URL}/seamen/promotion_candidates_masinisIV`,
+        };
+        return endpoints[job] || `${API_BASE_URL}/seamen/promotion_candidates`;
+      };
+
+      const endpoint = getPromotionEndpoint(job);
+      const response = await fetch(endpoint);
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        // Format data sama seperti ContainerRotation
+        const formatted = result.data.map((item: any) => ({
+          code: item.code || item.seamancode || 0,
+          name: item.name || '',
+          rank: item.rank || item.last_position || '',
+          history: Array.isArray(item.history)
+            ? item.history.filter(
+                (h: string) =>
+                  h !== 'PENDING GAJI' &&
+                  h !== 'PENDING CUTI' &&
+                  h !== 'DARAT STAND-BY' &&
+                  h !== 'DARAT BIASA'
+              )
+            : [],
+        }));
+        setPromotionCandidates(formatted);
+        console.log('🟣 PROMOTION CANDIDATES LOADED:', {
+          job,
+          endpoint,
+          count: formatted.length,
+        });
+      } else {
+        console.error('Error fetching promotion candidates:', result.message);
+        setPromotionCandidates([]);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setPromotionCandidates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatJobName = (jobName: string): string => {
+    const jobMapping: Record<string, string> = {
+      mualimII: 'MUALIM II',
+      mualimIII: 'MUALIM III',
+      masinisIII: 'MASINIS III',
+      masinisIV: 'MASINIS IV',
+      'MUALIM II': 'MUALIM III',
+      'MUALIM III': 'MUALIM II',
+      'MASINIS III': 'MASINIS IV',
+      'MASINIS IV': 'MASINIS III',
+    };
+    return jobMapping[jobName] || jobName;
+  };
+
+  if (loading) {
+    return (
+      <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm">
+        <div className="flex items-center justify-center py-8">
+          <Spinner />
+          <span className="ml-2 text-gray-600">Loading promotion data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (promotionCandidates.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b">
+        <div className="p-2 bg-purple-100 rounded-lg">
+          <HiSwitchHorizontal className="h-5 w-5 text-purple-600" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">
+            POTENSIAL PROMOSI KE {formatJobName(job)}
+          </h2>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm text-gray-700">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 w-[100px]">Code</th>
+              <th className="px-4 py-3 w-[200px]">Nama</th>
+              <th className="px-4 py-3 w-[120px]">Rank Saat Ini</th>
+              <th className="px-4 py-3">Riwayat Kapal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {promotionCandidates.map((candidate, index) => (
+              <tr key={index} className="border-b hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {candidate.code}
+                </td>
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {candidate.name}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="rounded bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-800">
+                    {candidate.rank}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="max-w-md text-xs text-gray-600">
+                    {candidate.history.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {candidate.history.slice(0, 5).map((vessel, idx) => (
+                          <span
+                            key={idx}
+                            className="rounded bg-gray-100 px-2 py-0.5"
+                          >
+                            {vessel}
+                          </span>
+                        ))}
+                        {candidate.history.length > 5 && (
+                          <span className="text-gray-500">
+                            +{candidate.history.length - 5} lainnya
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">Tidak ada riwayat</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-3 text-xs text-gray-500">
+        Total: {promotionCandidates.length} kandidat memenuhi syarat promosi
+      </div>
+    </div>
+  );
 }
 
 export function ScheduleRotation({
@@ -173,12 +352,33 @@ export function ScheduleRotation({
       };
       const mappedJob = jobMapping[job] || job.toUpperCase();
 
-      // Get next group (circular)
+      // SEMUA GROUP menggunakan 2 group berikutnya (circular)
       const groupKeys = Object.keys(groups);
       const currentIndex = groupKeys.indexOf(selectedGroup);
-      const nextIndex = (currentIndex + 1) % groupKeys.length;
-      const nextGroupKey = groupKeys[nextIndex];
-      const nextGroupVessels = groups[nextGroupKey] || [];
+
+      // Get next 2 groups (circular)
+      const next1Index = (currentIndex + 1) % groupKeys.length;
+      const next2Index = (currentIndex + 2) % groupKeys.length;
+
+      const next1Key = groupKeys[next1Index];
+      const next2Key = groupKeys[next2Index];
+
+      const next1Vessels = groups[next1Key] || [];
+      const next2Vessels = groups[next2Key] || [];
+
+      // Combine 2 next groups
+      const nextGroupVessels = [...next1Vessels, ...next2Vessels];
+      const nextGroupKey = `${next1Key},${next2Key}`;
+
+      console.log('🔵 REPLACEMENT LOGIC:', {
+        selectedGroup,
+        currentIndex,
+        next1Key,
+        next1Count: next1Vessels.length,
+        next2Key,
+        next2Count: next2Vessels.length,
+        combinedCount: nextGroupVessels.length,
+      });
 
       // Send next group vessels as query parameter
       const vesselsQuery = nextGroupVessels.join(',');
@@ -319,12 +519,6 @@ export function ScheduleRotation({
     }
   };
 
-  const getDaysRemainingColor = (days: number) => {
-    if (days < 7) return 'bg-red-100 text-red-800';
-    if (days < 30) return 'bg-orange-100 text-orange-800';
-    return 'bg-green-100 text-green-800';
-  };
-
   return (
     <div className="space-y-4">
       {/* ================== GRID CARD ================== */}
@@ -408,19 +602,26 @@ export function ScheduleRotation({
                                 </td> */}
                                 <td className="px-4 py-3">
                                   <span
-                                    className={`rounded px-2 py-1 text-xs font-semibold ${getDaysRemainingColor(
-                                      crew.daysRemaining
-                                    )}`}
+                                    className={`rounded px-2 py-1 text-xs font-semibold ${
+                                      crew.daysElapsed > 365
+                                        ? 'bg-red-100 text-red-800'
+                                        : crew.daysRemaining < 7
+                                          ? 'bg-red-100 text-red-800'
+                                          : crew.daysRemaining < 30
+                                            ? 'bg-orange-100 text-orange-800'
+                                            : 'bg-green-100 text-green-800'
+                                    }`}
                                   >
-                                    {crew.daysRemaining} hari
+                                    {crew.daysElapsed > 365
+                                      ? `+${crew.daysElapsed - 365} hari`
+                                      : `-${365 - crew.daysElapsed} hari`}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className="text-xs font-medium text-gray-700">
                                     {crew.daysElapsed} hari
                                   </span>
-                                </td>
-
+                                </td>{' '}
                                 {/* Kolom PENGGANTI */}
                                 <td className="px-4 py-3">
                                   {locked ? (
@@ -600,6 +801,12 @@ export function ScheduleRotation({
                   )}
                 </div>
               </div>
+
+              {/* ================== POTENSIAL PROMOSI (GROUP 3 & 4 ONLY) ================== */}
+              {(selectedGroup === 'container_rotation3' ||
+                selectedGroup === 'container_rotation4') && (
+                <PromotionCandidatesTable job={job} />
+              )}
 
               {/* ================== ACTION BUTTONS ================== */}
               {crewToRelieve.length > 0 && (
