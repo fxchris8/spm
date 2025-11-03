@@ -1403,14 +1403,26 @@ def get_promotion_candidates_mualimII():
             & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
         ]["seamancode"].unique()
 
+        # Tambahkan seamen dengan is_talent di posisi MUALIM III
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "MUALIM III") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
         # Ambil SEMUA history untuk seamancode yang qualified
         df_mutasi_filtered = df_history[
-            df_history["seamancode"].isin(seamancode_with_experience)
+            df_history["seamancode"].isin(seamancode_qualified)
         ]
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1423,6 +1435,11 @@ def get_promotion_candidates_mualimII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
                     ]["fromvesselname"]
@@ -1449,7 +1466,7 @@ def get_promotion_candidates_masinisIII():
         df_history = get_mutations_as_data()
         df_seamen = get_seamen_as_data()
 
-        # Tanggal cutoff pengalaman 2 tahun
+        # Tanggal cutoff pengalaman 4 tahun
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
         # Filter seamen berdasarkan posisi
@@ -1505,14 +1522,26 @@ def get_promotion_candidates_masinisIII():
             & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
         ]["seamancode"].unique()
 
+        # Tambahkan seamen dengan is_talent di posisi MASINIS IV
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "MASINIS IV") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
         # Ambil SEMUA history untuk seamancode yang qualified
         df_mutasi_filtered = df_history[
-            df_history["seamancode"].isin(seamancode_with_experience)
+            df_history["seamancode"].isin(seamancode_qualified)
         ]
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1525,6 +1554,11 @@ def get_promotion_candidates_masinisIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
@@ -1561,14 +1595,26 @@ def get_promotion_candidates_mualimIII():
             & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
         ]["seamancode"].unique()
 
+        # Tambahkan seamen dengan is_talent di posisi JURU MUDI
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "JURU MUDI") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
         # Ambil SEMUA history untuk seamancode yang qualified
         df_mutasi_filtered = df_history[
-            df_history["seamancode"].isin(seamancode_with_experience)
+            df_history["seamancode"].isin(seamancode_qualified)
         ]
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1581,6 +1627,11 @@ def get_promotion_candidates_mualimIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
                     ]["fromvesselname"]
@@ -1607,7 +1658,7 @@ def get_promotion_candidates_masinisIV():
         df_history = get_mutations_as_data()
         df_seamen = get_seamen_as_data()
 
-        # Tanggal cutoff pengalaman 2 tahun
+        # Tanggal cutoff pengalaman 4 tahun
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
         # Filter seamen berdasarkan posisi
@@ -1663,14 +1714,26 @@ def get_promotion_candidates_masinisIV():
             & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
         ]["seamancode"].unique()
 
+        # Tambahkan seamen dengan is_talent di posisi JURU MINYAK
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "JURU MINYAK") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
         # Ambil SEMUA history untuk seamancode yang qualified
         df_mutasi_filtered = df_history[
-            df_history["seamancode"].isin(seamancode_with_experience)
+            df_history["seamancode"].isin(seamancode_qualified)
         ]
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1683,6 +1746,11 @@ def get_promotion_candidates_masinisIV():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
@@ -2102,12 +2170,7 @@ def api_get_available_replacements():
         next_group_vessels_str = request.args.get(
             "next_group_vessels", ""
         )  # e.g., "KM. SHIP1,KM. SHIP2"
-        # promotion_job = request.args.get(
-        #     "promotion_job", ""
-        # ).upper()  # e.g., "MUALIM III" for promotion to MUALIM II
-        day_elapsed_threshold = int(
-            request.args.get("day_elapsed_threshold", 0)
-        )  # Default 0 (any day_elapsed)
+        day_elapsed_threshold = int(request.args.get("day_elapsed_threshold", 0))
 
         if not job:
             return (
@@ -2150,9 +2213,6 @@ def api_get_available_replacements():
         # Fetch all seamen data
         df_seamen = get_seamen_as_data()
 
-        # Filter by SAME job rank
-        df_same_job = df_seamen[df_seamen["last_position"] == job]
-
         # Define available last_location values (status khusus)
         AVAILABLE_LAST_LOCATIONS = [
             "PENDING CUTI",
@@ -2162,8 +2222,12 @@ def api_get_available_replacements():
             "DARAT STAND-BY",
         ]
 
-        # Filter crew yang memenuhi kriteria
         available_replacements = []
+
+        # ============================================================
+        # PART 1: Same Job Replacements
+        # ============================================================
+        df_same_job = df_seamen[df_seamen["last_position"] == job]
 
         for _, seaman in df_same_job.iterrows():
             last_location = seaman.get("last_location", "").upper()
@@ -2189,13 +2253,11 @@ def api_get_available_replacements():
             except (ValueError, TypeError):
                 day_elapsed = 0
 
-            # MUST have day_elapsed > 15
+            # MUST have day_elapsed < 15 (baru istirahat)
             if day_elapsed >= 15:
                 continue
 
-            # Check if day_elapsed is greater than threshold (additional parameter)
-            if day_elapsed < day_elapsed_threshold:
-                continue
+            # Check if day_elapsed is greater than threshold
             if day_elapsed < day_elapsed_threshold:
                 continue
 
@@ -2213,11 +2275,82 @@ def api_get_available_replacements():
                     or seaman.get("phone_number_1"),
                     "age": seaman.get("age"),
                     "daysSinceLastVessel": day_elapsed,
+                    "replacementType": "same_rank",
                 }
             )
 
-        # Sort by last_location priority and day_elapsed (prioritize higher day_elapsed = more rest time)
+        # ============================================================
+        # PART 2: Promotion Candidates (Optional - jika frontend kirim)
+        # ============================================================
+        promotion_vessels_str = request.args.get("promotion_vessels", "")
+        promotion_job = request.args.get("promotion_job", "").upper()
+
+        if promotion_vessels_str and promotion_job:
+            promotion_vessels = [
+                v.strip() for v in promotion_vessels_str.split(",") if v.strip()
+            ]
+
+            if promotion_vessels:
+                df_promotion = df_seamen[df_seamen["last_position"] == promotion_job]
+
+                for _, seaman in df_promotion.iterrows():
+                    last_location = seaman.get("last_location", "").upper()
+                    prev_location = seaman.get("prevlocation", "").upper()
+                    status = seaman.get("status", "").upper()
+
+                    # Last location MUST be in AVAILABLE_LAST_LOCATIONS
+                    if last_location not in AVAILABLE_LAST_LOCATIONS:
+                        continue
+
+                    # Previous location MUST be in promotion_vessels
+                    is_in_promotion_group = any(
+                        vessel.upper() in prev_location
+                        or prev_location in vessel.upper()
+                        for vessel in promotion_vessels
+                    )
+
+                    if not is_in_promotion_group:
+                        continue
+
+                    # Parse day_elapsed
+                    try:
+                        day_elapsed = int(seaman.get("day_elapsed", "0"))
+                    except (ValueError, TypeError):
+                        day_elapsed = 0
+
+                    # MUST have day_elapsed < 15
+                    if day_elapsed >= 15:
+                        continue
+
+                    # Check threshold
+                    if day_elapsed < day_elapsed_threshold:
+                        continue
+
+                    # Add to replacements with promotion flag
+                    available_replacements.append(
+                        {
+                            "seamancode": seaman.get("seamancode"),
+                            "name": seaman.get("name"),
+                            "position": seaman.get("last_position"),
+                            "lastVessel": last_location,
+                            "status": status,
+                            "certificate": seaman.get("certificate"),
+                            "experience": seaman.get("experience"),
+                            "phoneNumber": seaman.get("phone_number_3")
+                            or seaman.get("phone_number_1"),
+                            "age": seaman.get("age"),
+                            "daysSinceLastVessel": day_elapsed,
+                            "replacementType": "promotion",
+                            "promotionFrom": promotion_job,
+                            "promotionTo": job,
+                        }
+                    )
+
+        # ============================================================
+        # SORTING
+        # ============================================================
         def last_location_priority(replacement):
+            """Priority: DARAT STAND-BY > DARAT BIASA/DARAT > PENDING GAJI > PENDING CUTI"""
             location = replacement["lastVessel"].upper()
             if "DARAT STAND-BY" in location:
                 return 0
@@ -2230,19 +2363,44 @@ def api_get_available_replacements():
             else:
                 return 4
 
+        def replacement_type_priority(replacement):
+            """Priority: same_rank > promotion"""
+            return 0 if replacement.get("replacementType") == "same_rank" else 1
+
+        # Sort by: replacement type -> location priority -> day elapsed (descending)
         available_replacements.sort(
-            key=lambda x: (last_location_priority(x), -x["daysSinceLastVessel"])
+            key=lambda x: (
+                replacement_type_priority(x),
+                last_location_priority(x),
+                -x["daysSinceLastVessel"],
+            )
         )
 
+        # ============================================================
+        # RESPONSE
+        # ============================================================
         return jsonify(
             {
                 "status": "success",
                 "data": available_replacements,
                 "count": len(available_replacements),
+                "summary": {
+                    "same_rank_count": sum(
+                        1
+                        for r in available_replacements
+                        if r.get("replacementType") == "same_rank"
+                    ),
+                    "promotion_count": sum(
+                        1
+                        for r in available_replacements
+                        if r.get("replacementType") == "promotion"
+                    ),
+                },
                 "job": job,
                 "vessel_group": vessel_group,
                 "next_group": next_group,
                 "next_group_vessels": next_group_vessels,
+                "promotion_job": promotion_job if promotion_job else None,
                 "day_elapsed_threshold": day_elapsed_threshold,
             }
         )
