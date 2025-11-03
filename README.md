@@ -58,7 +58,7 @@ pip install -r requirements.txt
 # Jalankan Flask server
 python app.py
 
-# Server akan berjalan di http://localhost:5000
+# Server akan berjalan di http://localhost:8048
 ```
 
 #### 2. Setup Frontend (React)
