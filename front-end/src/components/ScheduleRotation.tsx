@@ -268,27 +268,59 @@ export function ScheduleRotation({
   }, [selectedGroup, job]);
 
   const loadGroupData = async () => {
-    // Skip jika data sudah di-load oleh useEffect (locked data)
-    if (isCurrentGroupLocked) {
-      console.log(
-        '⏭️ Skipping loadGroupData - data already loaded from locked state'
-      );
-      return;
-    }
+    // ✅ Cek dulu apakah group ini sudah di-lock
+    const lockedData = allLockedRotations.find(
+      lock => lock.group_key === selectedGroup && lock.is_active
+    );
 
     setIsLoadingLocked(true);
     setLoading(true);
 
-    // Reset state untuk data baru
-    setSelectedReplacement({});
-    setCrewToRelieve([]);
-    setReplacementOptions([]);
-    setLocked(false);
-    setIsLockedFromDB(false);
-    setLockedScheduleId(null);
+    if (lockedData) {
+      // ✅ Jika sudah di-lock, load crew data dari memory
+      console.log('📦 Loading locked crew data from memory');
 
-    await fetchCrewToRelieve();
-    await fetchReplacementOptions();
+      try {
+        let crewData = lockedData.crew_data;
+        let relieverData = lockedData.reliever_data;
+
+        if (typeof crewData === 'string') {
+          crewData = JSON.parse(crewData);
+        }
+        if (typeof relieverData === 'string') {
+          relieverData = JSON.parse(relieverData);
+        }
+
+        crewData = crewData || [];
+        relieverData = relieverData || {};
+
+        // ✅ Set locked crew data (TIDAK fetch API)
+        setCrewToRelieve(crewData);
+        setSelectedReplacement(relieverData);
+        setLocked(true);
+        setIsLockedFromDB(true);
+        setLockedScheduleId(lockedData.id);
+
+        console.log('✅ Locked crew data loaded from memory');
+      } catch (error) {
+        console.error('❌ Error parsing locked data:', error);
+        alert('⚠️ Error loading locked data. Silakan unlock dan lock ulang.');
+      }
+
+      // ✅ TETAP fetch replacement options dan promotion (karena dinamis per group)
+      await fetchReplacementOptions();
+    } else {
+      // ✅ Jika belum di-lock, fetch semua data baru
+      setSelectedReplacement({});
+      setCrewToRelieve([]);
+      setReplacementOptions([]);
+      setLocked(false);
+      setIsLockedFromDB(false);
+      setLockedScheduleId(null);
+
+      await fetchCrewToRelieve();
+      await fetchReplacementOptions();
+    }
 
     setIsLoadingLocked(false);
     setLoading(false);
@@ -662,49 +694,48 @@ export function ScheduleRotation({
   };
 
   // 🆕 IMPROVED: handleLockToggle dengan better error handling
+  // 🆕 IMPROVED: handleLockToggle dengan mekanisme seperti code pertama
   const handleLockToggle = async () => {
     if (locked) {
       // ==================== UNLOCK ====================
-      if (confirm('Apakah Anda yakin ingin membuka kunci data?')) {
-        setSubmitting(true);
-        try {
-          console.log('🔓 Unlocking:', {
-            selectedGroup,
-            job: formatJobName(job),
-          });
+      setSubmitting(true);
+      try {
+        console.log('🔓 Unlocking:', {
+          selectedGroup,
+          job: formatJobName(job),
+        });
 
-          const response = await fetch(
-            `${API_BASE_URL}/locked_rotations/${selectedGroup}?job=${formatJobName(
-              job
-            )}`,
-            { method: 'DELETE' }
-          );
+        const response = await fetch(
+          `${API_BASE_URL}/locked_rotations/${selectedGroup}?job=${formatJobName(
+            job
+          )}`,
+          { method: 'DELETE' }
+        );
 
-          const result = await response.json();
-          console.log('Unlock response:', result);
+        const result = await response.json();
+        console.log('Unlock response:', result);
 
-          if (result.status === 'success') {
-            setLocked(false);
-            setIsLockedFromDB(false);
-            setLockedScheduleId(null);
+        if (result.status === 'success') {
+          setLocked(false);
+          setIsLockedFromDB(false);
+          setLockedScheduleId(null);
 
-            // Reload locked rotations untuk update status
-            await reloadLockedRotations();
+          // ✅ REFRESH data setelah unlock
+          await reloadLockedRotations();
+          await fetchCrewToRelieve();
+          await fetchReplacementOptions();
 
-            // Refresh data
-            await fetchCrewToRelieve();
-            await fetchReplacementOptions();
+          // Reset selections
+          setSelectedReplacement({});
 
-            // Reset selections
-            setSelectedReplacement({});
-          } else {
-            console.error('❌ Gagal unlock:', result.message);
-          }
-        } catch (error) {
-          console.error('Error unlocking:', error);
-        } finally {
-          setSubmitting(false);
+          console.log('✅ Data berhasil di-unlock dan di-refresh');
+        } else {
+          console.error('❌ Gagal unlock:', result.message);
         }
+      } catch (error) {
+        console.error('Error unlocking:', error);
+      } finally {
+        setSubmitting(false);
       }
     } else {
       // ==================== LOCK ====================
@@ -793,12 +824,15 @@ export function ScheduleRotation({
           setIsLockedFromDB(true);
           setLockedScheduleId(result.id);
 
-          // Reload locked rotations untuk update status
+          // ✅ Reload locked rotations untuk update status (tapi TIDAK fetch data baru)
           await reloadLockedRotations();
 
           console.log(
             `✅ Data berhasil dikunci dan disimpan! ID: ${result.id}`
           );
+
+          // ❌ TIDAK perlu fetch ulang karena data sudah ada di state
+          // Data yang di-lock sudah ada di crewToRelieve & selectedReplacement
         } else {
           console.error('❌ Gagal lock:', result.message);
         }
@@ -809,6 +843,17 @@ export function ScheduleRotation({
       }
     }
   };
+
+  useEffect(() => {
+    if (selectedGroup && allLockedRotations.length > 0) {
+      const lockedData = allLockedRotations.find(
+        lock => lock.group_key === selectedGroup && lock.is_active
+      );
+      setIsCurrentGroupLocked(!!lockedData);
+    } else {
+      setIsCurrentGroupLocked(false);
+    }
+  }, [selectedGroup, allLockedRotations]);
 
   return (
     <div className="space-y-4">
@@ -1103,68 +1148,83 @@ export function ScheduleRotation({
                           </tr>
                         </thead>
                         <tbody>
-                          {replacementOptions
-                            .filter(replacement => {
-                              // 🔥 Filter out seamen yang sudah di-lock di group lain
-                              const lockedRelieverCodes = allLockedRotations
-                                .filter(
-                                  lock =>
-                                    lock.group_key !== selectedGroup && // Exclude current group
-                                    lock.is_active
+                          {replacementOptions.map((replacement, index) => {
+                            // � Check if this seaman is locked in another group
+                            const lockedInGroup = allLockedRotations.find(
+                              lock => {
+                                if (
+                                  lock.group_key === selectedGroup ||
+                                  !lock.is_active
                                 )
-                                .flatMap(lock => {
-                                  try {
-                                    const relieverData = JSON.parse(
-                                      lock.reliever_data || '{}'
-                                    );
-                                    return Object.values(relieverData)
-                                      .filter(r => r !== null)
-                                      .map((r: any) => String(r.seamancode));
-                                  } catch {
-                                    return [];
-                                  }
-                                });
+                                  return false;
 
-                              const isLockedElsewhere =
-                                lockedRelieverCodes.includes(
-                                  String(replacement.seamancode)
-                                );
+                                try {
+                                  const relieverData =
+                                    typeof lock.reliever_data === 'string'
+                                      ? JSON.parse(lock.reliever_data)
+                                      : lock.reliever_data || {};
 
-                              return !isLockedElsewhere;
-                            })
-                            .map((replacement, index) => {
-                              const isSelected = Object.values(
-                                selectedReplacement
-                              ).some(
-                                sel =>
-                                  (sel as ReplacementOption | null)
-                                    ?.seamancode === replacement.seamancode
-                              );
+                                  return Object.values(relieverData).some(
+                                    (r: any) =>
+                                      r &&
+                                      String(r.seamancode) ===
+                                        String(replacement.seamancode)
+                                  );
+                                } catch {
+                                  return false;
+                                }
+                              }
+                            );
 
-                              return (
-                                <tr
-                                  key={index}
-                                  className={`border-b hover:bg-gray-50 ${
-                                    isSelected ? 'bg-green-50' : ''
-                                  }`}
-                                >
-                                  <td className="px-4 py-3 font-medium text-gray-900">
-                                    <div className="flex items-center gap-1">
+                            const isLockedElsewhere = !!lockedInGroup;
+                            const isSelected = Object.values(
+                              selectedReplacement
+                            ).some(
+                              sel =>
+                                (sel as ReplacementOption | null)
+                                  ?.seamancode === replacement.seamancode
+                            );
+
+                            return (
+                              <tr
+                                key={index}
+                                className={`border-b hover:bg-gray-50 ${
+                                  isSelected
+                                    ? 'bg-green-50'
+                                    : isLockedElsewhere
+                                      ? 'bg-gray-50 opacity-60'
+                                      : ''
+                                }`}
+                              >
+                                <td className="px-4 py-3 font-medium text-gray-900">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
                                       <span className="text-xs">
                                         {replacement.seamancode} -{' '}
                                         {replacement.name}
                                       </span>
                                     </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-xs text-center">
-                                    {replacement.lastVessel}
-                                  </td>
-                                  <td className="px-4 py-3 text-xs font-medium text-gray-700 text-center">
-                                    {replacement.daysSinceLastVessel} hari
-                                  </td>
-                                </tr>
-                              );
-                            })}
+                                    {isLockedElsewhere && lockedInGroup && (
+                                      <span className="text-[10px] text-orange-600 font-medium">
+                                        Locked di Group{' '}
+                                        {lockedInGroup.group_key.replace(
+                                          'container_rotation',
+                                          ''
+                                        )}{' '}
+                                        - {lockedInGroup.job}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-xs text-center">
+                                  {replacement.lastVessel}
+                                </td>
+                                <td className="px-4 py-3 text-xs font-medium text-gray-700 text-center">
+                                  {replacement.daysSinceLastVessel} hari
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
