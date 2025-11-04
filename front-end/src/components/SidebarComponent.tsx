@@ -1,10 +1,16 @@
 'use client';
 
 import { Sidebar } from 'flowbite-react';
-import { HiChartPie } from 'react-icons/hi';
-import { FaSearch } from 'react-icons/fa';
-import { GiClockwiseRotation } from 'react-icons/gi';
-import { MdWorkHistory, MdWorkOff, MdAutorenew } from 'react-icons/md';
+import {
+  HiOutlineChartPie,
+  HiOutlineMagnifyingGlassCircle,
+  HiOutlineBriefcase,
+  HiOutlineUserMinus,
+  HiOutlineArrowPath,
+  HiOutlineCube,
+} from 'react-icons/hi2';
+import { GiShipWheel } from 'react-icons/gi';
+import { MdAutorenew } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function SidebarComponent() {
@@ -26,7 +32,7 @@ export function SidebarComponent() {
         <Sidebar.ItemGroup>
           <Sidebar.Item
             onClick={() => handleNavigation('/')}
-            icon={() => <HiChartPie className="w-5 h-5" />}
+            icon={() => <HiOutlineChartPie className="w-6 h-6" />}
             active={isActive('/')}
             className="cursor-pointer"
           >
@@ -34,13 +40,13 @@ export function SidebarComponent() {
           </Sidebar.Item>
 
           <Sidebar.Collapse
-            icon={() => <FaSearch className="w-5 h-5" />}
+            icon={() => <HiOutlineMagnifyingGlassCircle className="w-6 h-6" />}
             label="Search"
             open={isParentActive(['/search_on_duty', '/search_off_duty'])}
           >
             <Sidebar.Item
               onClick={() => handleNavigation('/search_on_duty')}
-              icon={() => <MdWorkHistory className="w-5 h-5" />}
+              icon={() => <HiOutlineBriefcase className="w-6 h-6" />}
               active={isActive('/search_on_duty')}
               className="cursor-pointer"
             >
@@ -48,7 +54,7 @@ export function SidebarComponent() {
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/search_off_duty')}
-              icon={() => <MdWorkOff className="w-5 h-5" />}
+              icon={() => <HiOutlineUserMinus className="w-6 h-6" />}
               active={isActive('/search_off_duty')}
               className="cursor-pointer"
             >
@@ -57,21 +63,33 @@ export function SidebarComponent() {
           </Sidebar.Collapse>
 
           <Sidebar.Collapse
-            icon={() => <GiClockwiseRotation className="w-5 h-5" />}
+            icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
             label="Rotation"
-            open={isParentActive(['/container_rotation', '/manalagi_rotation'])}
+            open={isParentActive([
+              '/container_rotation',
+              '/schedule_rotation',
+              '/manalagi_rotation',
+            ])}
           >
             <Sidebar.Item
               onClick={() => handleNavigation('/container_rotation')}
-              icon={() => <MdAutorenew className="w-5 h-5" />}
+              icon={() => <HiOutlineCube className="w-6 h-6" />}
               active={isActive('/container_rotation')}
               className="cursor-pointer"
             >
-              Container Rotation
+              Senior Rotation
+            </Sidebar.Item>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/schedule_rotation')}
+              icon={() => <GiShipWheel className="w-6 h-6" />}
+              active={isActive('/schedule_rotation')}
+              className="cursor-pointer"
+            >
+              Junior Rotation
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/manalagi_rotation')}
-              icon={() => <MdAutorenew className="w-5 h-5" />}
+              icon={() => <MdAutorenew className="w-6 h-6" />}
               active={isActive('/manalagi_rotation')}
               className="cursor-pointer"
             >

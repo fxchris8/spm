@@ -1376,6 +1376,393 @@ def get_promotion_candidates_masinisII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ISSUE
+
+
+@app.route("/api/seamen/promotion_candidates_mualimII", methods=["GET"])
+def get_promotion_candidates_mualimII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
+
+        # Filter seamen berdasarkan posisi dan sertifikat
+        seamancode_terfilter = df_seamen[
+            (df_seamen["last_position"] == "MUALIM III")
+            & (df_seamen["certificate"] == "ANT-I")
+        ]["seamancode"].unique()
+
+        # Cari seamancode yang punya pengalaman >= 2 tahun
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Tambahkan seamen dengan is_talent di posisi MUALIM III
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "MUALIM III") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_qualified)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict dan hilangkan history yang tidak relevan
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
+                    "history": g[
+                        ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
+                    ]["fromvesselname"]
+                    .dropna()
+                    .unique()
+                    .tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_masinisIII", methods=["GET"])
+def get_promotion_candidates_masinisIII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 4 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
+
+        # Filter seamen berdasarkan posisi
+        seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS IV")][
+            "seamancode"
+        ].unique()
+
+        # Daftar kapal yang disyaratkan
+        kapal_disyaratkan = {
+            "KM. HIJAU SEJUK",
+            "KM. ORIENTAL DIAMOND",
+            "KM. ORIENTAL RUBY",
+            "KM. ORIENTAL JADE",
+            "KM. VERIZON",
+            "KM. SPIL HANA",
+            "KM. SPIL HAPSRI",
+            "KM. SPIL HAYU",
+            "KM. SPIL HASYA",
+            "KM. HIJAU JELITA",
+            "KM. HIJAU SAMUDERA",
+            "KM. ORIENTAL GOLD",
+            "KM. ORIENTAL GALAXY",
+            "KM. LUZON",
+            "KM. ARMADA PERMATA",
+            "KM. ORIENTAL SILVER",
+            "KM. ORIENTAL EMERALD",
+        }
+
+        # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
+        df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
+
+        # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
+        df_kapal = df_all_history.copy()
+        df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
+            df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
+        )
+        df_kapal.loc[
+            df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"
+        ] = df_kapal["tovesselname"]
+
+        # Ambil hanya yang punya >= 2 kapal unik dari daftar
+        df_kapal_valid = (
+            df_kapal.dropna(subset=["kapal_terkait"])
+            .groupby("seamancode")["kapal_terkait"]
+            .nunique()
+            .reset_index()
+        )
+        df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
+
+        # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Tambahkan seamen dengan is_talent di posisi MASINIS IV
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "MASINIS IV") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_qualified)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
+                    "history": g["fromvesselname"].dropna().unique().tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_mualimIII", methods=["GET"])
+def get_promotion_candidates_mualimIII():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 2 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
+
+        # Filter seamen berdasarkan posisi dan sertifikat
+        seamancode_terfilter = df_seamen[
+            (df_seamen["last_position"] == "JURU MUDI")
+            & (df_seamen["certificate"] == "ANT-III")
+        ]["seamancode"].unique()
+
+        # Cari seamancode yang punya pengalaman >= 2 tahun
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(seamancode_terfilter))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Tambahkan seamen dengan is_talent di posisi JURU MUDI
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "JURU MUDI") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_qualified)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict dan hilangkan history yang tidak relevan
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
+                    "history": g[
+                        ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
+                    ]["fromvesselname"]
+                    .dropna()
+                    .unique()
+                    .tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/seamen/promotion_candidates_masinisIV", methods=["GET"])
+def get_promotion_candidates_masinisIV():
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        # Load from Supabase instead of Excel
+        df_history = get_mutations_as_data()
+        df_seamen = get_seamen_as_data()
+
+        # Tanggal cutoff pengalaman 4 tahun
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
+
+        # Filter seamen berdasarkan posisi
+        seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "JURU MINYAK")][
+            "seamancode"
+        ].unique()
+
+        # Daftar kapal yang disyaratkan
+        kapal_disyaratkan = {
+            "KM. HIJAU SEJUK",
+            "KM. ORIENTAL DIAMOND",
+            "KM. ORIENTAL RUBY",
+            "KM. ORIENTAL JADE",
+            "KM. VERIZON",
+            "KM. SPIL HANA",
+            "KM. SPIL HAPSRI",
+            "KM. SPIL HAYU",
+            "KM. SPIL HASYA",
+            "KM. HIJAU JELITA",
+            "KM. HIJAU SAMUDERA",
+            "KM. ORIENTAL GOLD",
+            "KM. ORIENTAL GALAXY",
+            "KM. LUZON",
+            "KM. ARMADA PERMATA",
+            "KM. ORIENTAL SILVER",
+            "KM. ORIENTAL EMERALD",
+        }
+
+        # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
+        df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
+
+        # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
+        df_kapal = df_all_history.copy()
+        df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
+            df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
+        )
+        df_kapal.loc[
+            df_kapal["tovesselname"].isin(kapal_disyaratkan), "kapal_terkait"
+        ] = df_kapal["tovesselname"]
+
+        # Ambil hanya yang punya >= 2 kapal unik dari daftar
+        df_kapal_valid = (
+            df_kapal.dropna(subset=["kapal_terkait"])
+            .groupby("seamancode")["kapal_terkait"]
+            .nunique()
+            .reset_index()
+        )
+        df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
+
+        # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
+        seamancode_with_experience = df_history[
+            (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
+            & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
+        ]["seamancode"].unique()
+
+        # Tambahkan seamen dengan is_talent di posisi JURU MINYAK
+        seamancode_talent = df_seamen[
+            (df_seamen["last_position"] == "JURU MINYAK") & (df_seamen["is_talent"])
+        ]["seamancode"].unique()
+
+        # Gabungkan kedua kriteria (experience + talent)
+        seamancode_qualified = list(
+            set(seamancode_with_experience) | set(seamancode_talent)
+        )
+
+        # Ambil SEMUA history untuk seamancode yang qualified
+        df_mutasi_filtered = df_history[
+            df_history["seamancode"].isin(seamancode_qualified)
+        ]
+
+        # Merge untuk ambil nama
+        df_mutasi_filtered = df_mutasi_filtered.merge(
+            df_seamen[
+                ["seamancode", "name", "last_position", "is_talent"]
+            ].drop_duplicates(),
+            on="seamancode",
+            how="left",
+        )
+
+        # Group jadi dict
+        result = (
+            df_mutasi_filtered.groupby("seamancode")
+            .apply(
+                lambda g: {
+                    "code": int(g["seamancode"].iloc[0]),
+                    "name": g["name"].iloc[0],
+                    "rank": g["last_position"].iloc[0],
+                    "is_talent": (
+                        bool(g["is_talent"].iloc[0])
+                        if pd.notna(g["is_talent"].iloc[0])
+                        else False
+                    ),
+                    "history": g["fromvesselname"].dropna().unique().tolist(),
+                }
+            )
+            .tolist()
+        )
+
+        return jsonify({"status": "success", "data": result})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/save-excel", methods=["POST"])
 def save_excel():
     data = request.get_json()
@@ -1614,6 +2001,590 @@ def api_get_locked_seaman_codes():
 
     except Exception as e:
         app.logger.error(f"Error fetching locked seaman codes: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/get_crew_to_relieve", methods=["GET"])
+def api_get_crew_to_relieve():
+    """Get crew members that need to be relieved (day_remains < threshold OR day_elapsed > threshold)"""
+    try:
+        vessel_group = request.args.get("vessel_group", "")
+        job = request.args.get("job", "").upper()
+        days_threshold = int(request.args.get("days_threshold", 30))  # Default 30 hari
+        days_elapsed_threshold = int(
+            request.args.get("days_elapsed_threshold", 335)
+        )  # Default 335 hari (1 bulan sebelum kontrak habis)
+
+        if not vessel_group or not job:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "vessel_group and job parameters required",
+                    }
+                ),
+                400,
+            )
+
+        # Parse vessel_group - bisa comma-separated string dari FE
+        # Split dan normalize vessel names
+        vessel_list = [v.strip().upper() for v in vessel_group.split(",")]
+
+        # Fetch all seamen data (no job parameter)
+        df_seamen = get_seamen_as_data()
+
+        # Filter by job and convert to dict
+        all_seamen = df_seamen[df_seamen["last_position"] == job].to_dict(
+            orient="records"
+        )
+
+        # Filter crew yang perlu diganti
+        crew_to_relieve = []
+        for seaman in all_seamen:
+            # Parse day_remains and day_elapsed - handle string, int, and None
+            day_remains_raw = seaman.get("day_remains")
+            try:
+                if day_remains_raw is None or day_remains_raw == "":
+                    day_remains = 999
+                else:
+                    day_remains = int(float(str(day_remains_raw)))
+            except (ValueError, TypeError):
+                day_remains = 999
+
+            day_elapsed_raw = seaman.get("day_elapsed")
+            try:
+                if day_elapsed_raw is None or day_elapsed_raw == "":
+                    day_elapsed = 0
+                else:
+                    day_elapsed = int(float(str(day_elapsed_raw)))
+            except (ValueError, TypeError):
+                day_elapsed = 0
+
+            # Check conditions
+            is_on_board = seaman.get("status", "").upper() == "ON BOARD"
+            needs_relief_by_remains = day_remains <= days_threshold  # <= 30 hari
+            needs_relief_by_elapsed = (
+                day_elapsed >= days_elapsed_threshold
+            )  # >= 335 hari
+            vessel_name = seaman.get("last_location", "").upper()
+
+            # Check if vessel belongs to the group
+            # Exact match atau partial match
+            in_vessel_group = any(
+                vessel in vessel_name or vessel_name in vessel for vessel in vessel_list
+            )
+
+            # Crew needs relief if EITHER condition is met
+            if (
+                is_on_board
+                and (needs_relief_by_remains or needs_relief_by_elapsed)
+                and in_vessel_group
+            ):
+                crew_to_relieve.append(
+                    {
+                        "seamancode": seaman.get("seamancode"),
+                        "seafarercode": seaman.get("seafarercode"),
+                        "name": seaman.get("name"),
+                        "age": seaman.get("age"),
+                        "birthdate": seaman.get("birthdate"),
+                        "birthplace": seaman.get("birthplace"),
+                        "currentVessel": seaman.get("last_location"),
+                        "currentVesselId": seaman.get("last_vesselid"),
+                        "currentPosition": seaman.get("last_position"),
+                        "certificate": seaman.get("certificate"),
+                        "experience": seaman.get("experience"),
+                        "fleet": seaman.get("fleet"),
+                        "startDate": seaman.get("start_date"),
+                        "endDate": seaman.get("end_date"),
+                        "daysElapsed": day_elapsed,
+                        "daysRemaining": day_remains,
+                        "phoneNumber1": seaman.get("phone_number_1"),
+                        "phoneNumber2": seaman.get("phone_number_2"),
+                        "phoneNumber3": seaman.get("phone_number_3"),
+                        "phoneNumber4": seaman.get("phone_number_4"),
+                        "picCrewing": seaman.get("pic_crewing"),
+                        "prevLocation": seaman.get("prevlocation"),
+                        "prevPosition": seaman.get("prevposition"),
+                        "reliefReason": (
+                            "elapsed" if needs_relief_by_elapsed else "remaining"
+                        ),
+                        "reliefPriority": (
+                            "critical"
+                            if (day_remains < 7 or day_elapsed > 358)
+                            else (
+                                "high"
+                                if (day_remains < 30 or day_elapsed > 335)
+                                else "medium"
+                            )
+                        ),
+                    }
+                )
+
+        # Sort by priority: critical first, then by days remaining (ascending), then by days elapsed (descending)
+        def sort_key(x):
+            priority_order = {"critical": 0, "high": 1, "medium": 2}
+            return (
+                priority_order.get(x["reliefPriority"], 3),
+                x["daysRemaining"],
+                -x["daysElapsed"],
+            )
+
+        crew_to_relieve.sort(key=sort_key)
+
+        return jsonify(
+            {
+                "status": "success",
+                "data": crew_to_relieve,
+                "count": len(crew_to_relieve),
+                "vessel_group": vessel_group,
+                "vessel_count": len(vessel_list),
+                "job": job,
+                "days_threshold": days_threshold,
+                "days_elapsed_threshold": days_elapsed_threshold,
+                "critical_count": sum(
+                    1 for x in crew_to_relieve if x["reliefPriority"] == "critical"
+                ),
+                "high_count": sum(
+                    1 for x in crew_to_relieve if x["reliefPriority"] == "high"
+                ),
+                "medium_count": sum(
+                    1 for x in crew_to_relieve if x["reliefPriority"] == "medium"
+                ),
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching crew to relieve: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/get_available_replacements", methods=["GET"])
+def api_get_available_replacements():
+    """Get available crew members for replacement from next group with SAME rank OR promotion from lower rank"""
+    try:
+        job = request.args.get("job", "").upper()
+        vessel_group = request.args.get(
+            "vessel_group", ""
+        )  # e.g., "container_rotation1"
+        next_group = request.args.get("next_group", "")  # e.g., "container_rotation2"
+        next_group_vessels_str = request.args.get(
+            "next_group_vessels", ""
+        )  # e.g., "KM. SHIP1,KM. SHIP2"
+        day_elapsed_threshold = int(request.args.get("day_elapsed_threshold", 0))
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "job parameter required"}),
+                400,
+            )
+
+        if not vessel_group:
+            return (
+                jsonify(
+                    {"status": "error", "message": "vessel_group parameter required"}
+                ),
+                400,
+            )
+
+        if not next_group_vessels_str:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "next_group_vessels parameter required",
+                    }
+                ),
+                400,
+            )
+
+        # Parse next group vessels from comma-separated string
+        next_group_vessels = [
+            v.strip() for v in next_group_vessels_str.split(",") if v.strip()
+        ]
+
+        if not next_group_vessels:
+            return (
+                jsonify(
+                    {"status": "error", "message": "next_group_vessels cannot be empty"}
+                ),
+                400,
+            )
+
+        # Fetch all seamen data
+        df_seamen = get_seamen_as_data()
+
+        # Define available last_location values (status khusus)
+        AVAILABLE_LAST_LOCATIONS = [
+            "PENDING CUTI",
+            "PENDING GAJI",
+            "DARAT BIASA",
+            "DARAT",
+            "DARAT STAND-BY",
+        ]
+
+        available_replacements = []
+
+        # ============================================================
+        # PART 1: Same Job Replacements
+        # ============================================================
+        df_same_job = df_seamen[df_seamen["last_position"] == job]
+
+        for _, seaman in df_same_job.iterrows():
+            last_location = seaman.get("last_location", "").upper()
+            prev_location = seaman.get("prevlocation", "").upper()
+            status = seaman.get("status", "").upper()
+
+            # Last location MUST be in AVAILABLE_LAST_LOCATIONS (status khusus)
+            if last_location not in AVAILABLE_LAST_LOCATIONS:
+                continue
+
+            # Previous location (kapal terakhir sebelum status khusus) MUST be in next_group_vessels
+            is_in_next_group = any(
+                vessel.upper() in prev_location or prev_location in vessel.upper()
+                for vessel in next_group_vessels
+            )
+
+            if not is_in_next_group:
+                continue
+
+            # Parse day_elapsed
+            try:
+                day_elapsed = int(seaman.get("day_elapsed", "0"))
+            except (ValueError, TypeError):
+                day_elapsed = 0
+
+            # MUST have day_elapsed < 15 (baru istirahat)
+            if day_elapsed >= 15:
+                continue
+
+            # Check if day_elapsed is greater than threshold
+            if day_elapsed < day_elapsed_threshold:
+                continue
+
+            # Add to replacements
+            available_replacements.append(
+                {
+                    "seamancode": seaman.get("seamancode"),
+                    "name": seaman.get("name"),
+                    "position": seaman.get("last_position"),
+                    "lastVessel": last_location,
+                    "status": status,
+                    "certificate": seaman.get("certificate"),
+                    "experience": seaman.get("experience"),
+                    "phoneNumber": seaman.get("phone_number_3")
+                    or seaman.get("phone_number_1"),
+                    "age": seaman.get("age"),
+                    "daysSinceLastVessel": day_elapsed,
+                    "replacementType": "same_rank",
+                }
+            )
+
+        # ============================================================
+        # PART 2: Promotion Candidates (Optional - jika frontend kirim)
+        # ============================================================
+        promotion_vessels_str = request.args.get("promotion_vessels", "")
+        promotion_job = request.args.get("promotion_job", "").upper()
+
+        if promotion_vessels_str and promotion_job:
+            promotion_vessels = [
+                v.strip() for v in promotion_vessels_str.split(",") if v.strip()
+            ]
+
+            if promotion_vessels:
+                df_promotion = df_seamen[df_seamen["last_position"] == promotion_job]
+
+                for _, seaman in df_promotion.iterrows():
+                    last_location = seaman.get("last_location", "").upper()
+                    prev_location = seaman.get("prevlocation", "").upper()
+                    status = seaman.get("status", "").upper()
+
+                    # Last location MUST be in AVAILABLE_LAST_LOCATIONS
+                    if last_location not in AVAILABLE_LAST_LOCATIONS:
+                        continue
+
+                    # Previous location MUST be in promotion_vessels
+                    is_in_promotion_group = any(
+                        vessel.upper() in prev_location
+                        or prev_location in vessel.upper()
+                        for vessel in promotion_vessels
+                    )
+
+                    if not is_in_promotion_group:
+                        continue
+
+                    # Parse day_elapsed
+                    try:
+                        day_elapsed = int(seaman.get("day_elapsed", "0"))
+                    except (ValueError, TypeError):
+                        day_elapsed = 0
+
+                    # MUST have day_elapsed < 15
+                    if day_elapsed >= 15:
+                        continue
+
+                    # Check threshold
+                    if day_elapsed < day_elapsed_threshold:
+                        continue
+
+                    # Add to replacements with promotion flag
+                    available_replacements.append(
+                        {
+                            "seamancode": seaman.get("seamancode"),
+                            "name": seaman.get("name"),
+                            "position": seaman.get("last_position"),
+                            "lastVessel": last_location,
+                            "status": status,
+                            "certificate": seaman.get("certificate"),
+                            "experience": seaman.get("experience"),
+                            "phoneNumber": seaman.get("phone_number_3")
+                            or seaman.get("phone_number_1"),
+                            "age": seaman.get("age"),
+                            "daysSinceLastVessel": day_elapsed,
+                            "replacementType": "promotion",
+                            "promotionFrom": promotion_job,
+                            "promotionTo": job,
+                        }
+                    )
+
+        # ============================================================
+        # SORTING
+        # ============================================================
+        def last_location_priority(replacement):
+            """Priority: DARAT STAND-BY > DARAT BIASA/DARAT > PENDING GAJI > PENDING CUTI"""
+            location = replacement["lastVessel"].upper()
+            if "DARAT STAND-BY" in location:
+                return 0
+            elif "DARAT BIASA" in location or "DARAT" in location:
+                return 1
+            elif "PENDING GAJI" in location:
+                return 2
+            elif "PENDING CUTI" in location:
+                return 3
+            else:
+                return 4
+
+        def replacement_type_priority(replacement):
+            """Priority: same_rank > promotion"""
+            return 0 if replacement.get("replacementType") == "same_rank" else 1
+
+        # Sort by: replacement type -> location priority -> day elapsed (descending)
+        available_replacements.sort(
+            key=lambda x: (
+                replacement_type_priority(x),
+                last_location_priority(x),
+                -x["daysSinceLastVessel"],
+            )
+        )
+
+        # ============================================================
+        # RESPONSE
+        # ============================================================
+        return jsonify(
+            {
+                "status": "success",
+                "data": available_replacements,
+                "count": len(available_replacements),
+                "summary": {
+                    "same_rank_count": sum(
+                        1
+                        for r in available_replacements
+                        if r.get("replacementType") == "same_rank"
+                    ),
+                    "promotion_count": sum(
+                        1
+                        for r in available_replacements
+                        if r.get("replacementType") == "promotion"
+                    ),
+                },
+                "job": job,
+                "vessel_group": vessel_group,
+                "next_group": next_group,
+                "next_group_vessels": next_group_vessels,
+                "promotion_job": promotion_job if promotion_job else None,
+                "day_elapsed_threshold": day_elapsed_threshold,
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching available replacements: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/submit_schedule_rotation", methods=["POST"])
+def api_submit_schedule_rotation():
+    """Submit schedule rotation assignments"""
+    try:
+        data = request.get_json()
+
+        if not data or "rotations" not in data:
+            return (
+                jsonify({"status": "error", "message": "rotations data required"}),
+                400,
+            )
+
+        rotations = data.get("rotations", [])
+        vessel_group = data.get("vessel_group", "")
+        job = data.get("job", "")
+        rotation_type = data.get("type", "")
+        rotation_part = data.get("part", "")
+
+        # Validate rotations
+        if not rotations:
+            return (
+                jsonify({"status": "error", "message": "No rotation data provided"}),
+                400,
+            )
+
+        # Process each rotation
+        processed_rotations = []
+        failed_rotations = []
+
+        for rotation in rotations:
+            crew_out_code = rotation.get("seamancode_out")
+            crew_in_code = rotation.get("seamancode_in")
+            vessel = rotation.get("vessel")
+            position = rotation.get("position")
+            days_remaining = rotation.get("days_remaining", 0)
+
+            if not all([crew_out_code, crew_in_code, vessel, position]):
+                failed_rotations.append(
+                    {"rotation": rotation, "reason": "Missing required fields"}
+                )
+                continue
+
+            try:
+                # Di sini Anda bisa simpan ke database
+                rotation_data = {
+                    "crew_out": crew_out_code,
+                    "crew_in": crew_in_code,
+                    "vessel": vessel,
+                    "position": position,
+                    "days_remaining": days_remaining,
+                    "vessel_group": vessel_group,
+                    "job": job,
+                    "type": rotation_type,
+                    "part": rotation_part,
+                    "status": "PENDING",
+                    "created_at": datetime.now().isoformat(),
+                    "created_by": "system",  # Bisa diganti dengan user login
+                }
+
+                # TODO: Insert to database
+                # insert_schedule_rotation(rotation_data)
+
+                processed_rotations.append(rotation_data)
+
+            except Exception as e:
+                failed_rotations.append({"rotation": rotation, "reason": str(e)})
+
+        return jsonify(
+            {
+                "status": "success",
+                "message": f"Successfully processed {len(processed_rotations)} rotations",
+                "data": {
+                    "processed": processed_rotations,
+                    "failed": failed_rotations,
+                    "total_processed": len(processed_rotations),
+                    "total_failed": len(failed_rotations),
+                },
+                "vessel_group": vessel_group,
+                "job": job,
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error submitting schedule rotation: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/get_rotation_summary", methods=["GET"])
+def api_get_rotation_summary():
+    """Get summary of rotation schedule for a vessel group"""
+    try:
+        vessel_group = request.args.get("vessel_group", "")
+        job = request.args.get("job", "").upper()
+
+        if not vessel_group or not job:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "vessel_group and job parameters required",
+                    }
+                ),
+                400,
+            )
+
+        # Parse vessel_group
+        vessel_list = [v.strip().upper() for v in vessel_group.split(",")]
+
+        # Get crew data (no job parameter)
+        df_seamen = get_seamen_as_data()
+
+        # Filter by job and convert to dict
+        all_seamen = df_seamen[df_seamen["last_position"] == job].to_dict(
+            orient="records"
+        )
+
+        total_crew = 0
+        needs_relief_30 = 0
+        needs_relief_60 = 0
+        needs_relief_90 = 0
+        critical_relief = 0  # < 7 days
+
+        for seaman in all_seamen:
+            vessel_name = seaman.get("last_location", "").upper()
+
+            # Check if vessel in group
+            in_vessel_group = any(
+                vessel in vessel_name or vessel_name in vessel for vessel in vessel_list
+            )
+
+            if in_vessel_group and seaman.get("status", "").upper() == "ON BOARD":
+                total_crew += 1
+                try:
+                    day_remains = int(seaman.get("day_remains", "999"))
+                    if day_remains < 90:
+                        needs_relief_90 += 1
+                    if day_remains < 60:
+                        needs_relief_60 += 1
+                    if day_remains < 30:
+                        needs_relief_30 += 1
+                    if day_remains < 7:
+                        critical_relief += 1
+                except (ValueError, TypeError):
+                    pass
+
+        return jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "vessel_group": vessel_group,
+                    "vessel_count": len(vessel_list),
+                    "job": job,
+                    "total_crew": total_crew,
+                    "needs_relief_30_days": needs_relief_30,
+                    "needs_relief_60_days": needs_relief_60,
+                    "needs_relief_90_days": needs_relief_90,
+                    "critical_relief": critical_relief,
+                    "relief_percentage_30": round(
+                        (needs_relief_30 / total_crew * 100) if total_crew > 0 else 0, 2
+                    ),
+                    "relief_percentage_60": round(
+                        (needs_relief_60 / total_crew * 100) if total_crew > 0 else 0, 2
+                    ),
+                    "relief_percentage_90": round(
+                        (needs_relief_90 / total_crew * 100) if total_crew > 0 else 0, 2
+                    ),
+                },
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching rotation summary: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
