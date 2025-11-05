@@ -9,7 +9,7 @@ import {
   Badge,
   Alert,
 } from 'flowbite-react';
-import { HiPlus, HiPencil, HiTrash, HiRefresh } from 'react-icons/hi';
+import { HiPlus, HiTrash, HiRefresh } from 'react-icons/hi';
 import {
   useRotationConfigs,
   RotationConfig,
@@ -33,11 +33,19 @@ export default function RotationShipConfig() {
   const [formData, setFormData] = useState({
     job_title: '',
     vessel: 'D',
-    type: 'container',
+    type: 'senior',
     part: 'deck',
     groups: {} as Record<string, string[]>,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Lock state untuk field kritis saat edit
+  const [isFieldsLocked, setIsFieldsLocked] = useState(true);
+
+  // Filter states
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterPart, setFilterPart] = useState<string>('all');
+  const [filterPosition, setFilterPosition] = useState<string>('all');
 
   // Alert state
   const [alert, setAlert] = useState<{
@@ -59,10 +67,11 @@ export default function RotationShipConfig() {
 
   const handleCreate = () => {
     setEditingConfig(null);
+    setIsFieldsLocked(false); // Unlock untuk create baru
     setFormData({
       job_title: '',
       vessel: 'D',
-      type: 'container',
+      type: 'senior',
       part: 'deck',
       groups: {},
     });
@@ -71,6 +80,7 @@ export default function RotationShipConfig() {
 
   const handleEdit = (config: RotationConfig) => {
     setEditingConfig(config);
+    setIsFieldsLocked(true); // Lock saat edit
     setFormData({
       job_title: config.job_title,
       vessel: config.vessel,
@@ -103,7 +113,7 @@ export default function RotationShipConfig() {
 
     // Validasi
     if (!formData.job_title.trim()) {
-      showAlert('warning', 'Job title harus diisi!');
+      showAlert('warning', 'Position harus diisi!');
       return;
     }
 
@@ -193,6 +203,21 @@ export default function RotationShipConfig() {
     });
   };
 
+  // Helper function untuk format Position untuk display
+  const formatJobTitleDisplay = (jobTitle: string): string => {
+    const formatMap: Record<string, string> = {
+      nakhoda: 'Nahkoda',
+      KKM: 'KKM',
+      mualimI: 'Mualim I',
+      mualimII: 'Mualim II',
+      mualimIII: 'Mualim III',
+      masinisII: 'Masinis II',
+      masinisIII: 'Masinis III',
+      masinisIV: 'Masinis IV',
+    };
+    return formatMap[jobTitle] || jobTitle;
+  };
+
   // Urutan hierarki jabatan
   const jobTitleOrder = [
     'nakhoda',
@@ -205,16 +230,36 @@ export default function RotationShipConfig() {
     'masinisIV',
   ];
 
-  const sortedConfigs = [...configs].sort((a, b) => {
-    const indexA = jobTitleOrder.indexOf(a.job_title);
-    const indexB = jobTitleOrder.indexOf(b.job_title);
+  // Urutan tipe
+  const typeOrder = ['senior', 'junior', 'manalagi'];
 
-    // Jika tidak ada di urutan, taruh di akhir
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
+  // Filter dan sort configs
+  const filteredAndSortedConfigs = [...configs]
+    .filter(config => {
+      if (filterType !== 'all' && config.type !== filterType) return false;
+      if (filterPart !== 'all' && config.part !== filterPart) return false;
+      if (filterPosition !== 'all' && config.job_title !== filterPosition)
+        return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort berdasarkan type dulu
+      const typeIndexA = typeOrder.indexOf(a.type);
+      const typeIndexB = typeOrder.indexOf(b.type);
 
-    return indexA - indexB;
-  });
+      if (typeIndexA !== typeIndexB) {
+        return typeIndexA - typeIndexB;
+      }
+
+      // Kemudian sort berdasarkan Position
+      const jobIndexA = jobTitleOrder.indexOf(a.job_title);
+      const jobIndexB = jobTitleOrder.indexOf(b.job_title);
+
+      if (jobIndexA === -1) return 1;
+      if (jobIndexB === -1) return -1;
+
+      return jobIndexA - jobIndexB;
+    });
 
   if (loading) {
     return (
@@ -241,40 +286,125 @@ export default function RotationShipConfig() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Kelola Konfigurasi Rotasi
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Manage rotation configurations for all job types
-          </p>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Kelola Konfigurasi Rotasi
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage rotation configurations for all job types
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              color="gray"
+              onClick={refetch}
+              disabled={isSubmitting}
+              className="hidden"
+            >
+              <HiRefresh className="mr-2" />
+              Refresh
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={isSubmitting}
+              className="flex items-center"
+            >
+              <HiPlus className="mr-2" />
+              Tambah Konfigurasi
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button color="gray" onClick={refetch} disabled={isSubmitting}>
-            <HiRefresh className="mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={handleCreate} disabled={isSubmitting}>
-            <HiPlus className="mr-2" />
-            Tambah Konfigurasi
-          </Button>
+
+        {/* Filter Section */}
+        <div className="flex gap-3 items-center bg-gray-50 p-4 rounded-lg flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Filter Tipe:
+            </label>
+            <Select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              sizing="sm"
+              className="w-40"
+            >
+              <option value="all">Semua Tipe</option>
+              <option value="senior">Senior</option>
+              <option value="junior">Junior</option>
+              <option value="manalagi">Manalagi</option>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Filter Part:
+            </label>
+            <Select
+              value={filterPart}
+              onChange={e => setFilterPart(e.target.value)}
+              sizing="sm"
+              className="w-40"
+            >
+              <option value="all">Semua Part</option>
+              <option value="deck">Deck</option>
+              <option value="engine">Engine</option>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Filter Position:
+            </label>
+            <Select
+              value={filterPosition}
+              onChange={e => setFilterPosition(e.target.value)}
+              sizing="sm"
+              className="w-40"
+            >
+              <option value="all">Semua Position</option>
+              <option value="nakhoda">Nahkoda</option>
+              <option value="KKM">KKM</option>
+              <option value="mualimI">Mualim I</option>
+              <option value="mualimII">Mualim II</option>
+              <option value="mualimIII">Mualim III</option>
+              <option value="masinisII">Masinis II</option>
+              <option value="masinisIII">Masinis III</option>
+              <option value="masinisIV">Masinis IV</option>
+            </Select>
+          </div>
+
+          {(filterType !== 'all' ||
+            filterPart !== 'all' ||
+            filterPosition !== 'all') && (
+            <Button
+              size="xs"
+              color="gray"
+              onClick={() => {
+                setFilterType('all');
+                setFilterPart('all');
+                setFilterPosition('all');
+              }}
+            >
+              Reset Filter
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <Table>
           <Table.Head>
-            <Table.HeadCell>Job Title</Table.HeadCell>
-            <Table.HeadCell>Vessel</Table.HeadCell>
             <Table.HeadCell>Type</Table.HeadCell>
             <Table.HeadCell>Part</Table.HeadCell>
+            <Table.HeadCell>Position</Table.HeadCell>
+            <Table.HeadCell>Vessel</Table.HeadCell>
             <Table.HeadCell>Groups</Table.HeadCell>
             <Table.HeadCell>Total Ships</Table.HeadCell>
-            <Table.HeadCell>Actions</Table.HeadCell>
+            <Table.HeadCell>Action</Table.HeadCell>
           </Table.Head>
           <Table.Body className="divide-y">
-            {sortedConfigs.map(config => {
+            {filteredAndSortedConfigs.map(config => {
               const totalShips = Object.values(config.groups).flat().length;
 
               // Helper function untuk vessel color
@@ -328,18 +458,6 @@ export default function RotationShipConfig() {
                   key={config.id}
                   className="bg-white hover:bg-gray-50"
                 >
-                  <Table.Cell className="font-bold text-gray-900 text-base">
-                    {config.job_title}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge
-                      color={vesselInfo.color as any}
-                      size="lg"
-                      className="font-semibold"
-                    >
-                      {vesselInfo.label}
-                    </Badge>
-                  </Table.Cell>
                   <Table.Cell>
                     <Badge
                       color={typeInfo.color as any}
@@ -358,6 +476,18 @@ export default function RotationShipConfig() {
                       {partInfo.label}
                     </Badge>
                   </Table.Cell>
+                  <Table.Cell className="font-bold text-gray-900 text-base">
+                    {formatJobTitleDisplay(config.job_title)}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Badge
+                      color={vesselInfo.color as any}
+                      size="lg"
+                      className="font-semibold"
+                    >
+                      {vesselInfo.label}
+                    </Badge>
+                  </Table.Cell>
                   <Table.Cell>
                     <span className="font-medium text-gray-700">
                       {Object.keys(config.groups).length} groups
@@ -372,11 +502,11 @@ export default function RotationShipConfig() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        color="gray"
+                        color="light"
                         onClick={() => handleEdit(config)}
                         disabled={isSubmitting}
                       >
-                        <HiPencil />
+                        Edit
                       </Button>
                       <Button
                         size="sm"
@@ -415,26 +545,94 @@ export default function RotationShipConfig() {
         </Modal.Header>
         <Modal.Body>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Warning jika mode edit */}
+            {editingConfig && isFieldsLocked && (
+              <Alert color="warning">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm flex-1">
+                    <strong>Mode Edit:</strong> Field kritis (Position, Type,
+                    Vessel, Part) terkunci untuk mencegah kesalahan input.
+                  </span>
+
+                  <Button
+                    size="xs"
+                    color="warning"
+                    onClick={() => setIsFieldsLocked(false)}
+                    className="shrink-0 ml-4"
+                  >
+                    Unlock untuk Edit
+                  </Button>
+                </div>
+              </Alert>
+            )}
+
+            {editingConfig && !isFieldsLocked && (
+              <Alert color="failure">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm flex-1">
+                    <strong>Peringatan:</strong> Field kritis tidak terkunci.
+                    Pastikan perubahan sudah benar!
+                  </span>
+
+                  <Button
+                    size="xs"
+                    color="gray"
+                    onClick={() => setIsFieldsLocked(true)}
+                    className="shrink-0 ml-4"
+                  >
+                    Lock Kembali
+                  </Button>
+                </div>
+              </Alert>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="job_title">Job Title *</Label>
-                <TextInput
+                <Label htmlFor="job_title">
+                  Position *
+                  {editingConfig && isFieldsLocked && (
+                    <span className="ml-2 text-xs text-amber-600">Lock</span>
+                  )}
+                </Label>
+                <Select
                   id="job_title"
                   value={formData.job_title}
                   onChange={e =>
                     setFormData({ ...formData, job_title: e.target.value })
                   }
-                  placeholder="contoh: mualimII, nakhoda, KKM"
                   required
-                />
+                  disabled={editingConfig ? isFieldsLocked : false}
+                  className={
+                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
+                  }
+                >
+                  <option value="">Pilih Position</option>
+                  <option value="nakhoda">Nahkoda</option>
+                  <option value="KKM">KKM</option>
+                  <option value="mualimI">Mualim I</option>
+                  <option value="mualimII">Mualim II</option>
+                  <option value="mualimIII">Mualim III</option>
+                  <option value="masinisII">Masinis II</option>
+                  <option value="masinisIII">Masinis III</option>
+                  <option value="masinisIV">Masinis IV</option>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="vessel">Vessel *</Label>
+                <Label htmlFor="vessel">
+                  Vessel *
+                  {editingConfig && isFieldsLocked && (
+                    <span className="ml-2 text-xs text-amber-600">Lock</span>
+                  )}
+                </Label>
                 <Select
                   id="vessel"
                   value={formData.vessel}
                   onChange={e =>
                     setFormData({ ...formData, vessel: e.target.value })
+                  }
+                  disabled={editingConfig ? isFieldsLocked : false}
+                  className={
+                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
                   }
                 >
                   <option value="D">D</option>
@@ -444,12 +642,21 @@ export default function RotationShipConfig() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="type">Type *</Label>
+                <Label htmlFor="type">
+                  Type *
+                  {editingConfig && isFieldsLocked && (
+                    <span className="ml-2 text-xs text-amber-600">Lock</span>
+                  )}
+                </Label>
                 <Select
                   id="type"
                   value={formData.type}
                   onChange={e =>
                     setFormData({ ...formData, type: e.target.value })
+                  }
+                  disabled={editingConfig ? isFieldsLocked : false}
+                  className={
+                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
                   }
                 >
                   <option value="senior">Senior</option>
@@ -458,12 +665,21 @@ export default function RotationShipConfig() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="part">Part *</Label>
+                <Label htmlFor="part">
+                  Part *
+                  {editingConfig && isFieldsLocked && (
+                    <span className="ml-2 text-xs text-amber-600">Lock</span>
+                  )}
+                </Label>
                 <Select
                   id="part"
                   value={formData.part}
                   onChange={e =>
                     setFormData({ ...formData, part: e.target.value })
+                  }
+                  disabled={editingConfig ? isFieldsLocked : false}
+                  className={
+                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
                   }
                 >
                   <option value="deck">Deck</option>
@@ -507,6 +723,7 @@ export default function RotationShipConfig() {
                 color="gray"
                 onClick={() => setShowModal(false)}
                 disabled={isSubmitting}
+                type="button"
               >
                 Batal
               </Button>
@@ -546,6 +763,16 @@ function GroupEditor({
 }) {
   const [newShip, setNewShip] = useState('');
 
+  // Helper function untuk format display nama group
+  const formatGroupDisplay = (key: string): string => {
+    // Extract nomor dari key (container_rotation1 -> 1, manalagi_rotation2 -> 2)
+    const match = key.match(/rotation(\d+)$/);
+    if (match) {
+      return `Group ${match[1]}`;
+    }
+    return key; // fallback ke original jika pattern tidak match
+  };
+
   const handleAdd = () => {
     if (newShip.trim()) {
       onAddShip(newShip);
@@ -563,7 +790,9 @@ function GroupEditor({
   return (
     <div className="p-4 border rounded-lg bg-gray-50">
       <div className="flex justify-between items-center mb-3">
-        <h4 className="font-semibold text-gray-900">{groupKey}</h4>
+        <h4 className="font-semibold text-gray-900">
+          {formatGroupDisplay(groupKey)}
+        </h4>
         <Button size="xs" color="failure" onClick={onRemoveGroup}>
           <HiTrash className="mr-1" />
           Hapus Group
