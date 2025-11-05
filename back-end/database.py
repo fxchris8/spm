@@ -755,7 +755,489 @@ def manual_sync_all():
 
 
 # ============================================================================
-# BAGIAN 5: MAIN EXECUTION
+# BAGIAN 5: ROTATION CONFIGS MANAGEMENT (CRUD)
+# ============================================================================
+
+# Validation Constants - Easy to update without database migration
+VALID_VESSELS = ["D", "E", "F", "G"]
+VALID_TYPES = ["senior", "junior", "manalagi"]
+VALID_PARTS = ["deck", "engine"]
+
+
+def validate_rotation_config(vessel, rotation_type, part, groups=None):
+    """
+    Validate rotation config data before insert/update
+
+    Args:
+        vessel: Vessel code
+        rotation_type: Type (container/schedule)
+        part: Part (deck/engine)
+        groups: Optional groups dict for additional validation
+
+    Raises:
+        ValueError: If validation fails
+
+    Returns:
+        True if all validations pass
+    """
+    # Validate vessel
+    if vessel not in VALID_VESSELS:
+        raise ValueError(f"Invalid vessel: '{vessel}'. Must be one of {VALID_VESSELS}")
+
+    # Validate type
+    if rotation_type not in VALID_TYPES:
+        raise ValueError(
+            f"Invalid type: '{rotation_type}'. Must be one of {VALID_TYPES}"
+        )
+
+    # Validate part
+    if part not in VALID_PARTS:
+        raise ValueError(f"Invalid part: '{part}'. Must be one of {VALID_PARTS}")
+
+    # Optional: Validate groups structure
+    if groups is not None:
+        if not isinstance(groups, dict):
+            raise ValueError("Groups must be a dictionary")
+
+        if len(groups) == 0:
+            raise ValueError("At least one group is required")
+
+        for group_key, ships in groups.items():
+            if not isinstance(ships, list):
+                raise ValueError(f"Ships in '{group_key}' must be a list")
+
+            if len(ships) == 0:
+                raise ValueError(f"Group '{group_key}' must contain at least one ship")
+
+    return True
+
+
+def get_rotation_configs(rotation_type=None):
+    """
+    Fetch rotation configs dari database dengan groups dan ships
+
+    Args:
+        rotation_type: Optional filter by type ('container' atau 'schedule')
+
+    Returns:
+        List of dicts dengan struktur:
+        {
+            'id': int,
+            'job_title': str,
+            'vessel': str,
+            'type': str,
+            'part': str,
+            'groups': {
+                'container_rotation1': ['KM. SHIP1', 'KM. SHIP2'],
+                'container_rotation2': ['KM. SHIP3', 'KM. SHIP4']
+            }
+        }
+    """
+    try:
+        # Build query dengan optional type filter
+        if rotation_type:
+            query = """
+                SELECT id, job_title, vessel, type, part, created_at, updated_at
+                FROM rotation_configs
+                WHERE type = :rotation_type
+                ORDER BY job_title
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query), {"rotation_type": rotation_type})
+                configs = result.fetchall()
+        else:
+            query = """
+                SELECT id, job_title, vessel, type, part, created_at, updated_at
+                FROM rotation_configs
+                ORDER BY job_title
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query))
+                configs = result.fetchall()
+
+        # Convert to list of dicts dengan groups
+        config_list = []
+        with engine.connect() as conn:
+            for config in configs:
+                config_id = config[0]
+
+                # Fetch groups untuk config ini
+                groups_query = """
+                    SELECT id, group_key, group_number
+                    FROM rotation_groups
+                    WHERE rotation_config_id = :config_id
+                    ORDER BY group_number
+                """
+                groups_result = conn.execute(
+                    text(groups_query), {"config_id": config_id}
+                )
+                groups = groups_result.fetchall()
+
+                # Build groups dict
+                groups_dict = {}
+                for group in groups:
+                    group_id = group[0]
+                    group_key = group[1]
+
+                    # Fetch ships untuk group ini
+                    ships_query = """
+                        SELECT ship_name
+                        FROM rotation_ships
+                        WHERE rotation_group_id = :group_id
+                        ORDER BY order_index
+                    """
+                    ships_result = conn.execute(
+                        text(ships_query), {"group_id": group_id}
+                    )
+                    ships = [row[0] for row in ships_result.fetchall()]
+
+                    groups_dict[group_key] = ships
+
+                # Build config dict
+                config_dict = {
+                    "id": config[0],
+                    "job_title": config[1],
+                    "vessel": config[2],
+                    "type": config[3],
+                    "part": config[4],
+                    "groups": groups_dict,
+                    "created_at": config[5].isoformat() if config[5] else None,
+                    "updated_at": config[6].isoformat() if config[6] else None,
+                }
+
+                config_list.append(config_dict)
+
+        print(f"DONE - Fetched {len(config_list)} rotation configs from database")
+        return config_list
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch rotation configs: {str(e)}")
+
+
+def get_rotation_config_by_id(config_id):
+    """
+    Fetch single rotation config by ID
+
+    Args:
+        config_id: ID of the config
+
+    Returns:
+        Dict dengan struktur sama seperti get_rotation_configs
+    """
+    try:
+        query = """
+            SELECT id, job_title, vessel, type, part, created_at, updated_at
+            FROM rotation_configs
+            WHERE id = :config_id
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), {"config_id": config_id})
+            config = result.fetchone()
+
+            if not config:
+                return None
+
+            # Fetch groups
+            groups_query = """
+                SELECT id, group_key, group_number
+                FROM rotation_groups
+                WHERE rotation_config_id = :config_id
+                ORDER BY group_number
+            """
+            groups_result = conn.execute(text(groups_query), {"config_id": config_id})
+            groups = groups_result.fetchall()
+
+            # Build groups dict
+            groups_dict = {}
+            for group in groups:
+                group_id = group[0]
+                group_key = group[1]
+
+                # Fetch ships
+                ships_query = """
+                    SELECT ship_name
+                    FROM rotation_ships
+                    WHERE rotation_group_id = :group_id
+                    ORDER BY order_index
+                """
+                ships_result = conn.execute(text(ships_query), {"group_id": group_id})
+                ships = [row[0] for row in ships_result.fetchall()]
+
+                groups_dict[group_key] = ships
+
+            config_dict = {
+                "id": config[0],
+                "job_title": config[1],
+                "vessel": config[2],
+                "type": config[3],
+                "part": config[4],
+                "groups": groups_dict,
+                "created_at": config[5].isoformat() if config[5] else None,
+                "updated_at": config[6].isoformat() if config[6] else None,
+            }
+
+            print(f"DONE - Fetched rotation config ID {config_id}")
+            return config_dict
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch rotation config: {str(e)}")
+
+
+def create_rotation_config(job_title, vessel, rotation_type, part, groups):
+    """
+    Create new rotation config dengan groups dan ships
+
+    Args:
+        job_title: Job title (e.g. 'mualimII')
+        vessel: Vessel code ('D', 'E', 'F', 'G')
+        rotation_type: Type ('container' atau 'schedule')
+        part: Part ('deck' atau 'engine')
+        groups: Dict dengan format:
+            {
+                'container_rotation1': ['KM. SHIP1', 'KM. SHIP2'],
+                'container_rotation2': ['KM. SHIP3', 'KM. SHIP4']
+            }
+
+    Returns:
+        Dict dengan 'success' dan 'id'
+    """
+    try:
+        # Validate input first
+        validate_rotation_config(vessel, rotation_type, part, groups)
+
+        with engine.connect() as conn:
+            # Start transaction
+            trans = conn.begin()
+
+            try:
+                # Insert config
+                config_query = """
+                    INSERT INTO rotation_configs (job_title, vessel, type, part)
+                    VALUES (:job_title, :vessel, :type, :part)
+                    RETURNING id
+                """
+                result = conn.execute(
+                    text(config_query),
+                    {
+                        "job_title": job_title,
+                        "vessel": vessel,
+                        "type": rotation_type,
+                        "part": part,
+                    },
+                )
+                config_id = result.fetchone()[0]
+
+                # Insert groups dan ships
+                for group_key, ships in groups.items():
+                    # Extract group number dari group_key
+                    group_number = int("".join(filter(str.isdigit, group_key)))
+
+                    # Insert group
+                    group_query = """
+                        INSERT INTO rotation_groups (rotation_config_id, group_key, group_number)
+                        VALUES (:config_id, :group_key, :group_number)
+                        RETURNING id
+                    """
+                    group_result = conn.execute(
+                        text(group_query),
+                        {
+                            "config_id": config_id,
+                            "group_key": group_key,
+                            "group_number": group_number,
+                        },
+                    )
+                    group_id = group_result.fetchone()[0]
+
+                    # Insert ships
+                    for idx, ship_name in enumerate(ships):
+                        ship_query = """
+                            INSERT INTO rotation_ships (rotation_group_id, ship_name, order_index)
+                            VALUES (:group_id, :ship_name, :order_index)
+                        """
+                        conn.execute(
+                            text(ship_query),
+                            {
+                                "group_id": group_id,
+                                "ship_name": ship_name,
+                                "order_index": idx,
+                            },
+                        )
+
+                # Commit transaction
+                trans.commit()
+
+                print(
+                    f"DONE - Created rotation config '{job_title}' with ID {config_id}"
+                )
+                return {
+                    "success": True,
+                    "message": f"Konfigurasi rotasi {job_title} berhasil dibuat",
+                    "id": config_id,
+                }
+
+            except Exception as e:
+                trans.rollback()
+                raise e
+
+    except ValueError as e:
+        # Validation error
+        print(f"FAIL - Validation Error: {str(e)}")
+        raise ValueError(f"Validation failed: {str(e)}")
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to create rotation config: {str(e)}")
+
+
+def update_rotation_config(config_id, job_title, vessel, rotation_type, part, groups):
+    """
+    Update existing rotation config
+
+    Args:
+        config_id: ID of config to update
+        job_title, vessel, rotation_type, part, groups: Same as create_rotation_config
+
+    Returns:
+        Dict dengan 'success'
+    """
+    try:
+        # Validate input first
+        validate_rotation_config(vessel, rotation_type, part, groups)
+
+        with engine.connect() as conn:
+            # Start transaction
+            trans = conn.begin()
+
+            try:
+                # Update config
+                update_query = """
+                    UPDATE rotation_configs
+                    SET job_title = :job_title,
+                        vessel = :vessel,
+                        type = :type,
+                        part = :part,
+                        updated_at = NOW()
+                    WHERE id = :config_id
+                """
+                conn.execute(
+                    text(update_query),
+                    {
+                        "config_id": config_id,
+                        "job_title": job_title,
+                        "vessel": vessel,
+                        "type": rotation_type,
+                        "part": part,
+                    },
+                )
+
+                # Delete old groups dan ships (CASCADE akan handle ships)
+                delete_groups_query = """
+                    DELETE FROM rotation_groups
+                    WHERE rotation_config_id = :config_id
+                """
+                conn.execute(text(delete_groups_query), {"config_id": config_id})
+
+                # Insert new groups dan ships
+                for group_key, ships in groups.items():
+                    group_number = int("".join(filter(str.isdigit, group_key)))
+
+                    # Insert group
+                    group_query = """
+                        INSERT INTO rotation_groups (rotation_config_id, group_key, group_number)
+                        VALUES (:config_id, :group_key, :group_number)
+                        RETURNING id
+                    """
+                    group_result = conn.execute(
+                        text(group_query),
+                        {
+                            "config_id": config_id,
+                            "group_key": group_key,
+                            "group_number": group_number,
+                        },
+                    )
+                    group_id = group_result.fetchone()[0]
+
+                    # Insert ships
+                    for idx, ship_name in enumerate(ships):
+                        ship_query = """
+                            INSERT INTO rotation_ships (rotation_group_id, ship_name, order_index)
+                            VALUES (:group_id, :ship_name, :order_index)
+                        """
+                        conn.execute(
+                            text(ship_query),
+                            {
+                                "group_id": group_id,
+                                "ship_name": ship_name,
+                                "order_index": idx,
+                            },
+                        )
+
+                # Commit transaction
+                trans.commit()
+
+                print(f"DONE - Updated rotation config ID {config_id}")
+                return {
+                    "success": True,
+                    "message": "Konfigurasi rotasi berhasil diupdate",
+                }
+
+            except Exception as e:
+                trans.rollback()
+                raise e
+
+    except ValueError as e:
+        # Validation error
+        print(f"FAIL - Validation Error: {str(e)}")
+        raise ValueError(f"Validation failed: {str(e)}")
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to update rotation config: {str(e)}")
+
+
+def delete_rotation_config(config_id):
+    """
+    Delete rotation config (CASCADE akan handle groups dan ships)
+
+    Args:
+        config_id: ID of config to delete
+
+    Returns:
+        Dict dengan 'success'
+    """
+    try:
+        with engine.connect() as conn:
+            query = """
+                DELETE FROM rotation_configs
+                WHERE id = :config_id
+                RETURNING id
+            """
+
+            result = conn.execute(text(query), {"config_id": config_id})
+            conn.commit()
+
+            deleted = result.fetchone()
+
+            if deleted:
+                print(f"DONE - Deleted rotation config ID {config_id}")
+                return {
+                    "success": True,
+                    "message": "Konfigurasi rotasi berhasil dihapus",
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Konfigurasi rotasi tidak ditemukan",
+                }
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to delete rotation config: {str(e)}")
+
+
+# ============================================================================
+# BAGIAN 6: MAIN EXECUTION
 # ============================================================================
 
 if __name__ == "__main__":

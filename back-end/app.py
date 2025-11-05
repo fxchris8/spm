@@ -11,12 +11,17 @@ from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
 from database import (
+    create_rotation_config,
+    delete_rotation_config,
     get_all_locked_seaman_codes,
     get_locked_rotations,
     get_mutations_as_data,
+    get_rotation_config_by_id,
+    get_rotation_configs,
     get_seamen_as_data,
     save_locked_rotation,
     unlock_rotation,
+    update_rotation_config,
 )
 from model import (
     filter_in_vessel,
@@ -2586,6 +2591,109 @@ def api_get_rotation_summary():
     except Exception as e:
         app.logger.error(f"Error fetching rotation summary: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ============================================================================
+# ROTATION CONFIGS ROUTES
+# ============================================================================
+
+
+@app.route("/api/rotation-configs", methods=["GET"])
+def api_get_rotation_configs():
+    """GET - Ambil semua rotation configs"""
+    try:
+        rotation_type = request.args.get("type")  # Optional filter
+        configs = get_rotation_configs(rotation_type)
+        return jsonify(configs), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rotation-configs/<int:config_id>", methods=["GET"])
+def api_get_rotation_config(config_id):
+    """GET - Ambil single rotation config by ID"""
+    try:
+        config = get_rotation_config_by_id(config_id)
+
+        if config:
+            return jsonify(config), 200
+        else:
+            return jsonify({"error": "Config not found"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rotation-configs", methods=["POST"])
+def api_create_rotation_config():
+    """POST - Create new rotation config"""
+    try:
+        data = request.json
+
+        # Validasi required fields
+        required_fields = ["job_title", "vessel", "type", "part", "groups"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        result = create_rotation_config(
+            job_title=data["job_title"],
+            vessel=data["vessel"],
+            rotation_type=data["type"],
+            part=data["part"],
+            groups=data["groups"],
+        )
+
+        return jsonify(result), 201
+
+    except ValueError as e:  # ✅ TAMBAHKAN INI - Handle validation errors
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rotation-configs/<int:config_id>", methods=["PUT"])
+def api_update_rotation_config(config_id):
+    """PUT - Update existing rotation config"""
+    try:
+        data = request.json
+
+        # Validasi required fields
+        required_fields = ["job_title", "vessel", "type", "part", "groups"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        result = update_rotation_config(
+            config_id=config_id,
+            job_title=data["job_title"],
+            vessel=data["vessel"],
+            rotation_type=data["type"],
+            part=data["part"],
+            groups=data["groups"],
+        )
+
+        return jsonify(result), 200
+
+    except ValueError as e:  # ✅ TAMBAHKAN INI - Handle validation errors
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rotation-configs/<int:config_id>", methods=["DELETE"])
+def api_delete_rotation_config(config_id):
+    """DELETE - Delete rotation config"""
+    try:
+        result = delete_rotation_config(config_id)
+
+        if result["success"]:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

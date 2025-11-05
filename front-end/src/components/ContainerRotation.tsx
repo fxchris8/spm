@@ -996,7 +996,7 @@ export function ContainerRotation({
   };
 
   return (
-    <>
+    <div className="px-6">
       <div className="text-3xl mb-3 font-bold">Generate Ship Crew Schedule</div>
 
       {/* Alert Component */}
@@ -1044,7 +1044,7 @@ export function ContainerRotation({
                   'container_rotation',
                   ''
                 )}`}
-                listShip={ships.join(', ')}
+                listShip={ships}
                 isActive={selectedGroup === groupKey}
                 onClick={() => handleCardClick(groupKey)}
               />
@@ -1324,6 +1324,6 @@ export function ContainerRotation({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
