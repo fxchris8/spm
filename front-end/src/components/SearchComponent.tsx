@@ -160,7 +160,7 @@ export function SearchComponent({ type, part }: SearchProps) {
   };
 
   return (
-    <div className="p-4">
+    <div className="px-6 ">
       {/* Card untuk Form Pencarian */}
       <Card className="mb-4">
         <h3 className="text-xl font-bold">Search for Crew Candidate</h3>

@@ -8,6 +8,7 @@ import {
   HiOutlineUserMinus,
   HiOutlineArrowPath,
   HiOutlineCube,
+  HiOutlineShieldCheck,
 } from 'react-icons/hi2';
 import { GiShipWheel } from 'react-icons/gi';
 import { MdAutorenew } from 'react-icons/md';
@@ -61,6 +62,15 @@ export function SidebarComponent() {
               Off Duty
             </Sidebar.Item>
           </Sidebar.Collapse>
+
+          <Sidebar.Item
+            onClick={() => handleNavigation('/rotation_ship')}
+            icon={() => <HiOutlineShieldCheck className="w-6 h-6" />}
+            active={isActive('/rotation_ship')}
+            className="cursor-pointer"
+          >
+            Rotation Ship
+          </Sidebar.Item>
 
           <Sidebar.Collapse
             icon={() => <HiOutlineArrowPath className="w-6 h-6" />}

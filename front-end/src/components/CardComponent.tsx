@@ -2,7 +2,7 @@ import { Card } from 'flowbite-react';
 
 interface CardProps {
   groupName: string;
-  listShip: string;
+  listShip: string[];
   isActive: boolean;
   onClick: () => void;
 }
@@ -34,7 +34,15 @@ export function CardComponent({
         >
           {groupName}
         </h5>
-        <p className="text-sm text-gray-600">{listShip}</p>
+
+        {/* ✅ Render sebagai list */}
+        <div className="text-sm text-gray-600">
+          {listShip.map((ship, index) => (
+            <div key={index} className="leading-relaxed">
+              {ship}
+            </div>
+          ))}
+        </div>
       </div>
     </Card>
   );

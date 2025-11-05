@@ -874,14 +874,12 @@ export function ScheduleRotation({
       {/* ================== GRID CARD ================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {Object.entries(groups).map(([groupKey, ships]) => {
-          // Check if this group is locked
           const isGroupLocked = allLockedRotations.some(
             lock => lock.group_key === groupKey && lock.is_active
           );
 
           return (
             <div key={groupKey} className="relative">
-              {/* Lock icon di pojok kanan atas card - seperti ContainerRotation */}
               {isGroupLocked && (
                 <div className="absolute top-2 right-2 z-10">
                   <HiLockClosed className="h-5 w-5 text-green-600" />
@@ -892,7 +890,7 @@ export function ScheduleRotation({
                   'container_rotation',
                   ''
                 )}`}
-                listShip={ships.join(', ')}
+                listShip={ships}
                 isActive={selectedGroup === groupKey}
                 onClick={() => handleCardClick(groupKey)}
               />
