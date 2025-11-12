@@ -677,7 +677,17 @@ def container_rotation_api():
         selected_group = data["selected_group"]
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
-        type_vessel = data.get("type")
+        type_vessel_raw = data.get("type")
+
+        # Map vessel codes
+        vessel_mapping = {
+            "senior": "container",
+            "junior": "container",
+            "manalagi": "manalagi",
+        }
+        type_vessel = vessel_mapping.get(type_vessel_raw, type_vessel_raw)
+
+        print(f"[DEBUG] Vessel: {type_vessel_raw} → {type_vessel}")
         part = data.get("part")
 
         # LOGGING
