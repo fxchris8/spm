@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass,
@@ -7,6 +7,8 @@ import {
   faShip,
   faHouse,
 } from '@fortawesome/free-solid-svg-icons';
+import { useDashboardData } from '../hooks/useDashboardData';
+import { useSimilarSeamen } from '../hooks/useSimilarSeamen';
 
 interface Seaman {
   'SEAMAN CODE': string;
@@ -19,29 +21,20 @@ interface Seaman {
   'DAY REMAINS': number;
 }
 
-interface SimilarSeaman {
-  seamancode: string;
-  seafarercode: string;
-  name: string;
-  last_position: string;
-  last_location: string;
-  age: number;
-  certificate: string;
-  'DAY REMAINS DIFF': number;
-}
-
 export function Dashboard() {
-  const [seamenData, setSeamenData] = useState<Seaman[]>([]);
-  const [filteredData, setFilteredData] = useState<Seaman[]>([]);
+  const { seamenData, loading } = useDashboardData();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [similarSeamen, setSimilarSeamen] = useState<SimilarSeaman[]>([]);
+  const [selectedSeamanCode, setSelectedSeamanCode] = useState<string | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8048';
 
-  // status yang tidak dihitung sebagai onboard
+  const { similarSeamen, loading: loadingSimilar } =
+    useSimilarSeamen(selectedSeamanCode);
+
   const excludedStatus = [
     'PENDING CUTI',
     'DARAT BIASA',
@@ -49,36 +42,21 @@ export function Dashboard() {
     'PENDING GAJI',
   ];
 
-  // Fetch data
-  useEffect(() => {
-    const fetchData = () => {
-      fetch(`${API_BASE_URL}/dashboard-data`)
-        .then(res => {
-          if (!res.ok) throw new Error('Gagal memuat data');
-          return res.json();
-        })
-        .then(data => {
-          setSeamenData(data);
-          setFilteredData(data);
-        })
-        .catch(console.error);
-    };
+  const filteredData = useMemo(() => {
+    if (searchTerm === '') {
+      return seamenData;
+    }
 
-    fetchData();
-    const interval = setInterval(fetchData, 3000000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fungsi pencarian
-  useEffect(() => {
-    const results = seamenData.filter(item =>
+    return seamenData.filter(item =>
       Object.values(item).some(val =>
         (val ?? '').toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-    setFilteredData(results);
-    setCurrentPage(1);
   }, [searchTerm, seamenData]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -103,39 +81,38 @@ export function Dashboard() {
     return pages;
   };
 
-  // Show similar
-  const showSimilar = async (seamanCode: string) => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/similarity/${seamanCode}`
-      );
-      if (!response.ok) throw new Error('Gagal mengambil data similar');
-
-      const data = await response.json();
-      if (data.status === 'error') throw new Error(data.message);
-
-      setSimilarSeamen(data.data);
-      setModalOpen(true);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error: ' + (error as Error).message);
-    }
+  const showSimilar = (seamanCode: string) => {
+    setSelectedSeamanCode(seamanCode);
+    setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
-    setSimilarSeamen([]);
+    setSelectedSeamanCode(null); // Reset, stop query
   };
 
-  // Hitung seaman onboard (VESSEL bukan status excluded)
+  // Hitung seaman onboard & offboard
   const onboardSeamen = seamenData.filter(
     s => !excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
-
-  // Hitung seaman onboard (VESSEL bukan status excluded)
   const offboardSeamen = seamenData.filter(s =>
     excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
+
+  if (loading) {
+    return (
+      <section className="p-6 flex-1 overflow-y-auto">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 text-lg">
+              Loading dashboard data...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
@@ -307,7 +284,7 @@ export function Dashboard() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-3xl relative">
             <button
               className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-2xl"
@@ -317,52 +294,59 @@ export function Dashboard() {
             </button>
             <h2 className="text-xl font-semibold mb-4">Top 5 Similar Seamen</h2>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-300 rounded-md">
-                <thead className="bg-gray-200">
-                  <tr>
-                    {[
-                      'SEAMAN CODE',
-                      'SEAFARER CODE',
-                      'SEAMAN NAME',
-                      'LAST POSITION',
-                      'LAST LOCATION',
-                      'AGE',
-                      'CERTIFICATE',
-                      'DAY REMAINS DIFF',
-                    ].map(header => (
-                      <th key={header} className="p-2 border text-sm">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {similarSeamen.length > 0 ? (
-                    similarSeamen.map((seaman, idx) => (
-                      <tr key={idx} className="hover:bg-gray-100 transition">
-                        <td className="p-2 border">{seaman.seamancode}</td>
-                        <td className="p-2 border">{seaman.seafarercode}</td>
-                        <td className="p-2 border">{seaman.name}</td>
-                        <td className="p-2 border">{seaman.last_position}</td>
-                        <td className="p-2 border">{seaman.last_location}</td>
-                        <td className="p-2 border">{seaman.age}</td>
-                        <td className="p-2 border">{seaman.certificate}</td>
-                        <td className="p-2 border">
-                          {seaman['DAY REMAINS DIFF']}
+            {loadingSimilar ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p className="ml-4 text-gray-600">Loading similar seamen...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-300 rounded-md">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      {[
+                        'SEAMAN CODE',
+                        'SEAFARER CODE',
+                        'SEAMAN NAME',
+                        'LAST POSITION',
+                        'LAST LOCATION',
+                        'AGE',
+                        'CERTIFICATE',
+                        'DAY REMAINS DIFF',
+                      ].map(header => (
+                        <th key={header} className="p-2 border text-sm">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {similarSeamen.length > 0 ? (
+                      similarSeamen.map((seaman, idx) => (
+                        <tr key={idx} className="hover:bg-gray-100 transition">
+                          <td className="p-2 border">{seaman.seamancode}</td>
+                          <td className="p-2 border">{seaman.seafarercode}</td>
+                          <td className="p-2 border">{seaman.name}</td>
+                          <td className="p-2 border">{seaman.last_position}</td>
+                          <td className="p-2 border">{seaman.last_location}</td>
+                          <td className="p-2 border">{seaman.age}</td>
+                          <td className="p-2 border">{seaman.certificate}</td>
+                          <td className="p-2 border">
+                            {seaman['DAY REMAINS DIFF']}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="p-2 border text-center">
+                          No similar seamen found
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="p-2 border text-center">
-                        No similar seamen found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

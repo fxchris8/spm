@@ -76,23 +76,23 @@ export function SidebarComponent() {
             icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
             label="Rotation"
             open={isParentActive([
-              '/container_rotation',
-              '/schedule_rotation',
+              '/senior_rotation',
+              '/junior_rotation',
               '/manalagi_rotation',
             ])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/container_rotation')}
+              onClick={() => handleNavigation('/senior_rotation')}
               icon={() => <HiOutlineCube className="w-6 h-6" />}
-              active={isActive('/container_rotation')}
+              active={isActive('/senior_rotation')}
               className="cursor-pointer"
             >
               Senior Rotation
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/schedule_rotation')}
+              onClick={() => handleNavigation('/junior_rotation')}
               icon={() => <GiShipWheel className="w-6 h-6" />}
-              active={isActive('/schedule_rotation')}
+              active={isActive('/junior_rotation')}
               className="cursor-pointer"
             >
               Junior Rotation

@@ -421,7 +421,7 @@ def get_dashboard_data():
 
 
 # Route to get the top 5 similar seamen
-@app.route("/similarity/<int:seaman_code>", methods=["GET"])
+@app.route("/api/similarity/<int:seaman_code>", methods=["GET"])
 def get_similarity(seaman_code):
     top_5 = get_top_5_similar(seaman_code)
     print(f"Top 5 similar seamen for code {seaman_code}: {top_5}")
@@ -626,7 +626,7 @@ def df_to_json(df: pd.DataFrame):
     return {"columns": df.columns.tolist(), "data": df.to_dict(orient="records")}
 
 
-@app.route("/api/container_rotation", methods=["POST"])
+@app.route("/api/container-rotation", methods=["POST"])
 def container_rotation_api():
     try:
         # Ambil parameter 'job' dari query string
@@ -759,28 +759,28 @@ def container_rotation_api():
         return jsonify({"error": "Terjadi kesalahan internal", "message": str(e)}), 500
 
 
-@app.route("/api/get_cadangan_KKM")
+@app.route("/api/cadangan-KKM")
 def get_cadangan_KKM():
     df = get_nganggur("KKM")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_nakhoda")
+@app.route("/api/cadangan-nakhoda")
 def get_cadangan_nakhoda():
     df = get_nganggur("NAKHODA")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_mualimI")
+@app.route("/api/cadangan-mualimI")
 def get_cadangan_mualimI():
     df = get_nganggur("MUALIM I")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_masinisII")
+@app.route("/api/cadangan-masinisII")
 def get_cadangan_masinisII():
     df = get_nganggur("MASINIS II")
     data = df.to_dict(orient="records")
@@ -1091,8 +1091,8 @@ def get_manual_search():
     return jsonify(result)
 
 
-@app.route("/api/seamen/promotion_candidates", methods=["GET"])
-def get_promotion_candidates():
+@app.route("/api/seamen/promotion-candidates-nakhoda", methods=["GET"])
+def get_promotion_candidates_nakhoda():
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1147,7 +1147,7 @@ def get_promotion_candidates():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_kkm", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-kkm", methods=["GET"])
 def get_promotion_candidates_kkm():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1241,7 +1241,7 @@ def get_promotion_candidates_kkm():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_mualimI", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimI", methods=["GET"])
 def get_promotion_candidates_mualimI():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1297,7 +1297,7 @@ def get_promotion_candidates_mualimI():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisII", methods=["GET"])
 def get_promotion_candidates_masinisII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1394,7 +1394,7 @@ def get_promotion_candidates_masinisII():
 # ISSUE
 
 
-@app.route("/api/seamen/promotion_candidates_mualimII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimII", methods=["GET"])
 def get_promotion_candidates_mualimII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1472,7 +1472,7 @@ def get_promotion_candidates_mualimII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisIII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisIII", methods=["GET"])
 def get_promotion_candidates_masinisIII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1586,7 +1586,7 @@ def get_promotion_candidates_masinisIII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_mualimIII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimIII", methods=["GET"])
 def get_promotion_candidates_mualimIII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1664,7 +1664,7 @@ def get_promotion_candidates_mualimIII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisIV", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisIV", methods=["GET"])
 def get_promotion_candidates_masinisIV():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1890,7 +1890,7 @@ def filter_history():
 # ============================================================================
 
 
-@app.route("/api/locked_rotations", methods=["GET"])
+@app.route("/api/locked-rotations", methods=["GET"])
 def api_get_locked_rotations():
     """Get all locked rotations for a specific job"""
     try:
@@ -1912,7 +1912,7 @@ def api_get_locked_rotations():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/locked_rotations", methods=["POST"])
+@app.route("/api/locked-rotations", methods=["POST"])
 def api_save_locked_rotation():
     """Save a locked rotation"""
     try:
@@ -1970,7 +1970,7 @@ def api_save_locked_rotation():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/locked_rotations/<group_key>", methods=["DELETE"])
+@app.route("/api/locked-rotations/<group_key>", methods=["DELETE"])
 def api_unlock_rotation(group_key):
     """Unlock a rotation"""
     try:
