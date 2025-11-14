@@ -58,7 +58,11 @@ export function RotationManalagi() {
           <Tabs.Item
             key={config.id}
             active={index === 0}
-            title={config.job_title === 'KKM' ? 'KKM' : config.job_title}
+            title={
+              config.job_title === 'KKM'
+                ? 'KKM'
+                : formatJobTitle(config.job_title)
+            }
             icon={HiUserCircle}
           >
             <ManalagiRotation
@@ -73,4 +77,14 @@ export function RotationManalagi() {
       </Tabs>
     </div>
   );
+}
+
+function formatJobTitle(jobTitle: string): string {
+  return jobTitle
+    .replace(/([A-Z]+)/g, ' $1')
+    .replace(/([A-Z][a-z])/g, ' $1')
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }

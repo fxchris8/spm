@@ -115,13 +115,13 @@ export function SeniorRotation({
     !!selectedGroup
   );
 
-  console.log('🔍 Debug Mutasi Data:', mutasiRawData);
+  // console.log('🔍 Debug Mutasi Data:', mutasiRawData);
 
   // Lazy load potential promotion
   const { potentialData: potentialRawData, loading: loadingPotential } =
     usePotentialPromotion(job, selectedGroup, groups, !!selectedGroup);
 
-  console.log('🔍 Debug Potential Data:', potentialRawData);
+  // console.log('🔍 Debug Potential Data:', potentialRawData);
 
   // Mutations
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();

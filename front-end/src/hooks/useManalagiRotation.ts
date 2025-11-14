@@ -137,6 +137,10 @@ async function fetchPromotionCandidates(
     params.append('locked_codes', lockedCadanganCodes.join(','));
   }
 
+  if (job === 'KKM') {
+    job = job.toLowerCase(); // sekarang job === "kkm"
+  }
+
   const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
     params.toString() ? `?${params.toString()}` : ''
   }`;

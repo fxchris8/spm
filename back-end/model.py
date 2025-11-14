@@ -546,10 +546,10 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         prefix = "E"
     elif type == "deck" and vessel == "manalagi":
         groups = MANALAGI_DECK
-        prefix = ""
+        prefix = "F"
     elif type == "engine" and vessel == "manalagi":
         groups = MANALAGI_ENGINE
-        prefix = ""
+        prefix = "G"
     else:
         raise ValueError("Parameter 'type' harus bernilai 'deck' atau 'engine'")
 
