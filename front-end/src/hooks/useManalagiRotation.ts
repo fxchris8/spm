@@ -108,7 +108,7 @@ async function fetchCadanganData(
   const url = `${API_BASE_URL}/cadangan-${job}${
     params.toString() ? `?${params.toString()}` : ''
   }`;
-  console.log('🔍 Fetching cadangan data:', url);
+  // console.log('🔍 Fetching cadangan data:', url);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -120,7 +120,7 @@ async function fetchCadanganData(
   }
 
   const data = await response.json();
-  console.log('🔍 Cadangan response:', data);
+  // console.log('🔍 Cadangan response:', data);
 
   // ✅ PERBAIKAN: Data sudah dalam format array langsung
   return Array.isArray(data) ? data : [];
@@ -144,7 +144,7 @@ async function fetchPromotionCandidates(
   const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
     params.toString() ? `?${params.toString()}` : ''
   }`;
-  console.log('🔍 Fetching promotion candidates:', url);
+  // console.log('🔍 Fetching promotion candidates:', url);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -156,7 +156,7 @@ async function fetchPromotionCandidates(
   }
 
   const result = await response.json();
-  console.log('🔍 Promotion candidates response:', result);
+  // console.log('🔍 Promotion candidates response:', result);
 
   // ✅ PERBAIKAN: Ambil dari result.data dan mapping field 'code' ke 'seamancode'
   const rawData = result.data || [];
@@ -177,7 +177,7 @@ async function generateSchedule(payload: {
   darat: string[];
   part: string;
 }): Promise<GroupDataResponse> {
-  console.log('Generating schedule with payload MANALAGI:', payload);
+  // console.log('Generating schedule with payload MANALAGI:', payload);
   // Buat selected_group digabung dengan vessel
   const mappedGroup = (() => {
     const pattern = /(container_rotation|manalagi_kkm|manalagi_container)/;
@@ -209,7 +209,7 @@ async function generateSchedule(payload: {
       body: JSON.stringify(finalPayload),
     }
   );
-  console.log('payload generateSchedule:', finalPayload);
+  // console.log('payload generateSchedule:', finalPayload);
 
   if (!response.ok) {
     throw new Error('Failed to generate schedule');
@@ -339,6 +339,21 @@ export function useMutasiData(
     'KM. KAPPA',
   ]);
 
+  const MANALAGI_VESSELS = new Set([
+    'KM. MANALAGI ASTA',
+    'KM. MANALAGI ASTI',
+    'KM. MANALAGI DASA',
+    'KM. MANALAGI ENZI',
+    'KM. MANALAGI HITA',
+    'KM. MANALAGI SAMBA',
+    'KM. MANALAGI TARA',
+    'KM. MANALAGI TISYA',
+    'KM. MANALAGI VIRA',
+    'KM. MANALAGI WANDA',
+    'KM. MANALAGI YASA',
+    'KM. XYS SATU',
+  ]);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'mutasi-data', job, groupKey, lockedCadanganCodes],
     queryFn: async () => {
@@ -355,7 +370,7 @@ export function useMutasiData(
         `${API_BASE_URL}/mutasi_filtered?${params.toString()}`
       );
       const result = await response.json();
-      console.log('🔍 [MANALAGI] Mutasi API response:', result);
+      // console.log('🔍 [MANALAGI] Mutasi API response:', result);
 
       if (result.status === 'success' && result.data) {
         const rawDataObject = result.data;
@@ -367,13 +382,24 @@ export function useMutasiData(
 
             // ✅ FILTER: Skip seaman jika last vessel adalah CONTAINER
             if (vlist.length > 0) {
-              const lastVessel = vlist[vlist.length - 1]; // Vessel terakhir
+              const lastVessel = vlist[vlist.length - 1]; // Vessel terakhir di array
 
-              if (CONTAINER_VESSELS.has(lastVessel)) {
-                console.log(
-                  `❌ [MANALAGI] Skipping ${seamancode} (${info?.name}) - last vessel: ${lastVessel} (Container ship)`
-                );
-                return null; // Skip seaman ini
+              if (type === 'senior' || type === 'junior') {
+                // Untuk container: SKIP jika last vessel adalah manalagi
+                if (MANALAGI_VESSELS.has(lastVessel)) {
+                  console.log(
+                    `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
+                  );
+                  return null; // Skip seaman ini
+                }
+              } else if (type === 'manalagi') {
+                // Untuk manalagi: SKIP jika last vessel adalah container
+                if (CONTAINER_VESSELS.has(lastVessel)) {
+                  console.log(
+                    `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
+                  );
+                  return null; // Skip seaman ini
+                }
               }
             }
 
@@ -510,8 +536,8 @@ export function usePotentialPromotion(
         fetchLockedSourceJob(),
       ]);
 
-      console.log('🔍 Filter history response:', hist);
-      console.log('🔍 Promotion candidates response:', cand);
+      // console.log('🔍 Filter history response:', hist);
+      // console.log('🔍 Promotion candidates response:', cand);
 
       // ✅ PERBAIKAN: Handle format response yang benar
       const histRowsRaw = hist?.data || [];
@@ -535,7 +561,7 @@ export function usePotentialPromotion(
         .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
         .slice(0, 50);
 
-      console.log('🔍 Processed potential promotion rows:', rows);
+      // console.log('🔍 Processed potential promotion rows:', rows);
       return rows;
     },
     enabled: enabled && !!groupKey,

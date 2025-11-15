@@ -108,7 +108,10 @@ async function fetchCadanganData(
   const url = `${API_BASE_URL}/cadangan-${job}${
     params.toString() ? `?${params.toString()}` : ''
   }`;
-  console.log('🔍 Fetching cadangan data:', url);
+  /* The above code is a comment written in TypeScript. It is logging a message "🔍 Fetching cadangan
+  data:" along with the value of the variable `url`. However, the actual value of `url` is not
+  provided in the code snippet. */
+  // console.log('🔍 Fetching cadangan data:', url);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -144,7 +147,7 @@ async function fetchPromotionCandidates(
   const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
     params.toString() ? `?${params.toString()}` : ''
   }`;
-  console.log('🔍 Fetching promotion candidates:', url);
+  // console.log('🔍 Fetching promotion candidates:', url);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -156,7 +159,7 @@ async function fetchPromotionCandidates(
   }
 
   const result = await response.json();
-  console.log('🔍 Promotion candidates response:', result);
+  // console.log('🔍 Promotion candidates response:', result);
 
   // ✅ PERBAIKAN: Ambil dari result.data dan mapping field 'code' ke 'seamancode'
   const rawData = result.data || [];
@@ -178,7 +181,7 @@ async function generateSchedule(payload: {
   part: string;
 }): Promise<GroupDataResponse> {
   // Buat selected_group digabung dengan vessel
-  console.log('Generating schedule with payload:', payload);
+  // console.log('Generating schedule with payload:', payload);
   const mappedGroup = payload.groupKey.replace(
     'container_rotation',
     payload.vessel
@@ -202,7 +205,7 @@ async function generateSchedule(payload: {
       body: JSON.stringify(finalPayload),
     }
   );
-  console.log('payload generateSchedule:', finalPayload);
+  // console.log('payload generateSchedule:', finalPayload);
 
   if (!response.ok) {
     throw new Error('Failed to generate schedule');
@@ -363,7 +366,7 @@ export function useMutasiData(
         `${API_BASE_URL}/mutasi_filtered?${params.toString()}`
       );
       const result = await response.json();
-      console.log('🔍 Mutasi API response:', result);
+      // console.log('🔍 Mutasi API response:', result);
 
       if (result.status === 'success' && result.data) {
         const rawDataObject = result.data;
@@ -411,8 +414,8 @@ export function useMutasiData(
           .sort((a: any, b: any) => b.matchCount - a.matchCount)
           .slice(0, 50);
 
-        console.log('🔍 Processed mutasi rows:', rows);
-        console.log(`✅ Final count after filtering: ${rows.length}`);
+        // console.log('🔍 Processed mutasi rows:', rows);
+        // console.log(`✅ Final count after filtering: ${rows.length}`);
         return rows;
       }
       return [];
@@ -528,8 +531,8 @@ export function usePotentialPromotion(
         fetchLockedSourceJob(),
       ]);
 
-      console.log('🔍 Filter history response:', hist);
-      console.log('🔍 Promotion candidates response:', cand);
+      // console.log('🔍 Filter history response:', hist);
+      // console.log('🔍 Promotion candidates response:', cand);
 
       // ✅ PERBAIKAN: Handle format response yang benar
       const histRowsRaw = hist?.data || [];
@@ -553,7 +556,7 @@ export function usePotentialPromotion(
         .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
         .slice(0, 50);
 
-      console.log('🔍 Processed potential promotion rows:', rows);
+      // console.log('🔍 Processed potential promotion rows:', rows);
       return rows;
     },
     enabled: enabled && !!groupKey,
