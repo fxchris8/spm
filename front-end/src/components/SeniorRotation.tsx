@@ -740,15 +740,19 @@ export function SeniorRotation({
       )}
 
       {daratTable && (
-        <div className="mt-6 p-4 border rounded-lg bg-white overflow-x-auto">
-          <h2 className="text-lg font-semibold mb-2">RELIEVER:</h2>
+        <div className="mt-6 p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-bold text-gray-900">RELIEVER:</h2>
+          </div>
           <TableComponent table={daratTable} />
         </div>
       )}
 
       {scheduleTable && (
-        <div className="mt-6 p-4 border rounded-lg bg-white overflow-x-auto">
-          <h2 className="text-lg font-semibold mb-2">ROTATION PLAN:</h2>
+        <div className="mt-6 p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-bold text-gray-900">ROTATION PLAN:</h2>
+          </div>
           <TableComponent table={scheduleTable} />
         </div>
       )}

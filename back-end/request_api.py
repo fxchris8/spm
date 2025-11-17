@@ -310,7 +310,7 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -374,7 +374,7 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -438,7 +438,7 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -502,7 +502,7 @@ def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
