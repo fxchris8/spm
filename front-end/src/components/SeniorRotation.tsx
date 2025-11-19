@@ -6,7 +6,14 @@ import { CardComponent } from './CardComponent';
 import { InputComponent } from './InputComponent';
 import { TableComponent } from './TableComponent';
 import { AlertComponent } from './AlertComponent';
-import { HiUserGroup, HiStar, HiLockClosed, HiLockOpen } from 'react-icons/hi';
+import {
+  HiUserGroup,
+  HiStar,
+  HiLockClosed,
+  HiLockOpen,
+  HiDownload,
+  HiDocumentText,
+} from 'react-icons/hi';
 import {
   useLockedRotations,
   useCadanganData,
@@ -16,7 +23,8 @@ import {
   useGenerateSchedule,
   useLockRotation,
 } from '../hooks/useSeniorRotation';
-import * as XLSX from 'xlsx';
+import { exportRotationToExcel } from './ExportRotationExcel';
+import { exportRotationToPDF } from './ExportRotationPDF';
 import { Spinner } from 'flowbite-react';
 
 interface TableJson {
@@ -427,26 +435,27 @@ export function SeniorRotation({
   );
 
   // Export to Excel
-  const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
-    if (nahkodaTable) {
-      const wsNahkoda = XLSX.utils.json_to_sheet(nahkodaTable.data);
-      XLSX.utils.book_append_sheet(wb, wsNahkoda, getJobDisplayName(job));
-    }
-    if (scheduleTable) {
-      const wsSchedule = XLSX.utils.json_to_sheet(scheduleTable.data, {
-        header: scheduleTable.columns,
-      });
-      XLSX.utils.book_append_sheet(wb, wsSchedule, 'RotationPlan');
-    }
-    if (daratTable) {
-      const wsDarat = XLSX.utils.json_to_sheet(daratTable.data);
-      XLSX.utils.book_append_sheet(wb, wsDarat, 'Reliever');
-    }
-    XLSX.writeFile(
-      wb,
-      `${getJobDisplayName(job)}_Schedule_${selectedGroup}.xlsx`
-    );
+  const handleExportToExcel = () => {
+    exportRotationToExcel({
+      job,
+      selectedGroup,
+      scheduleTable,
+      nahkodaTable,
+      daratTable,
+    });
+    // showAlert('success', 'Excel file exported successfully!');
+  };
+
+  // Export to PDF
+  const handleExportToPDF = () => {
+    exportRotationToPDF({
+      job,
+      selectedGroup,
+      scheduleTable,
+      nahkodaTable,
+      daratTable,
+    });
+    // showAlert('success', 'PDF file exported successfully!');
   };
 
   // Get job display name
@@ -557,6 +566,7 @@ export function SeniorRotation({
                             <th className="px-4 py-3">Seaman Code</th>
                             <th className="px-4 py-3">Name</th>
                             <th className="px-4 py-3">Vessels</th>
+                            <th className="px-4 py-3">Last Location</th>
                             <th className="px-4 py-3">Match Count</th>
                           </tr>
                         </thead>
@@ -569,6 +579,9 @@ export function SeniorRotation({
                               <td className="px-4 py-3">{item.name}</td>
                               <td className="px-4 py-3 text-xs">
                                 {item.vessels}
+                              </td>
+                              <td className="px-4 py-3">
+                                {item.last_location}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 {item.matchCount}
@@ -636,6 +649,7 @@ export function SeniorRotation({
                                   <th className="px-4 py-3">Seaman Code</th>
                                   <th className="px-4 py-3">Name</th>
                                   <th className="px-4 py-3">History</th>
+                                  <th className="px-4 py-3">Last Location</th>
                                   <th className="px-4 py-3">Match Count</th>
                                 </tr>
                               </thead>
@@ -651,6 +665,9 @@ export function SeniorRotation({
                                     <td className="px-4 py-3">{item.name}</td>
                                     <td className="px-4 py-3 text-xs">
                                       {item.history}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {item.last_location}
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                       {item.matchCount}
@@ -763,9 +780,19 @@ export function SeniorRotation({
           <Button
             gradientMonochrome="info"
             className="w-full sm:w-auto"
-            onClick={exportToExcel}
+            onClick={handleExportToExcel}
           >
+            <HiDownload className="mr-2 h-5 w-5" />
             Export ke Excel
+          </Button>
+
+          <Button
+            gradientMonochrome="purple"
+            className="w-full sm:w-auto"
+            onClick={handleExportToPDF}
+          >
+            <HiDocumentText className="mr-2 h-5 w-5" />
+            Export ke PDF
           </Button>
 
           {!isCurrentGroupLocked ? (

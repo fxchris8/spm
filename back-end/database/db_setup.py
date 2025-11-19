@@ -1,0 +1,450 @@
+# @faw_sd
+# Script untuk membuat database dan semua tabel yang dibutuhkan
+
+import os
+
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
+
+load_dotenv()
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Database configuration
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+
+# ⚠️ IMPORTANT: Ubah nama database ini saat deploy ke production
+DB_NAME_DEV = "dev-spm-spil"  # Development database name
+DB_NAME_PROD = "prod-spm-spil"  # Production database name (ganti saat deploy)
+
+# Pilih environment (change to 'production' when deploying)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+DB_NAME = DB_NAME_DEV if ENVIRONMENT == "development" else DB_NAME_PROD
+
+print("=" * 60)
+print(f"DATABASE INITIALIZATION - {ENVIRONMENT.upper()} MODE")
+print("=" * 60)
+print(f"Database Name: {DB_NAME}")
+print(f"Host: {DB_HOST}:{DB_PORT}")
+print(f"User: {DB_USER}")
+print("=" * 60)
+
+# Connection URLs
+POSTGRES_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/postgres"
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+
+# ============================================================================
+# SQL SCRIPTS
+# ============================================================================
+
+# Create database
+CREATE_DATABASE_SQL = f"""
+-- Create database if not exists
+SELECT 'CREATE DATABASE "{DB_NAME}"'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{DB_NAME}');
+"""
+
+# Table: seamen
+CREATE_TABLE_SEAMEN = """
+-- Table: seamen
+CREATE TABLE IF NOT EXISTS seamen (
+    seamancode int4 PRIMARY KEY,
+    age int8,
+    certificate text,
+    day_remains int8,
+    edu_level text,
+    end_date timestamptz,
+    experience text,
+    gender text,
+    is_active_employee text,
+    last_location text,
+    last_position text,
+    name text,
+    no int8,
+    phone_number_1 text,
+    phone_number_2 text,
+    phone_number_3 text,
+    phone_number_4 text,
+    seafarercode float8,
+    start_date timestamptz,
+    status text,
+    birthdate text,
+    birthplace text,
+    day_elapsed int8,
+    fleet text,
+    last_vesselid text,
+    pic_crewing text,
+    prevlocation text,
+    prevposition text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    is_talent boolean DEFAULT false
+);
+
+-- Indexes for seamen
+CREATE INDEX IF NOT EXISTS idx_seamen_status ON seamen(status);
+CREATE INDEX IF NOT EXISTS idx_seamen_last_position ON seamen(last_position);
+CREATE INDEX IF NOT EXISTS idx_seamen_name ON seamen(name);
+"""
+
+# Table: mutations
+CREATE_TABLE_MUTATIONS = """
+-- Table: mutations
+CREATE TABLE IF NOT EXISTS mutations (
+    mutationnoid int8 PRIMARY KEY,
+    fromrankcode text,
+    fromrankname text,
+    fromvesselcode text,
+    fromvesselname text,
+    jenis text,
+    seamancode int4,
+    seamanname text,
+    torankcode text,
+    torankname text,
+    tovesselcode text,
+    tovesselname text,
+    transactiondate timestamptz,
+    created_at timestamptz DEFAULT now(),
+    
+    -- Foreign Key Constraint (nullable untuk konsistensi)
+    CONSTRAINT fk_mutations_seaman 
+        FOREIGN KEY (seamancode) 
+        REFERENCES seamen(seamancode)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+-- Indexes for mutations
+CREATE INDEX IF NOT EXISTS idx_mutations_seamancode ON mutations(seamancode);
+CREATE INDEX IF NOT EXISTS idx_mutations_transactiondate ON mutations(transactiondate);
+CREATE INDEX IF NOT EXISTS idx_mutations_jenis ON mutations(jenis);
+"""
+
+# Table: locked_rotation_schedules
+CREATE_TABLE_LOCKED_ROTATIONS = """
+-- Table: locked_rotation_schedules
+CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
+    id SERIAL PRIMARY KEY,
+    group_key VARCHAR(255),
+    job VARCHAR(50),
+    schedule_data TEXT,
+    crew_data TEXT,
+    reliever_data TEXT,
+    locked_seaman_codes TEXT[],
+    locked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    locked_by VARCHAR(255),
+    unlocked_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for locked_rotation_schedules
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_locked_seaman_code 
+    ON locked_rotation_schedules USING GIN(locked_seaman_codes);
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_is_active 
+    ON locked_rotation_schedules(is_active);
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_job 
+    ON locked_rotation_schedules(job);
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_group_key 
+    ON locked_rotation_schedules(group_key);
+"""
+
+# Table: sync_logs
+CREATE_TABLE_SYNC_LOGS = """
+-- Table: sync_logs
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(100),
+    records_synced INTEGER,
+    sync_timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(50),
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for sync_logs
+CREATE INDEX IF NOT EXISTS idx_sync_logs_table_name ON sync_logs(table_name);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_timestamp ON sync_logs(sync_timestamp DESC);
+
+-- View: latest sync status
+CREATE OR REPLACE VIEW v_latest_sync AS
+SELECT DISTINCT ON (table_name)
+    table_name,
+    sync_timestamp,
+    records_synced,
+    status,
+    error_message
+FROM sync_logs
+ORDER BY table_name, sync_timestamp DESC;
+"""
+
+# Table: rotation_configs
+CREATE_TABLE_ROTATION_CONFIGS = """
+-- Table: rotation_configs
+CREATE TABLE IF NOT EXISTS rotation_configs (
+    id BIGSERIAL PRIMARY KEY,
+    job_title VARCHAR(50),
+    vessel VARCHAR(10),
+    type VARCHAR(20),
+    part VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(job_title, type)
+);
+
+-- Index for rotation_configs
+CREATE INDEX IF NOT EXISTS idx_rotation_configs_type ON rotation_configs(type);
+CREATE INDEX IF NOT EXISTS idx_rotation_configs_job_title ON rotation_configs(job_title);
+"""
+
+# Table: rotation_groups
+CREATE_TABLE_ROTATION_GROUPS = """
+-- Table: rotation_groups
+CREATE TABLE IF NOT EXISTS rotation_groups (
+    id BIGSERIAL PRIMARY KEY,
+    rotation_config_id BIGINT,
+    group_key VARCHAR(50),
+    group_number INT CHECK (group_number > 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT fk_rotation_groups_config
+        FOREIGN KEY (rotation_config_id) 
+        REFERENCES rotation_configs(id) 
+        ON DELETE CASCADE,
+    
+    UNIQUE(rotation_config_id, group_key)
+);
+
+-- Index for rotation_groups
+CREATE INDEX IF NOT EXISTS idx_rotation_groups_config ON rotation_groups(rotation_config_id);
+"""
+
+# Table: rotation_ships
+CREATE_TABLE_ROTATION_SHIPS = """
+-- Table: rotation_ships
+CREATE TABLE IF NOT EXISTS rotation_ships (
+    id BIGSERIAL PRIMARY KEY,
+    rotation_group_id BIGINT,
+    ship_name VARCHAR(100),
+    order_index INT CHECK (order_index >= 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT fk_rotation_ships_group
+        FOREIGN KEY (rotation_group_id) 
+        REFERENCES rotation_groups(id) 
+        ON DELETE CASCADE,
+    
+    UNIQUE(rotation_group_id, ship_name)
+);
+
+-- Index for rotation_ships
+CREATE INDEX IF NOT EXISTS idx_rotation_ships_group ON rotation_ships(rotation_group_id);
+"""
+
+
+# ============================================================================
+# INITIALIZATION FUNCTIONS
+# ============================================================================
+
+
+def create_database():
+    """Create database if not exists"""
+    try:
+        print("\n[1/8] Creating database...")
+        engine = create_engine(
+            POSTGRES_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT"
+        )
+
+        with engine.connect() as conn:
+            # Check if database exists
+            result = conn.execute(
+                text(f"SELECT 1 FROM pg_database WHERE datname = '{DB_NAME}'")
+            )
+            exists = result.fetchone()
+
+            if not exists:
+                conn.execute(text(f'CREATE DATABASE "{DB_NAME}"'))
+                print(f"[SUCCES] Database '{DB_NAME}' created successfully")
+            else:
+                print(f"[SUCCES] Database '{DB_NAME}' already exists")
+
+        engine.dispose()
+        return True
+
+    except Exception as e:
+        print(f"[FAILED] Error creating database: {str(e)}")
+        return False
+
+
+def create_tables():
+    """Create all tables and indexes"""
+    try:
+        engine = create_engine(DATABASE_URL, poolclass=NullPool)
+
+        tables = [
+            ("seamen", CREATE_TABLE_SEAMEN),
+            ("mutations", CREATE_TABLE_MUTATIONS),
+            ("locked_rotation_schedules", CREATE_TABLE_LOCKED_ROTATIONS),
+            ("sync_logs", CREATE_TABLE_SYNC_LOGS),
+            ("rotation_configs", CREATE_TABLE_ROTATION_CONFIGS),
+            ("rotation_groups", CREATE_TABLE_ROTATION_GROUPS),
+            ("rotation_ships", CREATE_TABLE_ROTATION_SHIPS),
+        ]
+
+        with engine.connect() as conn:
+            for idx, (table_name, sql) in enumerate(tables, start=2):
+                print(f"\n[{idx}/8] Creating table: {table_name}...")
+                conn.execute(text(sql))
+                conn.commit()
+                print(f"[SUCCES] Table '{table_name}' created successfully")
+
+        engine.dispose()
+        return True
+
+    except Exception as e:
+        print(f"[FAILED] Error creating tables: {str(e)}")
+        return False
+
+
+def verify_database():
+    """Verify all tables are created"""
+    try:
+        print("\n[9/8] Verifying database setup...")
+        engine = create_engine(DATABASE_URL, poolclass=NullPool)
+
+        expected_tables = [
+            "seamen",
+            "mutations",
+            "locked_rotation_schedules",
+            "sync_logs",
+            "rotation_configs",
+            "rotation_groups",
+            "rotation_ships",
+        ]
+
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_type = 'BASE TABLE'
+                ORDER BY table_name
+            """
+                )
+            )
+
+            existing_tables = [row[0] for row in result.fetchall()]
+
+            print("\nExisting tables:")
+            for table in existing_tables:
+                status = "[SUCCES]" if table in expected_tables else "?"
+                print(f"  {status} {table}")
+
+            missing_tables = set(expected_tables) - set(existing_tables)
+            if missing_tables:
+                print(f"\n[FAILED] Missing tables: {', '.join(missing_tables)}")
+                return False
+
+            # Check view
+            result = conn.execute(
+                text(
+                    """
+                SELECT table_name 
+                FROM information_schema.views 
+                WHERE table_schema = 'public'
+            """
+                )
+            )
+            views = [row[0] for row in result.fetchall()]
+
+            if "v_latest_sync" in views:
+                print("\nViews:")
+                print("  [SUCCES] v_latest_sync")
+
+        engine.dispose()
+        print("\n[SUCCES] Database verification complete!")
+        return True
+
+    except Exception as e:
+        print(f"\n[FAILED] Error verifying database: {str(e)}")
+        return False
+
+
+def init_database():
+    """Main initialization function"""
+    print("\nStarting database initialization...\n")
+
+    # Step 1: Create database
+    if not create_database():
+        print("\n[FAILED] Database initialization failed!")
+        return False
+
+    # Step 2: Create tables
+    if not create_tables():
+        print("\n[FAILED] Database initialization failed!")
+        return False
+
+    # Step 3: Verify
+    if not verify_database():
+        print("\n[FAILED] Database initialization failed!")
+        return False
+
+    print("\n" + "=" * 60)
+    print("[SUCCES] DATABASE INITIALIZATION COMPLETED SUCCESSFULLY!")
+    print("=" * 60)
+
+    return True
+
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+if __name__ == "__main__":
+    import sys
+
+    if "--drop" in sys.argv:
+        # Drop database (untuk testing)
+        confirm = input(
+            f"Are you sure you want to DROP database '{DB_NAME}'? (yes/no): "
+        )
+        if confirm.lower() == "yes":
+            try:
+                engine = create_engine(
+                    POSTGRES_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT"
+                )
+                with engine.connect() as conn:
+                    # Terminate all connections first
+                    conn.execute(
+                        text(
+                            f"""
+                        SELECT pg_terminate_backend(pid)
+                        FROM pg_stat_activity
+                        WHERE datname = '{DB_NAME}'
+                        AND pid <> pg_backend_pid()
+                    """
+                        )
+                    )
+                    conn.execute(text(f'DROP DATABASE IF EXISTS "{DB_NAME}"'))
+                    print(f"[SUCCES] Database '{DB_NAME}' dropped successfully")
+                engine.dispose()
+            except Exception as e:
+                print(f"[FAILED] Error dropping database: {str(e)}")
+        else:
+            print("Operation cancelled")
+    else:
+        # Normal initialization
+        init_database()

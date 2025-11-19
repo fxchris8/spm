@@ -10,7 +10,7 @@ from flask_cors import CORS
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
-from database import (
+from database.connection import (
     create_rotation_config,
     delete_rotation_config,
     get_all_locked_seaman_codes,
@@ -23,13 +23,13 @@ from database import (
     unlock_rotation,
     update_rotation_config,
 )
-from model import (
+from models.model import (
     filter_in_vessel,
     getRecommendation,
     search_candidate,
     vessel_group_id_deck,
 )
-from request_api import (
+from rotation import (
     get_kkm,
     get_masinisII,
     get_mualimI,
@@ -863,7 +863,7 @@ def get_mutasi_filtered():
 
         # Merge untuk mendapatkan nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name"]].drop_duplicates(),
+            df_seamen[["seamancode", "name", "last_location"]].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -874,6 +874,7 @@ def get_mutasi_filtered():
             .apply(
                 lambda g: {
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "vessels": g.loc[
                         ~g["fromvesselname"].isin(lokasi_filter), "fromvesselname"
                     ]
@@ -1117,7 +1118,9 @@ def get_promotion_candidates_nakhoda():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1129,6 +1132,7 @@ def get_promotion_candidates_nakhoda():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
@@ -1216,7 +1220,9 @@ def get_promotion_candidates_kkm():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1228,6 +1234,7 @@ def get_promotion_candidates_kkm():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
@@ -1267,7 +1274,9 @@ def get_promotion_candidates_mualimI():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1279,6 +1288,7 @@ def get_promotion_candidates_mualimI():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
@@ -1366,7 +1376,9 @@ def get_promotion_candidates_masinisII():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1378,6 +1390,7 @@ def get_promotion_candidates_masinisII():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }

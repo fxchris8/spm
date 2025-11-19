@@ -405,6 +405,7 @@ export function useMutasiData(
 
             return {
               seamancode: seamancode,
+              last_location: info?.last_location || '',
               name: info?.name || '',
               vessels: vlist.join(', '),
               matchCount,
@@ -545,6 +546,7 @@ export function usePotentialPromotion(
           seamancode: getCode(item),
           name: item?.name,
           history: item?.history,
+          last_location: item?.last_location,
           matchCount: item?.matchCount ?? 0,
         }))
         .filter(
