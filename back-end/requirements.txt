@@ -36,3 +36,5 @@ pre-commit==3.8.0
 types-requests==2.32.0.20240914
 dotenv
 sqlalchemy
+psycopg2-binary
+psycopg2
