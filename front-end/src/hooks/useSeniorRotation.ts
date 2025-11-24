@@ -96,7 +96,7 @@ async function fetchLockedRotations(
 // Fetch cadangan data for a specific group
 async function fetchCadanganData(
   job: string,
-  groupKey: string,
+  _groupKey: string,
   lockedCadanganCodes: string[]
 ): Promise<any[]> {
   // Build query params
@@ -132,7 +132,7 @@ async function fetchCadanganData(
 // Fetch promotion candidates
 async function fetchPromotionCandidates(
   job: string,
-  groupKey: string,
+  _groupKey: string,
   lockedCadanganCodes: string[]
 ): Promise<any[]> {
   const params = new URLSearchParams();
@@ -620,7 +620,7 @@ export function usePromotionCandidates(
 
 // Hook untuk generate schedule (mutation)
 export function useGenerateSchedule() {
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: generateSchedule,
@@ -691,5 +691,87 @@ export function useLockRotation() {
     lockLoading: lockMutation.isPending,
     unlockLoading: unlockMutation.isPending,
     error: lockMutation.error?.message || unlockMutation.error?.message || null,
+  };
+}
+
+// Hook untuk submit all rotations (mutation)
+export function useSubmitRotations() {
+  const queryClient = useQueryClient();
+
+  const submitMutation = useMutation({
+    mutationFn: async (job: string) => {
+      const response = await fetch(`${API_BASE_URL}/submit-rotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job: job.toUpperCase() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit rotations');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, job) => {
+      // Invalidate locked rotations and submission status
+      queryClient.invalidateQueries({
+        queryKey: ['locked-rotations', job],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['job-submitted', job],
+      });
+    },
+  });
+
+  return {
+    submitRotations: submitMutation.mutateAsync,
+    loading: submitMutation.isPending,
+    error: submitMutation.error?.message || null,
+  };
+}
+
+// Hook untuk check job submitted status
+export function useJobSubmitted(job: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['job-submitted', job],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-job-submitted?job=${job.toUpperCase()}`
+      );
+      const result = await response.json();
+      return result.is_submitted || false;
+    },
+    staleTime: 5 * 60 * 1000, // Fresh 5 menit
+    gcTime: 30 * 60 * 1000, // Cache 30 menit
+  });
+
+  return {
+    isSubmitted: data || false,
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
+// Hook untuk get rotation submissions
+export function useRotationSubmissions(job?: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['rotation-submissions', job],
+    queryFn: async () => {
+      const url = job
+        ? `${API_BASE_URL}/rotation-submissions?job=${job.toUpperCase()}`
+        : `${API_BASE_URL}/rotation-submissions`;
+      const response = await fetch(url);
+      const result = await response.json();
+      return result.data || [];
+    },
+    staleTime: 1 * 60 * 1000, // Fresh 1 menit
+    gcTime: 10 * 60 * 1000, // Cache 10 menit
+  });
+
+  return {
+    submissions: data || [],
+    loading: isLoading,
+    error: error?.message || null,
   };
 }

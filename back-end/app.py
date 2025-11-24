@@ -11,6 +11,7 @@ from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
 from database.connection import (
+    check_job_submitted,
     create_rotation_config,
     delete_rotation_config,
     get_all_locked_seaman_codes,
@@ -18,8 +19,10 @@ from database.connection import (
     get_mutations_as_data,
     get_rotation_config_by_id,
     get_rotation_configs,
+    get_rotation_submissions,
     get_seamen_as_data,
     save_locked_rotation,
+    submit_all_rotations,
     unlock_rotation,
     update_rotation_config,
 )
@@ -259,20 +262,27 @@ sorted_df.to_csv("../data/sorted_seamen_data_diff.csv", index=False)
 word2vec_model = None
 
 
-def load_word2vec_model(model_path="word2vec_model.model"):
+def load_word2vec_model(model_path="models/word2vec_model.model"):
     """
     Memuat model Word2Vec.
     """
     global word2vec_model
     try:
-        word2vec_model = Word2Vec.load(model_path)
-        print("Word2Vec model loaded successfully. app py")
+        # Convert to absolute path if relative
+        if not os.path.isabs(model_path):
+            base_dir = pathlib.Path(__file__).parent.resolve()
+            model_path = base_dir / model_path
+
+        word2vec_model = Word2Vec.load(str(model_path))
+        print(f"Word2Vec model loaded successfully from: {model_path}")
+    except FileNotFoundError:
+        print(f"Error: Word2Vec model file not found at {model_path}")
     except Exception as e:
         print(f"Error loading Word2Vec model: {e}")
 
 
 # Panggil fungsi untuk memuat Word2Vec model saat aplikasi dimulai
-load_word2vec_model("word2vec_model.model")
+load_word2vec_model()
 
 
 def get_last_request_time():
@@ -294,7 +304,7 @@ def get_top_5_similar(target_seaman_code):
 
         if word2vec_model is None:
             print("Word2Vec model is None!")
-            return jsonify({"error": "Word2Vec model belum dimuat"})
+            return {"error": "Word2Vec model belum dimuat"}
 
         target_seaman_data = combined_df[
             combined_df["seamancode"] == target_seaman_code
@@ -302,9 +312,7 @@ def get_top_5_similar(target_seaman_code):
 
         if target_seaman_data.empty:
             print("No seaman found with that code")
-            return jsonify(
-                {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
-            )
+            return {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
 
         rank = target_seaman_data.iloc[0]["last_position"]
         certificate = target_seaman_data.iloc[0]["certificate"]
@@ -382,7 +390,7 @@ def get_top_5_similar(target_seaman_code):
         return response
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return {"status": "error", "message": str(e)}
 
 
 # Route to serve the main dashboard
@@ -2005,6 +2013,80 @@ def api_unlock_rotation(group_key):
 
     except Exception as e:
         app.logger.error(f"Error unlocking rotation: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/submit-rotations", methods=["POST"])
+def api_submit_all_rotations():
+    """Submit all locked rotations untuk job tertentu"""
+    try:
+        data = request.get_json()
+        job = data.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Submit rotations menggunakan fungsi di database.py
+        result = submit_all_rotations(job=job)
+
+        if result["success"]:
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": result["message"],
+                    "submitted_count": result["submitted_count"],
+                    "apollo_success": result.get("apollo_success", 0),
+                    "apollo_failed": result.get("apollo_failed", 0),
+                }
+            )
+        else:
+            return jsonify({"status": "error", "message": result["message"]}), 400
+
+    except Exception as e:
+        app.logger.error(f"Error submitting rotations: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/rotation-submissions", methods=["GET"])
+def api_get_rotation_submissions():
+    """Get all rotation submissions"""
+    try:
+        job = request.args.get("job", None)
+        if job:
+            job = job.upper()
+
+        submissions = get_rotation_submissions(job=job)
+
+        return jsonify(
+            {"status": "success", "data": submissions, "count": len(submissions)}
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching rotation submissions: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/check-job-submitted", methods=["GET"])
+def api_check_job_submitted():
+    """Check if job has been submitted"""
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        is_submitted = check_job_submitted(job=job)
+
+        return jsonify({"status": "success", "is_submitted": is_submitted})
+
+    except Exception as e:
+        app.logger.error(f"Error checking job submission: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

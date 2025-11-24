@@ -457,7 +457,7 @@ export const exportRotationToPDF = ({
     } // Body rows
 
     const rows = scheduleTable.data.map((row: any) =>
-      parsedColumns.map((col, i) => String(row[scheduleTable.columns[i]] || ''))
+      parsedColumns.map((_, i) => String(row[scheduleTable.columns[i]] || ''))
     );
 
     const columnStyles: Record<number, any> = {

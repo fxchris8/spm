@@ -24,12 +24,12 @@ interface TableJson {
   data: Record<string, any>[];
 }
 
-interface ApiResponse {
-  schedule?: TableJson;
-  nahkoda?: TableJson;
-  darat?: TableJson | null;
-  error?: string;
-}
+// interface ApiResponse {
+//   schedule?: TableJson;
+//   nahkoda?: TableJson;
+//   darat?: TableJson | null;
+//   error?: string;
+// }
 
 interface ManalagiProps {
   groups: Record<string, string[]>;
@@ -39,17 +39,17 @@ interface ManalagiProps {
   job: string;
 }
 
-interface LockedRotation {
-  groupKey: string;
-  job: string;
-  scheduleTable: TableJson;
-  nahkodaTable: TableJson;
-  daratTable: TableJson | null;
-  lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
-  lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
-  lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
-  lockedAt: string;
-}
+// interface LockedRotation {
+//   groupKey: string;
+//   job: string;
+//   scheduleTable: TableJson;
+//   nahkodaTable: TableJson;
+//   daratTable: TableJson | null;
+//   lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
+//   lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
+//   lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
+//   lockedAt: string;
+// }
 
 export function ManalagiRotation({
   groups,
@@ -58,7 +58,7 @@ export function ManalagiRotation({
   part,
   job,
 }: ManalagiProps) {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedStandby, setSelectedStandby] = useState<string[]>([]);
   const [selectedOptional, setSelectedOptional] = useState<string[]>([]);
@@ -125,8 +125,7 @@ export function ManalagiRotation({
 
   // Mutations
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();
-  const { lockRotation, unlockRotation, lockLoading, unlockLoading } =
-    useLockRotation();
+  const { lockRotation, unlockRotation } = useLockRotation();
 
   // Helper function to show alert
   const showAlert = (

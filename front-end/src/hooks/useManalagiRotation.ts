@@ -96,7 +96,7 @@ async function fetchLockedRotations(
 // Fetch cadangan data for a specific group
 async function fetchCadanganData(
   job: string,
-  groupKey: string,
+  _groupKey: string,
   lockedCadanganCodes: string[]
 ): Promise<any[]> {
   // Build query params
@@ -129,7 +129,7 @@ async function fetchCadanganData(
 // Fetch promotion candidates
 async function fetchPromotionCandidates(
   job: string,
-  groupKey: string,
+  _groupKey: string,
   lockedCadanganCodes: string[]
 ): Promise<any[]> {
   const params = new URLSearchParams();
@@ -629,7 +629,7 @@ export function usePromotionCandidates(
 
 // Hook untuk generate schedule (mutation)
 export function useGenerateSchedule() {
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: generateSchedule,

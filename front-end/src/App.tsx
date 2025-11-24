@@ -9,6 +9,8 @@ import { RotationJunior } from './components/RotationJunior';
 import { RotationManalagi } from './components/RotationManalagi';
 import { SearchOnDuty } from './components/SearchOnDuty';
 import { SearchOffDuty } from './components/SearchOffDuty';
+import { InMessage } from './components/InMessage';
+import { OutMessage } from './components/OutMessage';
 import { Route, Routes, Navigate } from 'react-router-dom';
 
 export function App() {
@@ -51,6 +53,8 @@ export function App() {
             <Route path="/senior_rotation" element={<RotationSenior />} />
             <Route path="/junior_rotation" element={<RotationJunior />} />
             <Route path="/manalagi_rotation" element={<RotationManalagi />} />
+            <Route path="/in_message" element={<InMessage />} />
+            <Route path="/out_message" element={<OutMessage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

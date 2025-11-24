@@ -10,16 +10,16 @@ import {
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSimilarSeamen } from '../hooks/useSimilarSeamen';
 
-interface Seaman {
-  'SEAMAN CODE': string;
-  'SEAFARER CODE': string;
-  'SEAMAN NAME': string;
-  RANK: string;
-  VESSEL: string;
-  UMUR: number;
-  CERTIFICATE: string;
-  'DAY REMAINS': number;
-}
+// interface Seaman {
+//   'SEAMAN CODE': string;
+//   'SEAFARER CODE': string;
+//   'SEAMAN NAME': string;
+//   RANK: string;
+//   VESSEL: string;
+//   UMUR: number;
+//   CERTIFICATE: string;
+//   'DAY REMAINS': number;
+// }
 
 export function Dashboard() {
   const { seamenData, loading } = useDashboardData();

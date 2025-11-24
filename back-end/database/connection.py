@@ -596,7 +596,395 @@ def sync_mutations_to_database(df):
 
 
 # ============================================================================
-# BAGIAN 5: ROTATION CONFIGS MANAGEMENT (CRUD)
+# BAGIAN 5: ROTATION SUBMISSIONS MANAGEMENT
+# ============================================================================
+
+
+def submit_all_rotations(job):
+    """
+    Submit all locked rotations untuk job tertentu ke rotation_submissions
+    dan kirim notifikasi ke API pusat Apollo
+
+    Args:
+        job: Job title (e.g. 'NAKHODA', 'KKM', 'MUALIM I', 'MASINIS II')
+
+    Returns:
+        Dict dengan 'success', 'message', dan 'submitted_count'
+    """
+    try:
+        from datetime import datetime, timedelta
+
+        import requests
+
+        # Get all locked rotations for this job
+        locked_rotations = get_locked_rotations(job=job)
+
+        if not locked_rotations:
+            return {
+                "success": False,
+                "message": f"Tidak ada rotasi yang di-lock untuk job {job}",
+                "submitted_count": 0,
+            }
+
+        submissions = []
+        apollo_notifications = []
+
+        with engine.connect() as conn:
+            trans = conn.begin()
+
+            try:
+                for rotation in locked_rotations:
+                    group_key = rotation["group_key"]
+                    crew_data = rotation["crew_data"]
+                    schedule_data = rotation["schedule_data"]
+
+                    if not crew_data or not schedule_data:
+                        print(
+                            f"WARNING - Skipping {group_key}: missing crew or schedule data"
+                        )
+                        continue
+
+                    # Get the last crew member (paling bawah) from crew_data
+                    crew_rows = crew_data.get("data", [])
+                    if not crew_rows:
+                        print(f"WARNING - Skipping {group_key}: no crew data")
+                        continue
+
+                    last_crew = crew_rows[-1]  # Ambil yang paling bawah
+
+                    # Extract data dari last_crew
+                    seamancode = str(
+                        last_crew.get("seamancode")
+                        or last_crew.get("SEAMANCODE")
+                        or last_crew.get("Seamancode")
+                        or last_crew.get("SeamanCode")
+                        or ""
+                    )
+                    nama = str(last_crew.get("name") or last_crew.get("NAME") or "")
+                    last_location = str(
+                        last_crew.get("last_location")
+                        or last_crew.get("LAST_LOCATION")
+                        or ""
+                    )
+                    start_date = last_crew.get("start_date") or last_crew.get(
+                        "START_DATE"
+                    )
+                    end_date = last_crew.get("end_date") or last_crew.get("END_DATE")
+                    crew_index = str(
+                        last_crew.get("Index") or last_crew.get("INDEX") or ""
+                    )
+
+                    # Find mutation_to from schedule_data
+                    # Cari ship pertama kali yang dinaiki berdasarkan crew_index
+                    mutation_to = None
+                    first_rotation_date = None
+
+                    schedule_rows = schedule_data.get("data", [])
+                    for ship_row in schedule_rows:
+                        ship_name = ship_row.get("Ship") or ship_row.get("SHIP")
+
+                        # Check all month columns untuk crew_index
+                        for col_name, col_value in ship_row.items():
+                            if col_name in ["Ship", "SHIP", "First Rotation Date"]:
+                                continue
+
+                            # Bersihkan value dari " (transaction)"
+                            clean_value = (
+                                str(col_value).replace(" (transaction)", "").strip()
+                            )
+
+                            # Jika match dengan crew_index
+                            if clean_value == crew_index:
+                                mutation_to = ship_name
+                                first_rotation_date = ship_row.get(
+                                    "First Rotation Date"
+                                ) or ship_row.get("FIRST ROTATION DATE")
+                                break
+
+                        if mutation_to:
+                            break
+
+                    if not mutation_to:
+                        print(
+                            f"WARNING - Skipping {seamancode}: cannot find mutation_to"
+                        )
+                        continue
+
+                    # Parse dates
+                    try:
+                        # Convert start_date dan end_date ke datetime jika masih string
+                        if isinstance(start_date, str):
+                            # Try parsing different formats
+                            for fmt in [
+                                "%d/%m/%Y",
+                                "%Y-%m-%d",
+                                "%a, %d %b %Y %H:%M:%S %Z",
+                            ]:
+                                try:
+                                    start_date = datetime.strptime(start_date, fmt)
+                                    break
+                                except ValueError:
+                                    continue
+
+                        if isinstance(end_date, str):
+                            for fmt in [
+                                "%d/%m/%Y",
+                                "%Y-%m-%d",
+                                "%a, %d %b %Y %H:%M:%S %Z",
+                            ]:
+                                try:
+                                    end_date = datetime.strptime(end_date, fmt)
+                                    break
+                                except ValueError:
+                                    continue
+
+                        if isinstance(first_rotation_date, str):
+                            # Format: "01-12-2025"
+                            try:
+                                first_rotation_date = datetime.strptime(
+                                    first_rotation_date, "%d-%m-%Y"
+                                )
+                            except ValueError:
+                                first_rotation_date = None
+
+                    except Exception as e:
+                        print(f"WARNING - Date parsing error for {seamancode}: {e}")
+
+                    # Calculate dates
+                    tanggal = datetime.now() + timedelta(days=6)  # H+6 dari created_at
+                    tanggal_ready = None  # Kosong dulu, nanti diisi manual
+                    auto_accept_at = datetime.now() + timedelta(
+                        days=6
+                    )  # H+6 dari created_at, sama dengan tanggal
+
+                    # Insert ke rotation_submissions
+                    insert_query = """
+                        INSERT INTO rotation_submissions
+                        (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
+                         start_date, end_date, first_rotation_date, tanggal, tanggal_ready,
+                         auto_accept_at, status_data)
+                        VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from,
+                                :mutation_to, :start_date, :end_date, :first_rotation_date, :tanggal,
+                                :tanggal_ready, :auto_accept_at, :status_data)
+                        RETURNING id
+                    """
+
+                    result = conn.execute(
+                        text(insert_query),
+                        {
+                            "job": job,
+                            "group_key": group_key,
+                            "seamancode": seamancode,
+                            "nama": nama,
+                            "last_location": last_location,
+                            "mutation_from": last_location,
+                            "mutation_to": mutation_to,
+                            "start_date": start_date,
+                            "end_date": end_date,
+                            "first_rotation_date": first_rotation_date,
+                            "tanggal": tanggal,
+                            "tanggal_ready": tanggal_ready,
+                            "auto_accept_at": auto_accept_at,
+                            "status_data": "PENDING",
+                        },
+                    )
+
+                    submission_id = result.fetchone()[0]
+                    submissions.append(submission_id)
+
+                    # Prepare data untuk Apollo API
+                    apollo_notifications.append(
+                        {
+                            "seamancode": seamancode,
+                            "tanggal": tanggal.strftime(
+                                "%Y-%m-%d"
+                            ),  # Gunakan tanggal, bukan tanggal_ready
+                            "mutationfrom": last_location,
+                            "mutationto": mutation_to,
+                        }
+                    )
+
+                    print(
+                        f"DONE - Submitted {seamancode} ({nama}) to {mutation_to} on {first_rotation_date}"
+                    )
+
+                # Commit semua submissions
+                trans.commit()
+
+                print(
+                    f"DONE - Submitted {len(submissions)} rotations to rotation_submissions"
+                )
+
+                # Save apollo_notifications to test file for debugging
+                import json
+                import os
+
+                # Create data directory if not exists
+                data_dir = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)), "data"
+                )
+                os.makedirs(data_dir, exist_ok=True)
+
+                test_file_path = os.path.join(data_dir, "../../data/test-submit.json")
+
+                # Prepare test data with metadata
+                test_data = {
+                    "job": job,
+                    "total_submissions": len(submissions),
+                    "timestamp": datetime.now().isoformat(),
+                    "apollo_notifications": apollo_notifications,
+                }
+
+                # Write to file
+                with open(test_file_path, "w", encoding="utf-8") as f:
+                    json.dump(test_data, f, indent=2, ensure_ascii=False)
+
+                print(f"DONE - Saved Apollo notification data to {test_file_path}")
+
+                # Kirim ke Apollo API
+                apollo_success = 0
+                apollo_failed = 0
+
+                for notif in apollo_notifications:
+                    try:
+                        # Kirim ke Apollo API pusat
+                        response = requests.post(
+                            "https://kocak.spill.co.id/pe/ins-rotation-notif",
+                            json=notif,
+                            timeout=10,
+                        )
+
+                        if response.status_code == 200:
+                            apollo_success += 1
+                            print(
+                                f"DONE - Sent notification to Apollo for {notif['seamancode']}"
+                            )
+                        else:
+                            apollo_failed += 1
+                            print(
+                                f"WARNING - Failed to send notification to Apollo for {notif['seamancode']}: {response.status_code}"
+                            )
+
+                    except Exception as e:
+                        apollo_failed += 1
+                        print(
+                            f"WARNING - Error sending notification to Apollo for {notif['seamancode']}: {e}"
+                        )
+
+                return {
+                    "success": True,
+                    "message": f"Successfully submitted {len(submissions)} rotations. Apollo notifications: {apollo_success} success, {apollo_failed} failed.",
+                    "submitted_count": len(submissions),
+                    "apollo_success": apollo_success,
+                    "apollo_failed": apollo_failed,
+                }
+
+            except Exception as e:
+                trans.rollback()
+                raise e
+
+    except Exception as e:
+        print(f"FAIL - Error submitting rotations: {str(e)}")
+        raise Exception(f"Failed to submit rotations: {str(e)}")
+
+
+def get_rotation_submissions(job=None):
+    """
+    Get all rotation submissions, optionally filtered by job
+
+    Args:
+        job: Optional job filter (e.g. 'NAKHODA', 'KKM')
+
+    Returns:
+        List of submission records
+    """
+    try:
+        if job:
+            query = """
+                SELECT id, job, group_key, seamancode, nama, last_location,
+                       mutation_from, mutation_to, start_date, end_date,
+                       first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
+                       status_data, created_at, updated_at
+                FROM rotation_submissions
+                WHERE job = :job
+                ORDER BY created_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query), {"job": job})
+                rows = result.fetchall()
+        else:
+            query = """
+                SELECT id, job, group_key, seamancode, nama, last_location,
+                       mutation_from, mutation_to, start_date, end_date,
+                       first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
+                       status_data, created_at, updated_at
+                FROM rotation_submissions
+                ORDER BY created_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query))
+                rows = result.fetchall()
+
+        # Convert to list of dicts
+        records = []
+        for row in rows:
+            records.append(
+                {
+                    "id": row[0],
+                    "job": row[1],
+                    "group_key": row[2],
+                    "seamancode": row[3],
+                    "nama": row[4],
+                    "last_location": row[5],
+                    "mutation_from": row[6],
+                    "mutation_to": row[7],
+                    "start_date": row[8].isoformat() if row[8] else None,
+                    "end_date": row[9].isoformat() if row[9] else None,
+                    "first_rotation_date": row[10].isoformat() if row[10] else None,
+                    "tanggal": row[11].isoformat() if row[11] else None,
+                    "tanggal_ready": row[12].isoformat() if row[12] else None,
+                    "auto_accept_at": row[13].isoformat() if row[13] else None,
+                    "status_data": row[14],
+                    "created_at": row[15].isoformat() if row[15] else None,
+                    "updated_at": row[16].isoformat() if row[16] else None,
+                }
+            )
+
+        print(f"DONE - Fetched {len(records)} submission records")
+        return records
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch rotation submissions: {str(e)}")
+
+
+def check_job_submitted(job):
+    """
+    Check if a job has been submitted (ada data di rotation_submissions)
+
+    Args:
+        job: Job title
+
+    Returns:
+        Boolean - True jika ada submission
+    """
+    try:
+        query = """
+            SELECT COUNT(*) FROM rotation_submissions WHERE job = :job
+        """
+        with engine.connect() as conn:
+            result = conn.execute(text(query), {"job": job})
+            count = result.fetchone()[0]
+
+        return count > 0
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        return False
+
+
+# ============================================================================
+# BAGIAN 6: ROTATION CONFIGS MANAGEMENT (CRUD)
 # ============================================================================
 
 # Validation Constants - Easy to update without database migration

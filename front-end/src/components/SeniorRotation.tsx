@@ -22,6 +22,8 @@ import {
   usePotentialPromotion,
   useGenerateSchedule,
   useLockRotation,
+  useSubmitRotations,
+  useJobSubmitted,
 } from '../hooks/useSeniorRotation';
 import { exportRotationToExcel } from './ExportRotationExcel';
 import { exportRotationToPDF } from './ExportRotationPDF';
@@ -32,12 +34,12 @@ interface TableJson {
   data: Record<string, any>[];
 }
 
-interface ApiResponse {
-  schedule?: TableJson;
-  nahkoda?: TableJson;
-  darat?: TableJson | null;
-  error?: string;
-}
+// interface ApiResponse {
+//   schedule?: TableJson;
+//   nahkoda?: TableJson;
+//   darat?: TableJson | null;
+//   error?: string;
+// }
 
 interface SeniorProps {
   groups: Record<string, string[]>;
@@ -47,17 +49,17 @@ interface SeniorProps {
   job: string;
 }
 
-interface LockedRotation {
-  groupKey: string;
-  job: string;
-  scheduleTable: TableJson;
-  nahkodaTable: TableJson;
-  daratTable: TableJson | null;
-  lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
-  lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
-  lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
-  lockedAt: string;
-}
+// interface LockedRotation {
+//   groupKey: string;
+//   job: string;
+//   scheduleTable: TableJson;
+//   nahkodaTable: TableJson;
+//   daratTable: TableJson | null;
+//   lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
+//   lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
+//   lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
+//   lockedAt: string;
+// }
 
 export function SeniorRotation({
   groups,
@@ -66,7 +68,7 @@ export function SeniorRotation({
   part,
   job,
 }: SeniorProps) {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedStandby, setSelectedStandby] = useState<string[]>([]);
   const [selectedOptional, setSelectedOptional] = useState<string[]>([]);
@@ -95,6 +97,18 @@ export function SeniorRotation({
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
       .flatMap(lock => lock.lockedCadanganCodes || []);
   }, [lockedRotations, job]);
+
+  // Check if all groups are locked for current job
+  const areAllGroupsLocked = useMemo(() => {
+    const groupKeys = Object.keys(groups);
+    const lockedGroupsForJob = Object.keys(lockedRotations).filter(
+      key => lockedRotations[key]?.job?.toUpperCase() === job.toUpperCase()
+    );
+    return (
+      groupKeys.length > 0 &&
+      groupKeys.every(key => lockedGroupsForJob.includes(key))
+    );
+  }, [groups, lockedRotations, job]);
 
   // Lazy load cadangan data (only when group selected)
   const { cadanganData, loading: loadingCadangan } = useCadanganData(
@@ -133,18 +147,24 @@ export function SeniorRotation({
 
   // Mutations
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();
-  const { lockRotation, unlockRotation, lockLoading, unlockLoading } =
-    useLockRotation();
+  const { lockRotation, unlockRotation } = useLockRotation();
+  const { submitRotations, loading: loadingSubmit } = useSubmitRotations();
+  const { isSubmitted } = useJobSubmitted(job);
 
   // Helper function to show alert
   const showAlert = (
     type: 'success' | 'error' | 'info' | 'warning',
-    message: string
+    message: string,
+    onDismiss?: () => void
   ) => {
     setAlertInfo({ show: true, type, message });
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setAlertInfo({ show: false, type: 'info', message: '' });
+      // Execute callback after alert is dismissed
+      if (onDismiss) {
+        onDismiss();
+      }
     }, 5000);
   };
 
@@ -298,8 +318,16 @@ export function SeniorRotation({
         lockedSeamanCodes,
       });
 
-      showAlert('success', `Rotation for ${selectedGroup} has been locked!`);
       setIsCurrentGroupLocked(true);
+
+      // Refresh halaman setelah alert dismiss
+      showAlert(
+        'success',
+        `Rotation for ${selectedGroup} has been locked!`,
+        () => {
+          window.location.reload();
+        }
+      );
     } catch (error: any) {
       console.error('Error locking rotation:', error);
       showAlert('error', error.message || 'Failed to lock rotation');
@@ -474,9 +502,70 @@ export function SeniorRotation({
     }
   };
 
+  // Handle Submit All Rotations
+  const handleSubmitAllRotations = async () => {
+    if (
+      !window.confirm(
+        `Submit all ${getJobDisplayName(
+          job
+        )} rotations to database and send notifications to Apollo?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const result = await submitRotations(job);
+
+      if (result.status === 'success') {
+        showAlert(
+          'success',
+          `Successfully submitted ${result.submitted_count} rotations! Apollo notifications: ${result.apollo_success} success, ${result.apollo_failed} failed.`,
+          () => {
+            // Refresh page after submission
+            window.location.reload();
+          }
+        );
+      } else {
+        showAlert('error', result.message || 'Failed to submit rotations');
+      }
+    } catch (error: any) {
+      console.error('Error submitting rotations:', error);
+      showAlert('error', error.message || 'Failed to submit rotations');
+    }
+  };
+
   return (
     <div className="px-6">
-      <div className="text-3xl mb-3 font-bold">Generate Ship Crew Schedule</div>
+      <div className="flex justify-between items-center mb-3">
+        <div className="text-3xl font-bold">Generate Ship Crew Schedule</div>
+
+        {/* Submit Button - Only visible when all groups are locked AND not yet submitted */}
+        {areAllGroupsLocked && !isSubmitted && (
+          <Button
+            gradientMonochrome="success"
+            onClick={handleSubmitAllRotations}
+            disabled={loadingSubmit}
+          >
+            {loadingSubmit ? (
+              <>
+                <Spinner size="sm" light className="mr-2" />
+                Submitting...
+              </>
+            ) : (
+              `Submit Rotations`
+            )}
+          </Button>
+        )}
+
+        {/* Show submitted status */}
+        {areAllGroupsLocked && isSubmitted && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+            <HiLockClosed className="h-5 w-5" />
+            <span className="font-medium">Submitted</span>
+          </div>
+        )}
+      </div>
 
       {/* Alert Component */}
       {alertInfo.show && (

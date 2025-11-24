@@ -91,7 +91,7 @@ export const exportRotationToExcel = ({
     // Map data dengan urutan kolom yang benar
     const nahkodaData = nahkodaTable.data.map((row: any) => {
       const orderedRow: Record<string, any> = {};
-      
+
       // Iterate sesuai urutan columns dari API
       nahkodaTable.columns.forEach(col => {
         const label = getColumnLabel(col);
@@ -104,7 +104,7 @@ export const exportRotationToExcel = ({
           orderedRow[label] = value;
         }
       });
-      
+
       return orderedRow;
     });
 
@@ -127,7 +127,7 @@ export const exportRotationToExcel = ({
   if (daratTable && daratTable.columns && daratTable.data.length > 0) {
     const daratData = daratTable.data.map((row: any) => {
       const orderedRow: Record<string, any> = {};
-      
+
       daratTable.columns.forEach(col => {
         const label = getColumnLabel(col);
         const value = row[col] || row[col.toLowerCase()] || '';
@@ -138,7 +138,7 @@ export const exportRotationToExcel = ({
           orderedRow[label] = value;
         }
       });
-      
+
       return orderedRow;
     });
 
@@ -160,12 +160,12 @@ export const exportRotationToExcel = ({
   if (scheduleTable && scheduleTable.columns && scheduleTable.data.length > 0) {
     const scheduleData = scheduleTable.data.map((row: any) => {
       const orderedRow: Record<string, any> = {};
-      
+
       scheduleTable.columns.forEach(col => {
         const label = getColumnLabel(col);
         orderedRow[label] = row[col] || '';
       });
-      
+
       return orderedRow;
     });
 
