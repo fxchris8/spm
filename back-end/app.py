@@ -262,21 +262,20 @@ sorted_df.to_csv("../data/sorted_seamen_data_diff.csv", index=False)
 word2vec_model = None
 
 
-def load_word2vec_model(model_path="models/word2vec_model.model"):
+def load_word2vec_model():
     """
     Memuat model Word2Vec.
     """
     global word2vec_model
+    
+    ROOT_DIR = pathlib.Path(__file__).parent.resolve()
+    MODEL_PATH = ROOT_DIR / "models" / "word2vec_model.model"
+    
     try:
-        # Convert to absolute path if relative
-        if not os.path.isabs(model_path):
-            base_dir = pathlib.Path(__file__).parent.resolve()
-            model_path = base_dir / model_path
-
-        word2vec_model = Word2Vec.load(str(model_path))
-        print(f"Word2Vec model loaded successfully from: {model_path}")
+        word2vec_model = Word2Vec.load(str(MODEL_PATH))
+        print(f"Word2Vec model loaded successfully from: {MODEL_PATH}")
     except FileNotFoundError:
-        print(f"Error: Word2Vec model file not found at {model_path}")
+        print(f"Error: Word2Vec model file not found at {MODEL_PATH}")
     except Exception as e:
         print(f"Error loading Word2Vec model: {e}")
 
