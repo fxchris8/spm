@@ -797,7 +797,7 @@ def submit_all_rotations(job):
                         {
                             "seamancode": seamancode,
                             "tanggal": tanggal.strftime(
-                                "%Y-%m-%d"
+                                "%d-%m-%Y"
                             ),  # Gunakan tanggal, bukan tanggal_ready
                             "mutationfrom": last_location,
                             "mutationto": mutation_to,
