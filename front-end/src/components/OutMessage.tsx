@@ -2,6 +2,14 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRotationSubmissions } from '../hooks/useSeniorRotation';
 import { Spinner } from 'flowbite-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faPaperPlane,
+  faClock,
+  faCheckCircle,
+  faTimesCircle,
+  faExchangeAlt,
+} from '@fortawesome/free-solid-svg-icons';
 
 export function OutMessage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +35,8 @@ export function OutMessage() {
     // Filter by status
     if (statusFilter !== 'ALL') {
       result = result.filter(
-        (sub: any) => sub.status_data?.toUpperCase() === statusFilter.toUpperCase()
+        (sub: any) =>
+          sub.status_data?.toUpperCase() === statusFilter.toUpperCase()
       );
     }
 
@@ -51,7 +60,10 @@ export function OutMessage() {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredSubmissions.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredSubmissions.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
   const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
 
   const generatePageNumbers = () => {
@@ -81,15 +93,13 @@ export function OutMessage() {
   const statusCounts = useMemo(() => {
     return {
       total: submissions.length,
-      pending: submissions.filter(
-        (s: any) => s.status_data === 'PENDING'
-      ).length,
-      accepted: submissions.filter(
-        (s: any) => s.status_data === 'ACCEPTED'
-      ).length,
-      rejected: submissions.filter(
-        (s: any) => s.status_data === 'REJECTED'
-      ).length,
+      pending: submissions.filter((s: any) => s.status_data === 'PENDING')
+        .length,
+      accepted: submissions.filter((s: any) => s.status_data === 'ACCEPTED')
+        .length,
+      rejected: submissions.filter((s: any) => s.status_data === 'REJECTED')
+        .length,
+      change: submissions.filter((s: any) => s.status_data === 'CHANGE').length,
     };
   }, [submissions]);
 
@@ -113,25 +123,87 @@ export function OutMessage() {
       </h1>
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <p className="text-sm text-gray-600 font-medium">Total Submissions</p>
-          <h2 className="text-3xl font-bold text-gray-900">{statusCounts.total}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        {/* Total Submissions */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-gray-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              className="text-3xl text-gray-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">
+              Total Submissions
+            </p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {statusCounts.total}
+            </h2>
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <p className="text-sm text-gray-600 font-medium">Pending</p>
-          <h2 className="text-3xl font-bold text-yellow-600">{statusCounts.pending}</h2>
+        {/* Pending */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-yellow-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faClock}
+              className="text-3xl text-yellow-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Pending</p>
+            <h2 className="text-3xl font-bold text-yellow-600">
+              {statusCounts.pending}
+            </h2>
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <p className="text-sm text-gray-600 font-medium">Accepted</p>
-          <h2 className="text-3xl font-bold text-green-600">{statusCounts.accepted}</h2>
+        {/* Accepted */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-green-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faCheckCircle}
+              className="text-3xl text-green-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Accepted</p>
+            <h2 className="text-3xl font-bold text-green-600">
+              {statusCounts.accepted}
+            </h2>
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <p className="text-sm text-gray-600 font-medium">Rejected</p>
-          <h2 className="text-3xl font-bold text-red-600">{statusCounts.rejected}</h2>
+        {/* Change */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-orange-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faExchangeAlt}
+              className="text-3xl text-orange-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Change</p>
+            <h2 className="text-3xl font-bold text-orange-600">
+              {statusCounts.change}
+            </h2>
+          </div>
+        </div>
+
+        {/* Rejected */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-red-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faTimesCircle}
+              className="text-3xl text-red-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Rejected</p>
+            <h2 className="text-3xl font-bold text-red-600">
+              {statusCounts.rejected}
+            </h2>
+          </div>
         </div>
       </div>
 
@@ -203,7 +275,10 @@ export function OutMessage() {
           <tbody className="divide-y divide-gray-200">
             {currentItems.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
+                <td
+                  colSpan={12}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
                   No submissions found
                 </td>
               </tr>
@@ -213,11 +288,14 @@ export function OutMessage() {
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.job}
                   </td>
-                      <td className="px-4 py-3 text-sm border-b">
-                      {item.group_key?.startsWith('container_rotation') 
-                        ? `Group ${item.group_key.replace('container_rotation', '')}` 
-                        : item.group_key}
-                      </td>
+                  <td className="px-4 py-3 text-sm border-b">
+                    {item.group_key?.startsWith('container_rotation')
+                      ? `Group ${item.group_key.replace(
+                          'container_rotation',
+                          ''
+                        )}`
+                      : item.group_key}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.seamancode}
                   </td>
@@ -240,7 +318,9 @@ export function OutMessage() {
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
                     {item.auto_accept_at
-                      ? new Date(item.auto_accept_at).toLocaleDateString('id-ID')
+                      ? new Date(item.auto_accept_at).toLocaleDateString(
+                          'id-ID'
+                        )
                       : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
@@ -249,8 +329,10 @@ export function OutMessage() {
                         item.status_data === 'PENDING'
                           ? 'bg-yellow-100 text-yellow-800'
                           : item.status_data === 'ACCEPTED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : item.status_data === 'CHANGE'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {item.status_data}
@@ -268,7 +350,9 @@ export function OutMessage() {
 
       {/* Count */}
       <div className="mt-4 text-sm text-gray-600">
-        Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredSubmissions.length)} of {filteredSubmissions.length} submissions
+        Showing {indexOfFirstItem + 1}-
+        {Math.min(indexOfLastItem, filteredSubmissions.length)} of{' '}
+        {filteredSubmissions.length} submissions
       </div>
 
       {/* Pagination */}
@@ -304,7 +388,9 @@ export function OutMessage() {
             )}
 
             <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage(prev => Math.min(totalPages, prev + 1))
+              }
               disabled={currentPage === totalPages}
               className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >

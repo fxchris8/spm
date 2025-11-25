@@ -11,6 +11,7 @@ from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
 from database.connection import (
+    auto_accept_expired_rotations,
     check_job_submitted,
     create_rotation_config,
     delete_rotation_config,
@@ -21,10 +22,12 @@ from database.connection import (
     get_rotation_configs,
     get_rotation_submissions,
     get_seamen_as_data,
+    get_submitted_seamancodes,
     save_locked_rotation,
     submit_all_rotations,
     unlock_rotation,
     update_rotation_config,
+    update_rotation_status_change,
 )
 from models.model import (
     filter_in_vessel,
@@ -267,10 +270,10 @@ def load_word2vec_model():
     Memuat model Word2Vec.
     """
     global word2vec_model
-    
+
     ROOT_DIR = pathlib.Path(__file__).parent.resolve()
     MODEL_PATH = ROOT_DIR / "models" / "word2vec_model.model"
-    
+
     try:
         word2vec_model = Word2Vec.load(str(MODEL_PATH))
         print(f"Word2Vec model loaded successfully from: {MODEL_PATH}")
@@ -2113,6 +2116,39 @@ def api_get_locked_seaman_codes():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/submitted_seaman_codes", methods=["GET"])
+def api_get_submitted_seaman_codes():
+    """
+    Get all submitted seaman codes for filtering
+
+    Returns seamancodes yang sudah di-submit dengan status aktif (PENDING/CHANGE/ACCEPTED)
+    dan tanggal_ready belum lewat. Seamancodes ini harus di-exclude dari selection.
+    """
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Fetch submitted codes menggunakan fungsi di database.py
+        submitted_codes = get_submitted_seamancodes(job=job)
+
+        return jsonify(
+            {
+                "status": "success",
+                "data": submitted_codes,
+                "count": len(submitted_codes),
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching submitted seaman codes: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/get_crew_to_relieve", methods=["GET"])
 def api_get_crew_to_relieve():
     """Get crew members that need to be relieved (day_remains < threshold OR day_elapsed > threshold)"""
@@ -2796,6 +2832,132 @@ def api_delete_rotation_config(config_id):
         else:
             return jsonify(result), 404
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/change-schedule-rotation", methods=["POST"])
+def api_change_schedule_rotation():
+    """
+    POST - API untuk tim pusat mengirim request perubahan schedule rotation
+
+    Request body (dari tim pusat):
+    {
+        "seamencode": "12345",
+        "tanggalready": "25-12-2025",
+        "statusdata": "CHANGE"
+    }
+
+    Response:
+    {
+        "success": true,
+        "message": "Status updated successfully. 12345 set to CHANGE, 5 others set to ACCEPTED.",
+        "changed_seamancode": "12345",
+        "tanggal_ready": "25-12-2025",
+        "accepted_count": 5,
+        "job": "NAKHODA",
+        "group_key": "container_rotation1",
+        "auto_accepted_info": {
+            "auto_accepted_count": 2
+        },
+        "email_notification": {
+            "success": true,
+            "sent_count": 3
+        }
+    }
+    """
+    try:
+        from utils.email_notifier import send_rotation_change_notification
+
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Map parameter names dari tim pusat ke internal naming
+        seamancode = data.get("seamencode") or data.get("seamanCode")
+        tanggal_ready = data.get("tanggalready") or data.get("tanggalReady")
+        status_data = data.get("statusdata") or data.get("statusData")
+
+        if not seamancode:
+            return jsonify({"error": "Missing required field: seamencode"}), 400
+
+        if not tanggal_ready:
+            return jsonify({"error": "Missing required field: tanggalready"}), 400
+
+        if not status_data or status_data != "CHANGE":
+            return (
+                jsonify(
+                    {"error": "Missing or invalid statusdata field. Must be 'CHANGE'"}
+                ),
+                400,
+            )
+
+        # 1. Auto-accept expired rotations first
+        auto_accept_result = auto_accept_expired_rotations()
+
+        # 2. Update rotation status
+        result = update_rotation_status_change(seamancode, tanggal_ready)
+
+        if result["success"]:
+            # Include auto-accept info in response
+            result["auto_accepted_info"] = {
+                "auto_accepted_count": auto_accept_result.get("auto_accepted_count", 0)
+            }
+
+            # 3. Send email notification to divisions
+            # Get additional info (nama, mutation_to) from result
+            try:
+                # Fetch rotation details untuk email
+                from database.connection import get_rotation_submissions
+
+                submissions = get_rotation_submissions()
+                target_submission = next(
+                    (s for s in submissions if s["seamancode"] == seamancode), None
+                )
+
+                if target_submission:
+                    email_result = send_rotation_change_notification(
+                        seamancode=seamancode,
+                        nama=target_submission.get("nama", "Unknown"),
+                        job=result.get("job", "Unknown"),
+                        group_key=result.get("group_key", "Unknown"),
+                        mutation_to=target_submission.get("mutation_to", "Unknown"),
+                        tanggal_ready=tanggal_ready,
+                        status_data=status_data,
+                    )
+
+                    result["email_notification"] = {
+                        "success": email_result.get("success", False),
+                        "sent_count": email_result.get("sent_count", 0),
+                        "message": email_result.get("message", ""),
+                    }
+
+                    print(f"DONE - Email notification: {email_result.get('message')}")
+                else:
+                    result["email_notification"] = {
+                        "success": False,
+                        "sent_count": 0,
+                        "message": "Submission details not found for email",
+                    }
+
+            except Exception as e:
+                # Email error shouldn't fail the entire request
+                print(f"WARNING - Email notification failed: {str(e)}")
+                result["email_notification"] = {
+                    "success": False,
+                    "sent_count": 0,
+                    "message": f"Email error: {str(e)}",
+                }
+
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 404
+
+    except ValueError as e:
+        # Validation error (e.g., invalid date format)
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

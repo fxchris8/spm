@@ -605,6 +605,10 @@ def submit_all_rotations(job):
     Submit all locked rotations untuk job tertentu ke rotation_submissions
     dan kirim notifikasi ke API pusat Apollo
 
+    Logic:
+    - Hanya submit rotations yang BELUM pernah di-submit (group_key belum ada di rotation_submissions)
+    - Mencegah duplikasi data
+
     Args:
         job: Job title (e.g. 'NAKHODA', 'KKM', 'MUALIM I', 'MASINIS II')
 
@@ -628,6 +632,7 @@ def submit_all_rotations(job):
 
         submissions = []
         apollo_notifications = []
+        skipped_already_submitted = []
 
         with engine.connect() as conn:
             trans = conn.begin()
@@ -708,6 +713,28 @@ def submit_all_rotations(job):
                         print(
                             f"WARNING - Skipping {seamancode}: cannot find mutation_to"
                         )
+                        continue
+
+                    # ✅ CHECK: Apakah seamancode ini sudah pernah di-submit dengan status aktif?
+                    check_seamancode_query = """
+                        SELECT COUNT(*) FROM rotation_submissions
+                        WHERE job = :job
+                        AND seamancode = :seamancode
+                        AND status_data IN ('PENDING', 'CHANGE', 'ACCEPTED')
+                    """
+                    check_seamancode_result = conn.execute(
+                        text(check_seamancode_query),
+                        {"job": job, "seamancode": seamancode},
+                    )
+                    seamancode_already_submitted = (
+                        check_seamancode_result.fetchone()[0] > 0
+                    )
+
+                    if seamancode_already_submitted:
+                        print(
+                            f"INFO - Skipping {seamancode} ({nama}): already submitted with active status"
+                        )
+                        skipped_already_submitted.append(f"{seamancode} ({group_key})")
                         continue
 
                     # Parse dates
@@ -849,7 +876,7 @@ def submit_all_rotations(job):
                     try:
                         # Kirim ke Apollo API pusat
                         response = requests.post(
-                            "https://kocak.spill.co.id/pe/ins-rotation-notif",
+                            "https://kocak.spil.co.id/pe/ins-rotation-notif",
                             json=notif,
                             timeout=10,
                         )
@@ -871,10 +898,28 @@ def submit_all_rotations(job):
                             f"WARNING - Error sending notification to Apollo for {notif['seamancode']}: {e}"
                         )
 
+                # Generate message
+                message_parts = []
+                if len(submissions) > 0:
+                    message_parts.append(
+                        f"Successfully submitted {len(submissions)} new rotation(s)"
+                    )
+                if len(skipped_already_submitted) > 0:
+                    message_parts.append(
+                        f"Skipped {len(skipped_already_submitted)} already submitted rotation(s)"
+                    )
+                if apollo_success > 0 or apollo_failed > 0:
+                    message_parts.append(
+                        f"Apollo notifications: {apollo_success} success, {apollo_failed} failed"
+                    )
+
+                final_message = ". ".join(message_parts) + "."
+
                 return {
                     "success": True,
-                    "message": f"Successfully submitted {len(submissions)} rotations. Apollo notifications: {apollo_success} success, {apollo_failed} failed.",
+                    "message": final_message,
                     "submitted_count": len(submissions),
+                    "skipped_count": len(skipped_already_submitted),
                     "apollo_success": apollo_success,
                     "apollo_failed": apollo_failed,
                 }
@@ -960,27 +1005,287 @@ def get_rotation_submissions(job=None):
 
 def check_job_submitted(job):
     """
-    Check if a job has been submitted (ada data di rotation_submissions)
+    Check if ALL locked rotations for a job have been submitted
+
+    Logic:
+    - Get all locked rotation group_keys for this job
+    - Check if ALL of them exist in rotation_submissions
+    - Return True only if ALL locked rotations have been submitted
 
     Args:
         job: Job title
 
     Returns:
-        Boolean - True jika ada submission
+        Boolean - True jika SEMUA locked rotations sudah di-submit
     """
     try:
-        query = """
-            SELECT COUNT(*) FROM rotation_submissions WHERE job = :job
-        """
-        with engine.connect() as conn:
-            result = conn.execute(text(query), {"job": job})
-            count = result.fetchone()[0]
+        # Get all locked rotations for this job
+        locked_rotations = get_locked_rotations(job=job)
 
-        return count > 0
+        if not locked_rotations or len(locked_rotations) == 0:
+            # Tidak ada rotations yang di-lock, anggap belum submitted
+            return False
+
+        # Get group_keys yang di-lock
+        locked_group_keys = [rotation["group_key"] for rotation in locked_rotations]
+
+        # Check berapa banyak yang sudah ada di rotation_submissions
+        with engine.connect() as conn:
+            # Query untuk hitung group_keys yang sudah di-submit
+            placeholders = ", ".join(
+                [f":key{i}" for i in range(len(locked_group_keys))]
+            )
+            query = f"""
+                SELECT COUNT(DISTINCT group_key)
+                FROM rotation_submissions
+                WHERE job = :job AND group_key IN ({placeholders})
+            """
+
+            # Prepare parameters
+            params = {"job": job}
+            for i, key in enumerate(locked_group_keys):
+                params[f"key{i}"] = key
+
+            result = conn.execute(text(query), params)
+            submitted_count = result.fetchone()[0]
+
+        # Return True jika SEMUA locked rotations sudah di-submit
+        all_submitted = submitted_count == len(locked_group_keys)
+
+        if all_submitted:
+            print(
+                f"INFO - All {len(locked_group_keys)} locked rotations for {job} have been submitted"
+            )
+        else:
+            print(
+                f"INFO - Only {submitted_count}/{len(locked_group_keys)} locked rotations for {job} have been submitted"
+            )
+
+        return all_submitted
 
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
         return False
+
+
+def get_submitted_seamancodes(job):
+    """
+    Get list of seamancodes yang sudah di-submit untuk job tertentu
+    dan masih berstatus aktif (PENDING, CHANGE, ACCEPTED) dan belum ready
+
+    Logic:
+    - Return seamancodes yang:
+      1. Status = PENDING/CHANGE/ACCEPTED (bukan REJECTED/REPLACED)
+      2. tanggal_ready NULL ATAU belum lewat
+
+    Args:
+        job: Job title (e.g. 'NAKHODA', 'KKM')
+
+    Returns:
+        List of seamancodes yang harus di-exclude dari selection
+    """
+    try:
+        query = """
+            SELECT DISTINCT seamancode
+            FROM rotation_submissions
+            WHERE job = :job
+            AND status_data IN ('PENDING', 'CHANGE', 'ACCEPTED')
+            AND (tanggal_ready IS NULL OR tanggal_ready > NOW())
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), {"job": job})
+            seamancodes = [row[0] for row in result.fetchall()]
+
+        print(
+            f"INFO - Found {len(seamancodes)} submitted seamancodes for {job} to exclude"
+        )
+        return seamancodes
+
+    except Exception as e:
+        print(f"FAIL - Error fetching submitted seamancodes: {str(e)}")
+        return []
+
+
+def update_rotation_status_change(seamancode, tanggal_ready):
+    """
+    Update rotation submission status berdasarkan request dari tim pusat.
+
+    Logic:
+    1. Find rotation dengan seamancode yang di-CHANGE
+    2. Update seamancode tersebut menjadi status CHANGE
+    3. Update semua rotation lain dalam group yang sama (created_at sama) menjadi ACCEPTED
+
+    Args:
+        seamancode: Seamancode yang request CHANGE
+        tanggal_ready: Tanggal ready dari tim pusat (format: DD-MM-YYYY)
+
+    Returns:
+        Dict dengan 'success', 'message', dan detail perubahan
+    """
+    try:
+        from datetime import datetime
+
+        # Parse tanggal_ready dari DD-MM-YYYY ke datetime
+        try:
+            tanggal_ready_dt = datetime.strptime(tanggal_ready, "%d-%m-%Y")
+        except ValueError:
+            raise ValueError(
+                f"Invalid tanggal_ready format: {tanggal_ready}. Expected DD-MM-YYYY"
+            )
+
+        with engine.connect() as conn:
+            trans = conn.begin()
+
+            try:
+                # 1. Find rotation dengan seamancode ini
+                find_query = """
+                    SELECT id, job, group_key, created_at, status_data
+                    FROM rotation_submissions
+                    WHERE seamancode = :seamancode
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """
+                result = conn.execute(text(find_query), {"seamancode": seamancode})
+                target_rotation = result.fetchone()
+
+                if not target_rotation:
+                    return {
+                        "success": False,
+                        "message": f"Seamancode {seamancode} tidak ditemukan di rotation_submissions",
+                    }
+
+                rotation_id = target_rotation[0]
+                job = target_rotation[1]
+                group_key = target_rotation[2]
+                created_at = target_rotation[3]
+
+                # 2. Update seamancode tersebut menjadi CHANGE
+                update_change_query = """
+                    UPDATE rotation_submissions
+                    SET status_data = 'CHANGE',
+                        tanggal_ready = :tanggal_ready,
+                        updated_at = NOW()
+                    WHERE id = :rotation_id
+                """
+                conn.execute(
+                    text(update_change_query),
+                    {
+                        "rotation_id": rotation_id,
+                        "tanggal_ready": tanggal_ready_dt,
+                    },
+                )
+
+                print(
+                    f"DONE - Updated seamancode {seamancode} to CHANGE with tanggal_ready {tanggal_ready}"
+                )
+
+                # 3. Update semua rotation lain dalam batch yang sama (created_at sama) menjadi ACCEPTED
+                # Hanya update yang masih PENDING
+                update_accepted_query = """
+                    UPDATE rotation_submissions
+                    SET status_data = 'ACCEPTED',
+                        updated_at = NOW()
+                    WHERE job = :job
+                      AND created_at = :created_at
+                      AND seamancode != :seamancode
+                      AND status_data = 'PENDING'
+                    RETURNING seamancode, nama
+                """
+                accepted_result = conn.execute(
+                    text(update_accepted_query),
+                    {
+                        "job": job,
+                        "created_at": created_at,
+                        "seamancode": seamancode,
+                    },
+                )
+                accepted_rows = accepted_result.fetchall()
+                accepted_count = len(accepted_rows)
+
+                if accepted_count > 0:
+                    print(
+                        f"DONE - Auto-accepted {accepted_count} other rotations in the same batch"
+                    )
+                    for row in accepted_rows:
+                        print(f"       - {row[0]} ({row[1]})")
+
+                trans.commit()
+
+                return {
+                    "success": True,
+                    "message": f"Status updated successfully. {seamancode} set to CHANGE, {accepted_count} others set to ACCEPTED.",
+                    "changed_seamancode": seamancode,
+                    "tanggal_ready": tanggal_ready,
+                    "accepted_count": accepted_count,
+                    "job": job,
+                    "group_key": group_key,
+                }
+
+            except Exception as e:
+                trans.rollback()
+                raise e
+
+    except ValueError as e:
+        print(f"FAIL - Validation Error: {str(e)}")
+        raise ValueError(str(e))
+    except Exception as e:
+        print(f"FAIL - Error updating rotation status: {str(e)}")
+        raise Exception(f"Failed to update rotation status: {str(e)}")
+
+
+def auto_accept_expired_rotations():
+    """
+    Auto-accept semua rotation submissions yang sudah melewati auto_accept_at
+    dan masih berstatus PENDING.
+
+    Fungsi ini dipanggil setiap kali ada request ke API change-schedule-rotation
+    untuk memastikan rotations yang expired otomatis di-accept.
+
+    Returns:
+        Dict dengan jumlah rotations yang di-auto-accept
+    """
+    try:
+        with engine.connect() as conn:
+            # Update semua PENDING yang sudah lewat auto_accept_at
+            query = """
+                UPDATE rotation_submissions
+                SET status_data = 'ACCEPTED',
+                    updated_at = NOW()
+                WHERE status_data = 'PENDING'
+                  AND auto_accept_at <= NOW()
+                RETURNING id, seamancode, nama, job
+            """
+            result = conn.execute(text(query))
+            conn.commit()
+
+            auto_accepted = result.fetchall()
+            count = len(auto_accepted)
+
+            if count > 0:
+                print(f"DONE - Auto-accepted {count} expired rotation submissions")
+                for row in auto_accepted:
+                    print(f"       - ID {row[0]}: {row[1]} ({row[2]}) - {row[3]}")
+            else:
+                print("INFO - No expired rotations to auto-accept")
+
+            return {
+                "success": True,
+                "auto_accepted_count": count,
+                "auto_accepted_list": [
+                    {
+                        "id": row[0],
+                        "seamancode": row[1],
+                        "nama": row[2],
+                        "job": row[3],
+                    }
+                    for row in auto_accepted
+                ],
+            }
+
+    except Exception as e:
+        print(f"FAIL - Error auto-accepting expired rotations: {str(e)}")
+        return {"success": False, "auto_accepted_count": 0, "error": str(e)}
 
 
 # ============================================================================
