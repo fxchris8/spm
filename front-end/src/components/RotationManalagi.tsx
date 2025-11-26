@@ -3,10 +3,10 @@
 
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
-import { ContainerRotation } from './ContainerRotation';
+import { ManalagiRotation } from './ManalagiRotation';
 import { useRotationConfigs } from '../hooks/useRotationConfigs';
 
-export function RotationKKM() {
+export function RotationManalagi() {
   const { configs, loading, error } = useRotationConfigs('manalagi');
 
   // Urutan tabs untuk manalagi
@@ -58,10 +58,14 @@ export function RotationKKM() {
           <Tabs.Item
             key={config.id}
             active={index === 0}
-            title={config.job_title === 'KKM' ? 'KKM' : config.job_title}
+            title={
+              config.job_title === 'KKM'
+                ? 'KKM'
+                : formatJobTitle(config.job_title)
+            }
             icon={HiUserCircle}
           >
-            <ContainerRotation
+            <ManalagiRotation
               vessel={config.vessel}
               type={config.type}
               part={config.part}
@@ -73,4 +77,14 @@ export function RotationKKM() {
       </Tabs>
     </div>
   );
+}
+
+function formatJobTitle(jobTitle: string): string {
+  return jobTitle
+    .replace(/([A-Z]+)/g, ' $1')
+    .replace(/([A-Z][a-z])/g, ' $1')
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }

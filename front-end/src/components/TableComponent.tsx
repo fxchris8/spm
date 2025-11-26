@@ -18,6 +18,10 @@ export function TableComponent({ table }: { table: TableJson }) {
     H: 'bg-teal-400',
     I: 'bg-sky-400',
     J: 'bg-indigo-400',
+    K: 'bg-lime-400',
+    L: 'bg-amber-400',
+    M: 'bg-emerald-400',
+    N: 'bg-cyan-400',
   };
 
   const { columns, data } = table;
@@ -39,10 +43,10 @@ export function TableComponent({ table }: { table: TableJson }) {
             >
               {columns.map(col => {
                 const cellValue = row[col];
-                // Only apply color to columns that have values that are letters (A-J)
+                // Only apply color to columns that have values that are letters (A-K)
                 const letter =
                   typeof cellValue === 'string' &&
-                  /^[A-J]$/.test(cellValue.trim())
+                  /^[A-N]$/.test(cellValue.trim())
                     ? cellValue.trim().charAt(0).toUpperCase()
                     : '';
                 // If letter is found in colorMap, apply the color

@@ -10,7 +10,10 @@ from flask_cors import CORS
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
-from database import (
+from database.connection import (
+    auto_accept_expired_rotations,
+    check_has_pending_changes,
+    check_job_submitted,
     create_rotation_config,
     delete_rotation_config,
     get_all_locked_seaman_codes,
@@ -18,18 +21,22 @@ from database import (
     get_mutations_as_data,
     get_rotation_config_by_id,
     get_rotation_configs,
+    get_rotation_submissions,
     get_seamen_as_data,
+    get_submitted_seamancodes,
     save_locked_rotation,
+    submit_all_rotations,
     unlock_rotation,
     update_rotation_config,
+    update_rotation_status_change,
 )
-from model import (
+from models.model import (
     filter_in_vessel,
     getRecommendation,
     search_candidate,
     vessel_group_id_deck,
 )
-from request_api import (
+from rotation import (
     get_kkm,
     get_masinisII,
     get_mualimI,
@@ -259,20 +266,26 @@ sorted_df.to_csv("../data/sorted_seamen_data_diff.csv", index=False)
 word2vec_model = None
 
 
-def load_word2vec_model(model_path="word2vec_model.model"):
+def load_word2vec_model():
     """
     Memuat model Word2Vec.
     """
     global word2vec_model
+
+    ROOT_DIR = pathlib.Path(__file__).parent.resolve()
+    MODEL_PATH = ROOT_DIR / "models" / "word2vec_model.model"
+
     try:
-        word2vec_model = Word2Vec.load(model_path)
-        print("Word2Vec model loaded successfully. app py")
+        word2vec_model = Word2Vec.load(str(MODEL_PATH))
+        print(f"Word2Vec model loaded successfully from: {MODEL_PATH}")
+    except FileNotFoundError:
+        print(f"Error: Word2Vec model file not found at {MODEL_PATH}")
     except Exception as e:
         print(f"Error loading Word2Vec model: {e}")
 
 
 # Panggil fungsi untuk memuat Word2Vec model saat aplikasi dimulai
-load_word2vec_model("word2vec_model.model")
+load_word2vec_model()
 
 
 def get_last_request_time():
@@ -294,7 +307,7 @@ def get_top_5_similar(target_seaman_code):
 
         if word2vec_model is None:
             print("Word2Vec model is None!")
-            return jsonify({"error": "Word2Vec model belum dimuat"})
+            return {"error": "Word2Vec model belum dimuat"}
 
         target_seaman_data = combined_df[
             combined_df["seamancode"] == target_seaman_code
@@ -302,9 +315,7 @@ def get_top_5_similar(target_seaman_code):
 
         if target_seaman_data.empty:
             print("No seaman found with that code")
-            return jsonify(
-                {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
-            )
+            return {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
 
         rank = target_seaman_data.iloc[0]["last_position"]
         certificate = target_seaman_data.iloc[0]["certificate"]
@@ -382,7 +393,7 @@ def get_top_5_similar(target_seaman_code):
         return response
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return {"status": "error", "message": str(e)}
 
 
 # Route to serve the main dashboard
@@ -421,7 +432,7 @@ def get_dashboard_data():
 
 
 # Route to get the top 5 similar seamen
-@app.route("/similarity/<int:seaman_code>", methods=["GET"])
+@app.route("/api/similarity/<int:seaman_code>", methods=["GET"])
 def get_similarity(seaman_code):
     top_5 = get_top_5_similar(seaman_code)
     print(f"Top 5 similar seamen for code {seaman_code}: {top_5}")
@@ -626,7 +637,7 @@ def df_to_json(df: pd.DataFrame):
     return {"columns": df.columns.tolist(), "data": df.to_dict(orient="records")}
 
 
-@app.route("/api/container_rotation", methods=["POST"])
+@app.route("/api/container-rotation", methods=["POST"])
 def container_rotation_api():
     try:
         # Ambil parameter 'job' dari query string
@@ -759,28 +770,28 @@ def container_rotation_api():
         return jsonify({"error": "Terjadi kesalahan internal", "message": str(e)}), 500
 
 
-@app.route("/api/get_cadangan_KKM")
+@app.route("/api/cadangan-KKM")
 def get_cadangan_KKM():
     df = get_nganggur("KKM")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_nakhoda")
+@app.route("/api/cadangan-nakhoda")
 def get_cadangan_nakhoda():
     df = get_nganggur("NAKHODA")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_mualimI")
+@app.route("/api/cadangan-mualimI")
 def get_cadangan_mualimI():
     df = get_nganggur("MUALIM I")
     data = df.to_dict(orient="records")
     return jsonify(data)
 
 
-@app.route("/api/get_cadangan_masinisII")
+@app.route("/api/cadangan-masinisII")
 def get_cadangan_masinisII():
     df = get_nganggur("MASINIS II")
     data = df.to_dict(orient="records")
@@ -863,7 +874,7 @@ def get_mutasi_filtered():
 
         # Merge untuk mendapatkan nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name"]].drop_duplicates(),
+            df_seamen[["seamancode", "name", "last_location"]].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -874,6 +885,7 @@ def get_mutasi_filtered():
             .apply(
                 lambda g: {
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "vessels": g.loc[
                         ~g["fromvesselname"].isin(lokasi_filter), "fromvesselname"
                     ]
@@ -1091,8 +1103,8 @@ def get_manual_search():
     return jsonify(result)
 
 
-@app.route("/api/seamen/promotion_candidates", methods=["GET"])
-def get_promotion_candidates():
+@app.route("/api/seamen/promotion-candidates-nakhoda", methods=["GET"])
+def get_promotion_candidates_nakhoda():
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1117,7 +1129,9 @@ def get_promotion_candidates():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1129,6 +1143,7 @@ def get_promotion_candidates():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
@@ -1147,7 +1162,7 @@ def get_promotion_candidates():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_kkm", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-kkm", methods=["GET"])
 def get_promotion_candidates_kkm():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1216,7 +1231,9 @@ def get_promotion_candidates_kkm():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1228,6 +1245,7 @@ def get_promotion_candidates_kkm():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
@@ -1241,7 +1259,7 @@ def get_promotion_candidates_kkm():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_mualimI", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimI", methods=["GET"])
 def get_promotion_candidates_mualimI():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1267,7 +1285,9 @@ def get_promotion_candidates_mualimI():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1279,6 +1299,7 @@ def get_promotion_candidates_mualimI():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g[
                         ~g["fromvesselname"].isin(["PENDING GAJI", "PENDING CUTI"])
@@ -1297,7 +1318,7 @@ def get_promotion_candidates_mualimI():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisII", methods=["GET"])
 def get_promotion_candidates_masinisII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1366,7 +1387,9 @@ def get_promotion_candidates_masinisII():
 
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_position"]].drop_duplicates(),
+            df_seamen[
+                ["seamancode", "name", "last_position", "last_location"]
+            ].drop_duplicates(),
             on="seamancode",
             how="left",
         )
@@ -1378,6 +1401,7 @@ def get_promotion_candidates_masinisII():
                 lambda g: {
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
+                    "last_location": g["last_location"].iloc[0],
                     "rank": g["last_position"].iloc[0],
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
@@ -1394,7 +1418,7 @@ def get_promotion_candidates_masinisII():
 # ISSUE
 
 
-@app.route("/api/seamen/promotion_candidates_mualimII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimII", methods=["GET"])
 def get_promotion_candidates_mualimII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1472,7 +1496,7 @@ def get_promotion_candidates_mualimII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisIII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisIII", methods=["GET"])
 def get_promotion_candidates_masinisIII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1586,7 +1610,7 @@ def get_promotion_candidates_masinisIII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_mualimIII", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-mualimIII", methods=["GET"])
 def get_promotion_candidates_mualimIII():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1664,7 +1688,7 @@ def get_promotion_candidates_mualimIII():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/seamen/promotion_candidates_masinisIV", methods=["GET"])
+@app.route("/api/seamen/promotion-candidates-masinisIV", methods=["GET"])
 def get_promotion_candidates_masinisIV():
     try:
         from datetime import datetime, timedelta, timezone
@@ -1890,7 +1914,7 @@ def filter_history():
 # ============================================================================
 
 
-@app.route("/api/locked_rotations", methods=["GET"])
+@app.route("/api/locked-rotations", methods=["GET"])
 def api_get_locked_rotations():
     """Get all locked rotations for a specific job"""
     try:
@@ -1912,7 +1936,7 @@ def api_get_locked_rotations():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/locked_rotations", methods=["POST"])
+@app.route("/api/locked-rotations", methods=["POST"])
 def api_save_locked_rotation():
     """Save a locked rotation"""
     try:
@@ -1970,7 +1994,7 @@ def api_save_locked_rotation():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/api/locked_rotations/<group_key>", methods=["DELETE"])
+@app.route("/api/locked-rotations/<group_key>", methods=["DELETE"])
 def api_unlock_rotation(group_key):
     """Unlock a rotation"""
     try:
@@ -1995,6 +2019,111 @@ def api_unlock_rotation(group_key):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/submit-rotations", methods=["POST"])
+def api_submit_all_rotations():
+    """Submit all locked rotations untuk job tertentu"""
+    try:
+        data = request.get_json()
+        job = data.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Submit rotations menggunakan fungsi di database.py
+        result = submit_all_rotations(job=job)
+
+        if result["success"]:
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": result["message"],
+                    "submitted_count": result["submitted_count"],
+                    "apollo_success": result.get("apollo_success", 0),
+                    "apollo_failed": result.get("apollo_failed", 0),
+                }
+            )
+        else:
+            return jsonify({"status": "error", "message": result["message"]}), 400
+
+    except Exception as e:
+        app.logger.error(f"Error submitting rotations: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/rotation-submissions", methods=["GET"])
+def api_get_rotation_submissions():
+    """Get all rotation submissions"""
+    try:
+        job = request.args.get("job", None)
+        if job:
+            job = job.upper()
+
+        submissions = get_rotation_submissions(job=job)
+
+        return jsonify(
+            {"status": "success", "data": submissions, "count": len(submissions)}
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching rotation submissions: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/check-job-submitted", methods=["GET"])
+def api_check_job_submitted():
+    """Check if job has been submitted"""
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        is_submitted = check_job_submitted(job=job)
+
+        return jsonify({"status": "success", "is_submitted": is_submitted})
+
+    except Exception as e:
+        app.logger.error(f"Error checking job submission: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/check-pending-changes", methods=["GET"])
+def api_check_pending_changes():
+    """
+    Check if there are pending changes (status CHANGE with is_active FALSE)
+    that need to be resubmitted
+    """
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        result = check_has_pending_changes(job=job)
+
+        return jsonify(
+            {
+                "status": "success",
+                "has_changes": result["has_changes"],
+                "count": result["count"],
+                "affected_groups": result["affected_groups"],
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error checking pending changes: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/locked_seaman_codes", methods=["GET"])
 def api_get_locked_seaman_codes():
     """Get all locked seaman codes for filtering"""
@@ -2016,6 +2145,39 @@ def api_get_locked_seaman_codes():
 
     except Exception as e:
         app.logger.error(f"Error fetching locked seaman codes: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/submitted_seaman_codes", methods=["GET"])
+def api_get_submitted_seaman_codes():
+    """
+    Get all submitted seaman codes for filtering
+
+    Returns seamancodes yang sudah di-submit dengan status aktif (PENDING/CHANGE/ACCEPTED)
+    dan tanggal_ready belum lewat. Seamancodes ini harus di-exclude dari selection.
+    """
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        # Fetch submitted codes menggunakan fungsi di database.py
+        submitted_codes = get_submitted_seamancodes(job=job)
+
+        return jsonify(
+            {
+                "status": "success",
+                "data": submitted_codes,
+                "count": len(submitted_codes),
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching submitted seaman codes: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -2702,6 +2864,132 @@ def api_delete_rotation_config(config_id):
         else:
             return jsonify(result), 404
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/change-schedule-rotation", methods=["POST"])
+def api_change_schedule_rotation():
+    """
+    POST - API untuk tim pusat mengirim request perubahan schedule rotation
+
+    Request body (dari tim pusat):
+    {
+        "seamencode": "12345",
+        "tanggalready": "25-12-2025",
+        "statusdata": "CHANGE"
+    }
+
+    Response:
+    {
+        "success": true,
+        "message": "Status updated successfully. 12345 set to CHANGE, 5 others set to ACCEPTED.",
+        "changed_seamancode": "12345",
+        "tanggal_ready": "25-12-2025",
+        "accepted_count": 5,
+        "job": "NAKHODA",
+        "group_key": "container_rotation1",
+        "auto_accepted_info": {
+            "auto_accepted_count": 2
+        },
+        "email_notification": {
+            "success": true,
+            "sent_count": 3
+        }
+    }
+    """
+    try:
+        from utils.email_notifier import send_rotation_change_notification
+
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Map parameter names dari tim pusat ke internal naming
+        seamancode = data.get("seamencode") or data.get("seamanCode")
+        tanggal_ready = data.get("tanggalready") or data.get("tanggalReady")
+        status_data = data.get("statusdata") or data.get("statusData")
+
+        if not seamancode:
+            return jsonify({"error": "Missing required field: seamencode"}), 400
+
+        if not tanggal_ready:
+            return jsonify({"error": "Missing required field: tanggalready"}), 400
+
+        if not status_data or status_data != "CHANGE":
+            return (
+                jsonify(
+                    {"error": "Missing or invalid statusdata field. Must be 'CHANGE'"}
+                ),
+                400,
+            )
+
+        # 1. Auto-accept expired rotations first
+        auto_accept_result = auto_accept_expired_rotations()
+
+        # 2. Update rotation status
+        result = update_rotation_status_change(seamancode, tanggal_ready)
+
+        if result["success"]:
+            # Include auto-accept info in response
+            result["auto_accepted_info"] = {
+                "auto_accepted_count": auto_accept_result.get("auto_accepted_count", 0)
+            }
+
+            # 3. Send email notification to divisions
+            # Get additional info (nama, mutation_to) from result
+            try:
+                # Fetch rotation details untuk email
+                from database.connection import get_rotation_submissions
+
+                submissions = get_rotation_submissions()
+                target_submission = next(
+                    (s for s in submissions if s["seamancode"] == seamancode), None
+                )
+
+                if target_submission:
+                    email_result = send_rotation_change_notification(
+                        seamancode=seamancode,
+                        nama=target_submission.get("nama", "Unknown"),
+                        job=result.get("job", "Unknown"),
+                        group_key=result.get("group_key", "Unknown"),
+                        mutation_to=target_submission.get("mutation_to", "Unknown"),
+                        tanggal_ready=tanggal_ready,
+                        status_data=status_data,
+                    )
+
+                    result["email_notification"] = {
+                        "success": email_result.get("success", False),
+                        "sent_count": email_result.get("sent_count", 0),
+                        "message": email_result.get("message", ""),
+                    }
+
+                    print(f"DONE - Email notification: {email_result.get('message')}")
+                else:
+                    result["email_notification"] = {
+                        "success": False,
+                        "sent_count": 0,
+                        "message": "Submission details not found for email",
+                    }
+
+            except Exception as e:
+                # Email error shouldn't fail the entire request
+                print(f"WARNING - Email notification failed: {str(e)}")
+                result["email_notification"] = {
+                    "success": False,
+                    "sent_count": 0,
+                    "message": f"Email error: {str(e)}",
+                }
+
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 404
+
+    except ValueError as e:
+        # Validation error (e.g., invalid date format)
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

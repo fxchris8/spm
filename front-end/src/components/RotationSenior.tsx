@@ -1,27 +1,30 @@
-// src/components/RotationContainer.tsx
+// src/components/RotationSenior.tsx
 'use client';
 
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
-import { ContainerRotation } from './ContainerRotation';
-import { useRotationConfigs } from '../hooks/useRotationConfigs';
+import { SeniorRotation } from './SeniorRotation';
+import { useRotationContainer } from '../hooks/useRotationContainer';
+import { useMemo } from 'react';
 
-export function RotationContainer() {
-  const { configs, loading, error } = useRotationConfigs('senior');
+export function RotationSenior() {
+  const { configs, loading, error } = useRotationContainer('senior');
 
   // Urutan tabs untuk container
   const containerOrder = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
 
-  const sortedConfigs = [...configs].sort((a, b) => {
-    const indexA = containerOrder.indexOf(a.job_title);
-    const indexB = containerOrder.indexOf(b.job_title);
+  // ✅ Optimized: useMemo untuk sorting
+  const sortedConfigs = useMemo(() => {
+    return [...configs].sort((a, b) => {
+      const indexA = containerOrder.indexOf(a.job_title);
+      const indexB = containerOrder.indexOf(b.job_title);
 
-    // Jika tidak ada di urutan, taruh di akhir
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
 
-    return indexA - indexB;
-  });
+      return indexA - indexB;
+    });
+  }, [configs]);
 
   if (loading) {
     return (
@@ -46,7 +49,7 @@ export function RotationContainer() {
   if (configs.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Tidak ada konfigurasi rotasi container</p>
+        <p className="text-gray-600">Tidak ada konfigurasi rotasi senior</p>
       </div>
     );
   }
@@ -65,8 +68,9 @@ export function RotationContainer() {
             }
             icon={HiUserCircle}
           >
+            {/* ✅ Lazy Loading: Component hanya render saat tab aktif */}
             <div>
-              <ContainerRotation
+              <SeniorRotation
                 vessel={config.vessel}
                 type={config.type}
                 part={config.part}

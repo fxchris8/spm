@@ -1,19 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Button,
   Table,
-  Modal,
   TextInput,
   Label,
   Select,
   Badge,
   Alert,
+  Card,
 } from 'flowbite-react';
-import { HiPlus, HiTrash, HiRefresh } from 'react-icons/hi';
 import {
-  useRotationConfigs,
+  HiPlus,
+  HiTrash,
+  HiRefresh,
+  HiChevronUp,
+  HiPencil,
+  HiX,
+} from 'react-icons/hi';
+import {
+  useRotationShipConfig,
   RotationConfig,
-} from '../hooks/useRotationConfigs';
+} from '../hooks/useRotationShipConfig';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -25,11 +32,14 @@ export default function RotationShipConfig() {
     updateConfig,
     deleteConfig,
     refetch,
-  } = useRotationConfigs();
-  const [showModal, setShowModal] = useState(false);
+  } = useRotationShipConfig();
+
+  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
   const [editingConfig, setEditingConfig] = useState<RotationConfig | null>(
     null
   );
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
   const [formData, setFormData] = useState({
     job_title: '',
     vessel: 'D',
@@ -38,8 +48,6 @@ export default function RotationShipConfig() {
     groups: {} as Record<string, string[]>,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Lock state untuk field kritis saat edit
   const [isFieldsLocked, setIsFieldsLocked] = useState(true);
 
   // Filter states
@@ -67,7 +75,8 @@ export default function RotationShipConfig() {
 
   const handleCreate = () => {
     setEditingConfig(null);
-    setIsFieldsLocked(false); // Unlock untuk create baru
+    setIsFieldsLocked(false);
+    setExpandedRowId(null);
     setFormData({
       job_title: '',
       vessel: 'D',
@@ -75,12 +84,14 @@ export default function RotationShipConfig() {
       part: 'deck',
       groups: {},
     });
-    setShowModal(true);
+    setShowCreateForm(true);
   };
 
   const handleEdit = (config: RotationConfig) => {
+    setShowCreateForm(false);
     setEditingConfig(config);
-    setIsFieldsLocked(true); // Lock saat edit
+    setIsFieldsLocked(true);
+    setExpandedRowId(config.id);
     setFormData({
       job_title: config.job_title,
       vessel: config.vessel,
@@ -88,7 +99,13 @@ export default function RotationShipConfig() {
       part: config.part,
       groups: config.groups,
     });
-    setShowModal(true);
+  };
+
+  const handleCancelEdit = () => {
+    setExpandedRowId(null);
+    setEditingConfig(null);
+    setShowCreateForm(false);
+    setIsFieldsLocked(true);
   };
 
   const handleDelete = async (id: number, jobTitle: string) => {
@@ -100,6 +117,7 @@ export default function RotationShipConfig() {
     try {
       const result = await deleteConfig(id);
       showAlert('success', result.message || 'Konfigurasi berhasil dihapus!');
+      handleCancelEdit();
     } catch (error: any) {
       console.error('Error deleting config:', error);
       showAlert('error', `Gagal menghapus: ${error.message}`);
@@ -111,7 +129,6 @@ export default function RotationShipConfig() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi
     if (!formData.job_title.trim()) {
       showAlert('warning', 'Position harus diisi!');
       return;
@@ -122,7 +139,6 @@ export default function RotationShipConfig() {
       return;
     }
 
-    // Check if any group is empty
     const hasEmptyGroup = Object.entries(formData.groups).some(
       ([, ships]) => ships.length === 0
     );
@@ -144,7 +160,7 @@ export default function RotationShipConfig() {
         const result = await createConfig(formData);
         showAlert('success', result.message || 'Konfigurasi berhasil dibuat!');
       }
-      setShowModal(false);
+      handleCancelEdit();
     } catch (error: any) {
       console.error('Error saving config:', error);
       showAlert('error', `Gagal menyimpan: ${error.message}`);
@@ -155,7 +171,6 @@ export default function RotationShipConfig() {
 
   const addGroup = () => {
     const groupNumber = Object.keys(formData.groups).length + 1;
-    // Untuk senior dan junior gunakan 'container', untuk manalagi tetap 'manalagi'
     const typePrefix =
       formData.type === 'senior' || formData.type === 'junior'
         ? 'container'
@@ -203,7 +218,6 @@ export default function RotationShipConfig() {
     });
   };
 
-  // Helper function untuk format Position untuk display
   const formatJobTitleDisplay = (jobTitle: string): string => {
     const formatMap: Record<string, string> = {
       nakhoda: 'Nahkoda',
@@ -218,7 +232,11 @@ export default function RotationShipConfig() {
     return formatMap[jobTitle] || jobTitle;
   };
 
-  // Urutan hierarki jabatan
+  const formatGroupName = (groupKey: string): string => {
+    const match = groupKey.match(/rotation(\d+)$/);
+    return match ? `Group ${match[1]}` : groupKey;
+  };
+
   const jobTitleOrder = [
     'nakhoda',
     'KKM',
@@ -229,44 +247,38 @@ export default function RotationShipConfig() {
     'mualimIII',
     'masinisIV',
   ];
-
-  // Urutan tipe
   const typeOrder = ['senior', 'junior', 'manalagi'];
 
-  // Filter dan sort configs
-  const filteredAndSortedConfigs = [...configs]
-    .filter(config => {
-      if (filterType !== 'all' && config.type !== filterType) return false;
-      if (filterPart !== 'all' && config.part !== filterPart) return false;
-      if (filterPosition !== 'all' && config.job_title !== filterPosition)
-        return false;
-      return true;
-    })
-    .sort((a, b) => {
-      // Sort berdasarkan type dulu
-      const typeIndexA = typeOrder.indexOf(a.type);
-      const typeIndexB = typeOrder.indexOf(b.type);
+  const filteredAndSortedConfigs = useMemo(() => {
+    return [...configs]
+      .filter(config => {
+        if (filterType !== 'all' && config.type !== filterType) return false;
+        if (filterPart !== 'all' && config.part !== filterPart) return false;
+        if (filterPosition !== 'all' && config.job_title !== filterPosition)
+          return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const typeIndexA = typeOrder.indexOf(a.type);
+        const typeIndexB = typeOrder.indexOf(b.type);
+        if (typeIndexA !== typeIndexB) return typeIndexA - typeIndexB;
 
-      if (typeIndexA !== typeIndexB) {
-        return typeIndexA - typeIndexB;
-      }
-
-      // Kemudian sort berdasarkan Position
-      const jobIndexA = jobTitleOrder.indexOf(a.job_title);
-      const jobIndexB = jobTitleOrder.indexOf(b.job_title);
-
-      if (jobIndexA === -1) return 1;
-      if (jobIndexB === -1) return -1;
-
-      return jobIndexA - jobIndexB;
-    });
+        const jobIndexA = jobTitleOrder.indexOf(a.job_title);
+        const jobIndexB = jobTitleOrder.indexOf(b.job_title);
+        if (jobIndexA === -1) return 1;
+        if (jobIndexB === -1) return -1;
+        return jobIndexA - jobIndexB;
+      });
+  }, [configs, filterType, filterPart, filterPosition]);
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-lg">
+            Loading rotation configurations...
+          </p>
         </div>
       </div>
     );
@@ -274,93 +286,72 @@ export default function RotationShipConfig() {
 
   return (
     <div className="p-6">
-      {/* Alert */}
       {alert.show && (
         <div className="mb-4">
           <Alert
             color={alert.type}
             onDismiss={() => setAlert({ ...alert, show: false })}
           >
-            {alert.message}
+            <span>{alert.message}</span>
           </Alert>
         </div>
       )}
 
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Kelola Konfigurasi Rotasi
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Manage rotation configurations for all job types
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Rotation Ship Configuration
+          </h1>
           <div className="flex gap-2">
-            <Button
-              color="gray"
-              onClick={refetch}
-              disabled={isSubmitting}
-              className="hidden"
-            >
+            <Button color="gray" onClick={() => refetch()} className="hidden">
               <HiRefresh className="mr-2" />
               Refresh
             </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={isSubmitting}
-              className="flex items-center"
-            >
+            <Button onClick={handleCreate}>
               <HiPlus className="mr-2" />
               Tambah Konfigurasi
             </Button>
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="flex gap-3 items-center bg-gray-50 p-4 rounded-lg flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Filter Tipe:
-            </label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+          <div>
+            <Label htmlFor="filter-type" className="mb-2 block">
+              Filter by Type
+            </Label>
             <Select
+              id="filter-type"
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              sizing="sm"
-              className="w-40"
             >
-              <option value="all">Semua Tipe</option>
+              <option value="all">Semua Type</option>
               <option value="senior">Senior</option>
               <option value="junior">Junior</option>
               <option value="manalagi">Manalagi</option>
             </Select>
           </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Filter Part:
-            </label>
+          <div>
+            <Label htmlFor="filter-part" className="mb-2 block">
+              Filter by Part
+            </Label>
             <Select
+              id="filter-part"
               value={filterPart}
               onChange={e => setFilterPart(e.target.value)}
-              sizing="sm"
-              className="w-40"
             >
               <option value="all">Semua Part</option>
               <option value="deck">Deck</option>
               <option value="engine">Engine</option>
             </Select>
           </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Filter Position:
-            </label>
+          <div>
+            <Label htmlFor="filter-position" className="mb-2 block">
+              Filter by Position
+            </Label>
             <Select
+              id="filter-position"
               value={filterPosition}
               onChange={e => setFilterPosition(e.target.value)}
-              sizing="sm"
-              className="w-40"
             >
               <option value="all">Semua Position</option>
               <option value="nakhoda">Nahkoda</option>
@@ -373,405 +364,378 @@ export default function RotationShipConfig() {
               <option value="masinisIV">Masinis IV</option>
             </Select>
           </div>
-
-          {(filterType !== 'all' ||
-            filterPart !== 'all' ||
-            filterPosition !== 'all') && (
-            <Button
-              size="xs"
-              color="gray"
-              onClick={() => {
-                setFilterType('all');
-                setFilterPart('all');
-                setFilterPosition('all');
-              }}
-            >
-              Reset Filter
-            </Button>
-          )}
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <Table>
+      {showCreateForm && (
+        <Card className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800">
+              Tambah Konfigurasi Baru
+            </h2>
+            <Button size="sm" color="gray" onClick={handleCancelEdit}>
+              <HiX className="mr-2" />
+              Batal
+            </Button>
+          </div>
+          <EditForm
+            formData={formData}
+            setFormData={setFormData}
+            isFieldsLocked={false}
+            setIsFieldsLocked={setIsFieldsLocked}
+            editingConfig={null}
+            isSubmitting={isSubmitting}
+            handleSubmit={handleSubmit}
+            addGroup={addGroup}
+            removeGroup={removeGroup}
+            addShipToGroup={addShipToGroup}
+            removeShipFromGroup={removeShipFromGroup}
+            formatGroupName={formatGroupName}
+          />
+        </Card>
+      )}
+
+      <div className="overflow-x-auto rounded-xl shadow-md">
+        <Table striped>
           <Table.Head>
             <Table.HeadCell>Type</Table.HeadCell>
             <Table.HeadCell>Part</Table.HeadCell>
-            <Table.HeadCell>Position</Table.HeadCell>
             <Table.HeadCell>Vessel</Table.HeadCell>
+            <Table.HeadCell>Position</Table.HeadCell>
             <Table.HeadCell>Groups</Table.HeadCell>
-            <Table.HeadCell>Total Ships</Table.HeadCell>
-            <Table.HeadCell>Action</Table.HeadCell>
+            <Table.HeadCell>Aksi</Table.HeadCell>
           </Table.Head>
           <Table.Body className="divide-y">
-            {filteredAndSortedConfigs.map(config => {
-              const totalShips = Object.values(config.groups).flat().length;
-
-              // Helper function untuk vessel color
-              const getVesselColor = (vessel: string) => {
-                switch (vessel) {
-                  case 'D':
-                    return { color: 'info', label: 'D' };
-                  case 'E':
-                    return { color: 'failure', label: 'E' };
-                  case 'F':
-                    return { color: 'warning', label: 'F' };
-                  case 'G':
-                    return { color: 'success', label: 'G' };
-                  default:
-                    return { color: 'gray', label: vessel };
-                }
-              };
-
-              // Helper function untuk type color
-              const getTypeColor = (type: string) => {
-                switch (type) {
-                  case 'senior':
-                    return { color: 'purple', label: 'Senior' };
-                  case 'junior':
-                    return { color: 'pink', label: 'Junior' };
-                  case 'manalagi':
-                    return { color: 'indigo', label: 'Manalagi' };
-                  default:
-                    return { color: 'gray', label: type };
-                }
-              };
-
-              // Helper function untuk part color
-              const getPartColor = (part: string) => {
-                switch (part) {
-                  case 'deck':
-                    return { color: 'success', label: 'Deck' };
-                  case 'engine':
-                    return { color: 'warning', label: 'Engine' };
-                  default:
-                    return { color: 'gray', label: part };
-                }
-              };
-
-              const vesselInfo = getVesselColor(config.vessel);
-              const typeInfo = getTypeColor(config.type);
-              const partInfo = getPartColor(config.part);
-
-              return (
-                <Table.Row
-                  key={config.id}
-                  className="bg-white hover:bg-gray-50"
-                >
-                  <Table.Cell>
-                    <Badge
-                      color={typeInfo.color as any}
-                      size="lg"
-                      className="font-semibold"
-                    >
-                      {typeInfo.label}
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge
-                      color={partInfo.color as any}
-                      size="lg"
-                      className="font-semibold"
-                    >
-                      {partInfo.label}
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell className="font-bold text-gray-900 text-base">
-                    {formatJobTitleDisplay(config.job_title)}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge
-                      color={vesselInfo.color as any}
-                      size="lg"
-                      className="font-semibold"
-                    >
-                      {vesselInfo.label}
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <span className="font-medium text-gray-700">
-                      {Object.keys(config.groups).length} groups
-                    </span>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <span className="font-medium text-blue-600">
-                      {totalShips} ships
-                    </span>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        color="light"
-                        onClick={() => handleEdit(config)}
-                        disabled={isSubmitting}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="failure"
-                        onClick={() =>
-                          handleDelete(config.id, config.job_title)
+            {filteredAndSortedConfigs.length === 0 ? (
+              <Table.Row>
+                <Table.Cell colSpan={6} className="text-center py-8">
+                  <p className="text-gray-500">
+                    Tidak ada konfigurasi yang sesuai dengan filter
+                  </p>
+                </Table.Cell>
+              </Table.Row>
+            ) : (
+              filteredAndSortedConfigs.map(config => (
+                <>
+                  <Table.Row key={config.id} className="bg-white">
+                    <Table.Cell>
+                      <Badge
+                        color={
+                          config.type === 'senior'
+                            ? 'success'
+                            : config.type === 'junior'
+                              ? 'warning'
+                              : 'purple'
                         }
-                        disabled={isSubmitting}
                       >
-                        {isSubmitting ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
+                        {config.type}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge color={config.part === 'deck' ? 'blue' : 'gray'}>
+                        {config.part}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge color="info">{config.vessel}</Badge>
+                    </Table.Cell>
+                    <Table.Cell className="font-medium">
+                      {formatJobTitleDisplay(config.job_title)}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.keys(config.groups).map(groupKey => (
+                          <Badge key={groupKey} color="gray" size="sm">
+                            {formatGroupName(groupKey)} (
+                            {config.groups[groupKey].length})
+                          </Badge>
+                        ))}
+                      </div>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="xs"
+                          onClick={() =>
+                            expandedRowId === config.id
+                              ? handleCancelEdit()
+                              : handleEdit(config)
+                          }
+                          disabled={isSubmitting || showCreateForm}
+                        >
+                          {expandedRowId === config.id ? (
+                            <>
+                              <HiChevronUp className="mr-1" />
+                              Tutup
+                            </>
+                          ) : (
+                            <>
+                              <HiPencil className="mr-1" />
+                              Edit
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="xs"
+                          color="failure"
+                          onClick={() =>
+                            handleDelete(config.id, config.job_title)
+                          }
+                          disabled={isSubmitting || showCreateForm}
+                        >
                           <HiTrash />
-                        )}
-                      </Button>
-                    </div>
-                  </Table.Cell>
-                </Table.Row>
-              );
-            })}
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+
+                  {expandedRowId === config.id && editingConfig && (
+                    <Table.Row>
+                      <Table.Cell colSpan={6} className="bg-gray-50 p-0">
+                        <Card className="m-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-800">
+                              Edit Konfigurasi
+                            </h2>
+                            <Button
+                              size="sm"
+                              color="gray"
+                              onClick={handleCancelEdit}
+                            >
+                              <HiX className="mr-2" />
+                              Batal
+                            </Button>
+                          </div>
+                          <EditForm
+                            formData={formData}
+                            setFormData={setFormData}
+                            isFieldsLocked={isFieldsLocked}
+                            setIsFieldsLocked={setIsFieldsLocked}
+                            editingConfig={editingConfig}
+                            isSubmitting={isSubmitting}
+                            handleSubmit={handleSubmit}
+                            addGroup={addGroup}
+                            removeGroup={removeGroup}
+                            addShipToGroup={addShipToGroup}
+                            removeShipFromGroup={removeShipFromGroup}
+                            formatGroupName={formatGroupName}
+                          />
+                        </Card>
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                </>
+              ))
+            )}
           </Table.Body>
         </Table>
-
-        {configs.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            Belum ada konfigurasi rotasi. Klik "Tambah Konfigurasi" untuk
-            membuat yang baru.
-          </div>
-        )}
       </div>
-
-      {/* Modal Form */}
-      <Modal show={showModal} onClose={() => setShowModal(false)} size="4xl">
-        <Modal.Header>
-          {editingConfig ? 'Edit' : 'Tambah'} Konfigurasi Rotasi
-        </Modal.Header>
-        <Modal.Body>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Warning jika mode edit */}
-            {editingConfig && isFieldsLocked && (
-              <Alert color="warning">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm flex-1">
-                    <strong>Mode Edit:</strong> Field kritis (Position, Type,
-                    Vessel, Part) terkunci untuk mencegah kesalahan input.
-                  </span>
-
-                  <Button
-                    size="xs"
-                    color="warning"
-                    onClick={() => setIsFieldsLocked(false)}
-                    className="shrink-0 ml-4"
-                  >
-                    Unlock untuk Edit
-                  </Button>
-                </div>
-              </Alert>
-            )}
-
-            {editingConfig && !isFieldsLocked && (
-              <Alert color="failure">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm flex-1">
-                    <strong>Peringatan:</strong> Field kritis tidak terkunci.
-                    Pastikan perubahan sudah benar!
-                  </span>
-
-                  <Button
-                    size="xs"
-                    color="gray"
-                    onClick={() => setIsFieldsLocked(true)}
-                    className="shrink-0 ml-4"
-                  >
-                    Lock Kembali
-                  </Button>
-                </div>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="job_title">
-                  Position *
-                  {editingConfig && isFieldsLocked && (
-                    <span className="ml-2 text-xs text-amber-600">Lock</span>
-                  )}
-                </Label>
-                <Select
-                  id="job_title"
-                  value={formData.job_title}
-                  onChange={e =>
-                    setFormData({ ...formData, job_title: e.target.value })
-                  }
-                  required
-                  disabled={editingConfig ? isFieldsLocked : false}
-                  className={
-                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
-                  }
-                >
-                  <option value="">Pilih Position</option>
-                  <option value="nakhoda">Nahkoda</option>
-                  <option value="KKM">KKM</option>
-                  <option value="mualimI">Mualim I</option>
-                  <option value="mualimII">Mualim II</option>
-                  <option value="mualimIII">Mualim III</option>
-                  <option value="masinisII">Masinis II</option>
-                  <option value="masinisIII">Masinis III</option>
-                  <option value="masinisIV">Masinis IV</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="vessel">
-                  Vessel *
-                  {editingConfig && isFieldsLocked && (
-                    <span className="ml-2 text-xs text-amber-600">Lock</span>
-                  )}
-                </Label>
-                <Select
-                  id="vessel"
-                  value={formData.vessel}
-                  onChange={e =>
-                    setFormData({ ...formData, vessel: e.target.value })
-                  }
-                  disabled={editingConfig ? isFieldsLocked : false}
-                  className={
-                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
-                  }
-                >
-                  <option value="D">D</option>
-                  <option value="E">E</option>
-                  <option value="F">F</option>
-                  <option value="G">G</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="type">
-                  Type *
-                  {editingConfig && isFieldsLocked && (
-                    <span className="ml-2 text-xs text-amber-600">Lock</span>
-                  )}
-                </Label>
-                <Select
-                  id="type"
-                  value={formData.type}
-                  onChange={e =>
-                    setFormData({ ...formData, type: e.target.value })
-                  }
-                  disabled={editingConfig ? isFieldsLocked : false}
-                  className={
-                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
-                  }
-                >
-                  <option value="senior">Senior</option>
-                  <option value="junior">Junior</option>
-                  <option value="manalagi">Manalagi</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="part">
-                  Part *
-                  {editingConfig && isFieldsLocked && (
-                    <span className="ml-2 text-xs text-amber-600">Lock</span>
-                  )}
-                </Label>
-                <Select
-                  id="part"
-                  value={formData.part}
-                  onChange={e =>
-                    setFormData({ ...formData, part: e.target.value })
-                  }
-                  disabled={editingConfig ? isFieldsLocked : false}
-                  className={
-                    editingConfig && isFieldsLocked ? 'bg-gray-100' : ''
-                  }
-                >
-                  <option value="deck">Deck</option>
-                  <option value="engine">Engine</option>
-                </Select>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Groups & Kapal</h3>
-                <Button type="button" size="sm" onClick={addGroup}>
-                  <HiPlus className="mr-2" />
-                  Tambah Group
-                </Button>
-              </div>
-
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {Object.entries(formData.groups).map(([groupKey, ships]) => (
-                  <GroupEditor
-                    key={groupKey}
-                    groupKey={groupKey}
-                    ships={ships}
-                    onAddShip={shipName => addShipToGroup(groupKey, shipName)}
-                    onRemoveShip={index => removeShipFromGroup(groupKey, index)}
-                    onRemoveGroup={() => removeGroup(groupKey)}
-                  />
-                ))}
-
-                {Object.keys(formData.groups).length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    Belum ada group. Klik "Tambah Group" untuk membuat group
-                    pertama.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button
-                color="gray"
-                onClick={() => setShowModal(false)}
-                disabled={isSubmitting}
-                type="button"
-              >
-                Batal
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {editingConfig ? 'Updating...' : 'Menyimpan...'}
-                  </>
-                ) : editingConfig ? (
-                  'Update'
-                ) : (
-                  'Simpan'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Modal.Body>
-      </Modal>
     </div>
   );
 }
 
-// Component untuk edit group
+function EditForm({
+  formData,
+  setFormData,
+  isFieldsLocked,
+  setIsFieldsLocked,
+  editingConfig,
+  isSubmitting,
+  handleSubmit,
+  addGroup,
+  removeGroup,
+  addShipToGroup,
+  removeShipFromGroup,
+  formatGroupName,
+}: any) {
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {editingConfig && !isFieldsLocked && (
+        <Alert color="warning">
+          <div className="flex items-start justify-between">
+            <span className="text-sm">
+              ⚠️ Anda sedang mengubah field kritis! Pastikan perubahan sudah
+              benar!
+            </span>
+            <Button
+              size="xs"
+              color="gray"
+              onClick={() => setIsFieldsLocked(true)}
+              className="shrink-0 ml-4"
+            >
+              Lock Kembali
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <Label htmlFor="type">
+            Type *
+            {editingConfig && isFieldsLocked && (
+              <span className="ml-2 text-xs text-amber-600"></span>
+            )}
+          </Label>
+          <Select
+            id="type"
+            value={formData.type}
+            onChange={e => setFormData({ ...formData, type: e.target.value })}
+            disabled={editingConfig ? isFieldsLocked : false}
+            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+          >
+            <option value="senior">Senior</option>
+            <option value="junior">Junior</option>
+            <option value="manalagi">Manalagi</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="part">
+            Part *
+            {editingConfig && isFieldsLocked && (
+              <span className="ml-2 text-xs text-amber-600"></span>
+            )}
+          </Label>
+          <Select
+            id="part"
+            value={formData.part}
+            onChange={e => setFormData({ ...formData, part: e.target.value })}
+            disabled={editingConfig ? isFieldsLocked : false}
+            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+          >
+            <option value="deck">Deck</option>
+            <option value="engine">Engine</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="vessel">
+            Vessel *
+            {editingConfig && isFieldsLocked && (
+              <span className="ml-2 text-xs text-amber-600"></span>
+            )}
+          </Label>
+          <Select
+            id="vessel"
+            value={formData.vessel}
+            onChange={e => setFormData({ ...formData, vessel: e.target.value })}
+            disabled={editingConfig ? isFieldsLocked : false}
+            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+          >
+            <option value="D">D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="G">G</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="job_title">
+            Position *
+            {editingConfig && isFieldsLocked && (
+              <span className="ml-2 text-xs text-amber-600"></span>
+            )}
+          </Label>
+          <Select
+            id="job_title"
+            value={formData.job_title}
+            onChange={e =>
+              setFormData({ ...formData, job_title: e.target.value })
+            }
+            required
+            disabled={editingConfig ? isFieldsLocked : false}
+            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+          >
+            <option value="">Pilih Position</option>
+            <option value="nakhoda">Nahkoda</option>
+            <option value="KKM">KKM</option>
+            <option value="mualimI">Mualim I</option>
+            <option value="mualimII">Mualim II</option>
+            <option value="mualimIII">Mualim III</option>
+            <option value="masinisII">Masinis II</option>
+            <option value="masinisIII">Masinis III</option>
+            <option value="masinisIV">Masinis IV</option>
+          </Select>
+        </div>
+      </div>
+
+      {editingConfig && isFieldsLocked && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            Field kritis di-lock untuk mencegah perubahan tidak sengaja.
+            <button
+              type="button"
+              onClick={() => setIsFieldsLocked(false)}
+              className="ml-2 text-blue-600 hover:text-blue-800 underline font-medium"
+            >
+              Klik di sini untuk unlock
+            </button>
+          </p>
+        </div>
+      )}
+
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Groups & Kapal</h3>
+          <Button type="button" size="sm" onClick={addGroup}>
+            <HiPlus className="mr-2" />
+            Tambah Group
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(formData.groups).map(([groupKey, ships]) => (
+            <GroupEditor
+              key={groupKey}
+              groupKey={groupKey}
+              ships={ships as string[]}
+              onAddShip={shipName => addShipToGroup(groupKey, shipName)}
+              onRemoveShip={index => removeShipFromGroup(groupKey, index)}
+              onRemoveGroup={() => removeGroup(groupKey)}
+              formatGroupName={formatGroupName}
+            />
+          ))}
+
+          {Object.keys(formData.groups).length === 0 && (
+            <div className="col-span-2 text-center py-8 text-gray-500">
+              Belum ada group. Klik "Tambah Group" untuk membuat group pertama.
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4 border-t">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {editingConfig ? 'Updating...' : 'Menyimpan...'}
+            </>
+          ) : editingConfig ? (
+            'Update'
+          ) : (
+            'Simpan'
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 function GroupEditor({
   groupKey,
   ships,
   onAddShip,
   onRemoveShip,
   onRemoveGroup,
+  formatGroupName,
 }: {
   groupKey: string;
   ships: string[];
   onAddShip: (shipName: string) => void;
   onRemoveShip: (index: number) => void;
   onRemoveGroup: () => void;
+  formatGroupName: (key: string) => string;
 }) {
   const [newShip, setNewShip] = useState('');
-
-  // Helper function untuk format display nama group
-  const formatGroupDisplay = (key: string): string => {
-    // Extract nomor dari key (container_rotation1 -> 1, manalagi_rotation2 -> 2)
-    const match = key.match(/rotation(\d+)$/);
-    if (match) {
-      return `Group ${match[1]}`;
-    }
-    return key; // fallback ke original jika pattern tidak match
-  };
 
   const handleAdd = () => {
     if (newShip.trim()) {
@@ -788,14 +752,14 @@ function GroupEditor({
   };
 
   return (
-    <div className="p-4 border rounded-lg bg-gray-50">
+    <div className="p-4 border-2 border-gray-200 rounded-lg bg-white">
       <div className="flex justify-between items-center mb-3">
-        <h4 className="font-semibold text-gray-900">
-          {formatGroupDisplay(groupKey)}
+        <h4 className="font-bold text-gray-900 text-lg">
+          {formatGroupName(groupKey)}
         </h4>
         <Button size="xs" color="failure" onClick={onRemoveGroup}>
           <HiTrash className="mr-1" />
-          Hapus Group
+          Hapus
         </Button>
       </div>
 
@@ -806,22 +770,25 @@ function GroupEditor({
           onKeyPress={handleKeyPress}
           placeholder="Nama Kapal (contoh: KM. ORIENTAL EMERALD)"
           className="flex-1"
+          sizing="sm"
         />
         <Button size="sm" onClick={handleAdd}>
           <HiPlus />
         </Button>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 max-h-40 overflow-y-auto">
         {ships.length === 0 ? (
-          <p className="text-sm text-gray-500 italic py-2">Belum ada kapal</p>
+          <p className="text-sm text-gray-500 italic py-2 text-center">
+            Belum ada kapal
+          </p>
         ) : (
           ships.map((ship, index) => (
             <div
               key={index}
-              className="flex justify-between items-center p-2 bg-white rounded border"
+              className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200"
             >
-              <span className="text-sm">{ship}</span>
+              <span className="text-sm font-medium">{ship}</span>
               <Button
                 size="xs"
                 color="failure"

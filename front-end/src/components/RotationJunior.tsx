@@ -3,10 +3,10 @@
 
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
-import { ScheduleRotation } from './ScheduleRotation';
+import { JuniorRotation } from './JuniorRotation';
 import { useRotationConfigs } from '../hooks/useRotationConfigs';
 
-export function RotationSchedule() {
+export function RotationJunior() {
   const { configs, loading, error } = useRotationConfigs('junior');
 
   // Urutan tabs untuk schedule
@@ -61,7 +61,7 @@ export function RotationSchedule() {
             title={formatJobTitle(config.job_title)}
             icon={HiUserCircle}
           >
-            <ScheduleRotation
+            <JuniorRotation
               vessel={config.vessel}
               type={config.type}
               part={config.part}

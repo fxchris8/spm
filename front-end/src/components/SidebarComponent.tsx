@@ -9,6 +9,9 @@ import {
   HiOutlineArrowPath,
   HiOutlineCube,
   HiOutlineShieldCheck,
+  HiOutlineEnvelope,
+  HiOutlineArrowDownCircle,
+  HiOutlineArrowUpCircle,
 } from 'react-icons/hi2';
 import { GiShipWheel } from 'react-icons/gi';
 import { MdAutorenew } from 'react-icons/md';
@@ -76,23 +79,23 @@ export function SidebarComponent() {
             icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
             label="Rotation"
             open={isParentActive([
-              '/container_rotation',
-              '/schedule_rotation',
+              '/senior_rotation',
+              '/junior_rotation',
               '/manalagi_rotation',
             ])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/container_rotation')}
+              onClick={() => handleNavigation('/senior_rotation')}
               icon={() => <HiOutlineCube className="w-6 h-6" />}
-              active={isActive('/container_rotation')}
+              active={isActive('/senior_rotation')}
               className="cursor-pointer"
             >
               Senior Rotation
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/schedule_rotation')}
+              onClick={() => handleNavigation('/junior_rotation')}
               icon={() => <GiShipWheel className="w-6 h-6" />}
-              active={isActive('/schedule_rotation')}
+              active={isActive('/junior_rotation')}
               className="cursor-pointer"
             >
               Junior Rotation
@@ -104,6 +107,28 @@ export function SidebarComponent() {
               className="cursor-pointer"
             >
               Manalagi Rotation
+            </Sidebar.Item>
+          </Sidebar.Collapse>
+          <Sidebar.Collapse
+            icon={() => <HiOutlineEnvelope className="w-6 h-6" />}
+            label="Messages"
+            open={isParentActive(['/in_message', '/out_message'])}
+          >
+            <Sidebar.Item
+              onClick={() => handleNavigation('/in_message')}
+              icon={() => <HiOutlineArrowDownCircle className="w-6 h-6" />}
+              active={isActive('/in_message')}
+              className="cursor-pointer"
+            >
+              In - Message
+            </Sidebar.Item>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/out_message')}
+              icon={() => <HiOutlineArrowUpCircle className="w-6 h-6" />}
+              active={isActive('/out_message')}
+              className="cursor-pointer"
+            >
+              Out - Message
             </Sidebar.Item>
           </Sidebar.Collapse>
         </Sidebar.ItemGroup>

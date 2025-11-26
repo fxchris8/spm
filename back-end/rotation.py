@@ -1,7 +1,26 @@
 import pandas as pd
 
-from database import get_seamen_as_data
-from model import filter_in_vessel, vessel_group_id_deck
+from database.connection import get_seamen_as_data
+from models.model import filter_in_vessel, vessel_group_id_deck
+
+# Global variable to store index to first rotation date mapping
+_last_index_to_first_date = {}
+
+
+def add_first_rotation_date_column(df):
+    """
+    Add first_rotation_date column to crew DataFrame based on Index.
+    Uses the global _last_index_to_first_date mapping from get_schedule.
+    """
+    global _last_index_to_first_date
+    if "Index" in df.columns:
+        df["first_rotation_date"] = df["Index"].map(
+            lambda idx: _last_index_to_first_date.get(idx, "")
+        )
+    else:
+        df["first_rotation_date"] = ""
+    return df
+
 
 KELOMPOK = {
     "container": [
@@ -283,6 +302,39 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
         first_rotation_dates.append(first_date)
 
     schedule["First Rotation Date"] = first_rotation_dates
+
+    # Reorder columns: Ship, First Rotation Date, then all month columns
+    ship_col = ["Ship"]
+    first_rotation_col = ["First Rotation Date"]
+    month_cols = [
+        col for col in schedule.columns if col not in ["Ship", "First Rotation Date"]
+    ]
+    schedule = schedule[ship_col + first_rotation_col + month_cols]
+
+    # Create a mapping of Index (A, B, C, etc.) to First Rotation Date
+    # by finding the first month each index appears in the schedule
+    index_to_first_date = {}
+    for col in schedule.columns[2:]:  # Skip 'Ship' and 'First Rotation Date' columns
+        for idx, row in schedule.iterrows():
+            crew_index = row[col]
+            if (
+                pd.notna(crew_index)
+                and crew_index != ""
+                and crew_index not in index_to_first_date
+            ):
+                # This is the first appearance of this crew index
+                try:
+                    first_date = pd.to_datetime(f"01 {col}", format="%d %B %Y")
+                    index_to_first_date[crew_index] = first_date.strftime(
+                        "%a, %d %b %Y %H:%M:%S GMT"
+                    )
+                except Exception:
+                    pass
+
+    # Store the mapping globally for use by get_nahkoda and other functions
+    global _last_index_to_first_date
+    _last_index_to_first_date = index_to_first_date
+
     return schedule.fillna("")
 
 
@@ -310,7 +362,7 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -345,8 +397,19 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
         if col not in filtered_df_nahkoda.columns:
             filtered_df_nahkoda[col] = ""
 
+    # Add first_rotation_date column
+    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
+
     return filtered_df_nahkoda[
-        ["Index", "name", "last_location", "seamancode", "start_date", "end_date"]
+        [
+            "Index",
+            "name",
+            "last_location",
+            "seamancode",
+            "start_date",
+            "end_date",
+            "first_rotation_date",
+        ]
     ]
 
 
@@ -374,7 +437,7 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -409,8 +472,19 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
         if col not in filtered_df_nahkoda.columns:
             filtered_df_nahkoda[col] = ""
 
+    # Add first_rotation_date column
+    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
+
     return filtered_df_nahkoda[
-        ["Index", "name", "last_location", "seamancode", "start_date", "end_date"]
+        [
+            "Index",
+            "name",
+            "last_location",
+            "seamancode",
+            "start_date",
+            "end_date",
+            "first_rotation_date",
+        ]
     ]
 
 
@@ -438,7 +512,7 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -473,8 +547,19 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
         if col not in filtered_df_nahkoda.columns:
             filtered_df_nahkoda[col] = ""
 
+    # Add first_rotation_date column
+    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
+
     return filtered_df_nahkoda[
-        ["Index", "name", "last_location", "seamancode", "start_date", "end_date"]
+        [
+            "Index",
+            "name",
+            "last_location",
+            "seamancode",
+            "start_date",
+            "end_date",
+            "first_rotation_date",
+        ]
     ]
 
 
@@ -502,7 +587,7 @@ def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL
             by="end_date", ascending=True
         )
         filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%d/%m/%Y"
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
         filtered_df_nahkoda["end_date"] = ""
@@ -537,6 +622,17 @@ def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL
         if col not in filtered_df_nahkoda.columns:
             filtered_df_nahkoda[col] = ""
 
+    # Add first_rotation_date column
+    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
+
     return filtered_df_nahkoda[
-        ["Index", "name", "last_location", "seamancode", "start_date", "end_date"]
+        [
+            "Index",
+            "name",
+            "last_location",
+            "seamancode",
+            "start_date",
+            "end_date",
+            "first_rotation_date",
+        ]
     ]
