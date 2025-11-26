@@ -89,6 +89,11 @@ def send_rotation_change_notification(
         # Create email content
         subject = f"[URGENT] Perubahan Jadwal Rotasi Kru - {nama} ({job})"
 
+        # Ubah group_key apbila container_rotation1 maka menjadi Group 1, dan begitu selanjutnya
+        if group_key.startswith("container_rotation"):
+            group_number = group_key.split("container_rotation")[-1]
+            group_key = f"Group {group_number}"
+
         # HTML email body
         html_body = f"""
         <!DOCTYPE html>
@@ -256,12 +261,6 @@ def send_rotation_change_notification(
                             <li>Pastikan kru siap pada tanggal yang telah ditentukan</li>
                             <li>Update status di sistem setelah pergantian selesai</li>
                         </ul>
-                    </div>
-
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{base_url}/" class="button">
-                            Lihat Detail di System
-                        </a>
                     </div>
                 </div>
 

@@ -13,6 +13,7 @@ import {
   HiLockOpen,
   HiDownload,
   HiDocumentText,
+  HiExclamationCircle,
 } from 'react-icons/hi';
 import {
   useLockedRotations,
@@ -24,6 +25,7 @@ import {
   useLockRotation,
   useSubmitRotations,
   useJobSubmitted,
+  usePendingChanges,
 } from '../hooks/useSeniorRotation';
 import { exportRotationToExcel } from './ExportRotationExcel';
 import { exportRotationToPDF } from './ExportRotationPDF';
@@ -150,6 +152,11 @@ export function SeniorRotation({
   const { lockRotation, unlockRotation } = useLockRotation();
   const { submitRotations, loading: loadingSubmit } = useSubmitRotations();
   const { isSubmitted } = useJobSubmitted(job);
+  const {
+    hasChanges,
+    count: changesCount,
+    affectedGroups,
+  } = usePendingChanges(job);
 
   // Helper function to show alert
   const showAlert = (
@@ -540,8 +547,11 @@ export function SeniorRotation({
       <div className="flex justify-between items-center mb-3">
         <div className="text-3xl font-bold">Generate Ship Crew Schedule</div>
 
-        {/* Submit Button - Only visible when all groups are locked AND not yet submitted */}
-        {areAllGroupsLocked && !isSubmitted && (
+        {/* Submit Button - Visible when:
+            1. All groups locked AND not yet submitted (first submit)
+            2. All groups locked AND has pending changes (resubmit after CHANGE)
+        */}
+        {areAllGroupsLocked && (!isSubmitted || hasChanges) && (
           <Button
             gradientMonochrome="success"
             onClick={handleSubmitAllRotations}
@@ -552,14 +562,16 @@ export function SeniorRotation({
                 <Spinner size="sm" light className="mr-2" />
                 Submitting...
               </>
+            ) : hasChanges ? (
+              `Resubmit Changes (${changesCount})`
             ) : (
               `Submit Rotations`
             )}
           </Button>
         )}
 
-        {/* Show submitted status */}
-        {areAllGroupsLocked && isSubmitted && (
+        {/* Show submitted status - only when submitted and no pending changes */}
+        {areAllGroupsLocked && isSubmitted && !hasChanges && (
           <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
             <HiLockClosed className="h-5 w-5" />
             <span className="font-medium">Submitted</span>
@@ -584,17 +596,57 @@ export function SeniorRotation({
         </div>
       )}
 
+      {/* Pending Changes Alert */}
+      {hasChanges && affectedGroups.length > 0 && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <HiExclamationCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                Pending Changes Detected
+              </h3>
+              <p className="text-sm text-yellow-700 mb-2">
+                {changesCount} rotation{changesCount > 1 ? 's' : ''} in the
+                following group{affectedGroups.length > 1 ? 's' : ''} need
+                resubmission:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {affectedGroups.map((groupKey: string) => (
+                  <span
+                    key={groupKey}
+                    className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded"
+                  >
+                    {groupKey.replace('container_rotation', 'Group ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Card for group selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {Object.entries(groups).map(([groupKey, ships]) => {
           const isLocked = !!lockedRotations[groupKey];
+          const hasPendingChange = affectedGroups.includes(groupKey);
+
           return (
             <div key={groupKey} className="relative">
-              {isLocked && (
-                <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm">
+              {/* Locked Badge */}
+              {isLocked && !hasPendingChange && (
+                <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm z-10">
                   <HiLockClosed className="h-4 w-4 text-green-600" />
                 </div>
               )}
+
+              {/* Pending Change Badge - Higher priority than locked */}
+              {hasPendingChange && (
+                <div className="absolute top-4 right-4 bg-yellow-100 rounded-full p-1.5 shadow-sm z-10">
+                  <HiExclamationCircle className="h-4 w-4 text-yellow-600" />
+                </div>
+              )}
+
               <CardComponent
                 groupName={`Group ${groupKey.replace(
                   'container_rotation',

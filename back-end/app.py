@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from database.connection import (
     auto_accept_expired_rotations,
+    check_has_pending_changes,
     check_job_submitted,
     create_rotation_config,
     delete_rotation_config,
@@ -2089,6 +2090,37 @@ def api_check_job_submitted():
 
     except Exception as e:
         app.logger.error(f"Error checking job submission: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/check-pending-changes", methods=["GET"])
+def api_check_pending_changes():
+    """
+    Check if there are pending changes (status CHANGE with is_active FALSE)
+    that need to be resubmitted
+    """
+    try:
+        job = request.args.get("job", "").upper()
+
+        if not job:
+            return (
+                jsonify({"status": "error", "message": "Job parameter required"}),
+                400,
+            )
+
+        result = check_has_pending_changes(job=job)
+
+        return jsonify(
+            {
+                "status": "success",
+                "has_changes": result["has_changes"],
+                "count": result["count"],
+                "affected_groups": result["affected_groups"],
+            }
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error checking pending changes: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

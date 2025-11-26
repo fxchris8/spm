@@ -753,6 +753,34 @@ export function useJobSubmitted(job: string) {
   };
 }
 
+// Hook untuk check pending changes (status CHANGE with is_active FALSE)
+export function usePendingChanges(job: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['pending-changes', job],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-pending-changes?job=${job.toUpperCase()}`
+      );
+      const result = await response.json();
+      return {
+        hasChanges: result.has_changes || false,
+        count: result.count || 0,
+        affectedGroups: result.affected_groups || [],
+      };
+    },
+    staleTime: 1 * 60 * 1000, // Fresh 1 menit (lebih sering update untuk detect changes)
+    gcTime: 10 * 60 * 1000, // Cache 10 menit
+  });
+
+  return {
+    hasChanges: data?.hasChanges || false,
+    count: data?.count || 0,
+    affectedGroups: data?.affectedGroups || [],
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
 // Hook untuk get rotation submissions
 export function useRotationSubmissions(job?: string) {
   const { data, isLoading, error } = useQuery({

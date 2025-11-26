@@ -605,9 +605,16 @@ def submit_all_rotations(job):
     Submit all locked rotations untuk job tertentu ke rotation_submissions
     dan kirim notifikasi ke API pusat Apollo
 
-    Logic:
-    - Hanya submit rotations yang BELUM pernah di-submit (group_key belum ada di rotation_submissions)
-    - Mencegah duplikasi data
+    Logic dengan Versioning:
+    1. Submit PERTAMA (version 1):
+       - Submit semua locked rotations
+       - Set version=1, is_active=TRUE, status_data=PENDING
+
+    2. Submit ULANG (version 2+) setelah CHANGE:
+       - Hanya submit data yang status_data='CHANGE' dan is_active=FALSE
+       - Set version lama is_active=FALSE
+       - Insert version baru dengan version+1, is_active=TRUE, status_data=PENDING
+       - Kirim notifikasi Apollo hanya untuk data yang berubah
 
     Args:
         job: Job title (e.g. 'NAKHODA', 'KKM', 'MUALIM I', 'MASINIS II')
@@ -715,26 +722,74 @@ def submit_all_rotations(job):
                         )
                         continue
 
-                    # ✅ CHECK: Apakah seamancode ini sudah pernah di-submit dengan status aktif?
-                    check_seamancode_query = """
-                        SELECT COUNT(*) FROM rotation_submissions
+                    # ✅ CHECK: Apakah group ini pernah di-submit sebelumnya?
+                    # Cek berdasarkan JOB + GROUP_KEY (bukan seamancode!)
+                    # Karena saat CHANGE, seamannya bisa berbeda (diganti)
+                    check_query = """
+                        SELECT id, version, status_data, is_active, seamancode
+                        FROM rotation_submissions
                         WHERE job = :job
-                        AND seamancode = :seamancode
-                        AND status_data IN ('PENDING', 'CHANGE', 'ACCEPTED')
+                        AND group_key = :group_key
+                        ORDER BY version DESC
+                        LIMIT 1
                     """
-                    check_seamancode_result = conn.execute(
-                        text(check_seamancode_query),
-                        {"job": job, "seamancode": seamancode},
+                    check_result = conn.execute(
+                        text(check_query),
+                        {"job": job, "group_key": group_key},
                     )
-                    seamancode_already_submitted = (
-                        check_seamancode_result.fetchone()[0] > 0
-                    )
+                    existing_record = check_result.fetchone()
 
-                    if seamancode_already_submitted:
+                    # Debug log
+                    if existing_record:
                         print(
-                            f"INFO - Skipping {seamancode} ({nama}): already submitted with active status"
+                            f"DEBUG - Found existing record for {job} {group_key}: seaman={existing_record[4]}, version={existing_record[1]}, status={existing_record[2]}, active={existing_record[3]}"
                         )
-                        skipped_already_submitted.append(f"{seamancode} ({group_key})")
+                    else:
+                        print(f"DEBUG - No existing record for {job} {group_key}")
+
+                    # Tentukan apakah perlu submit atau skip
+                    should_submit = False
+                    new_version = 1
+
+                    if existing_record:
+                        old_version = existing_record[1]
+                        old_status = existing_record[2]
+                        old_is_active = existing_record[3]
+                        old_seamancode = existing_record[4]
+
+                        # ✅ Jika status CHANGE dan is_active FALSE -> perlu resubmit dengan version baru
+                        # Seamancode bisa berbeda karena diganti
+                        if old_status == "CHANGE" and not old_is_active:
+                            should_submit = True
+                            new_version = old_version + 1
+                            print(
+                                f"INFO - Resubmitting {job} {group_key}: CHANGE detected (old: {old_seamancode}, new: {seamancode}), version {old_version} -> {new_version}"
+                            )
+                        # ✅ Jika sudah ada record aktif (PENDING/ACCEPTED) -> skip
+                        elif old_is_active and old_status in ["PENDING", "ACCEPTED"]:
+                            print(
+                                f"INFO - Skipping {job} {group_key}: already submitted with {old_seamancode} (version {old_version}, status {old_status})"
+                            )
+                            skipped_already_submitted.append(
+                                f"{seamancode} ({group_key})"
+                            )
+                            continue
+                        # ✅ Jika ada record tapi bukan CHANGE dan tidak aktif -> error case
+                        else:
+                            print(
+                                f"WARNING - Unexpected state for {job} {group_key}: status={old_status}, active={old_is_active}, treating as new"
+                            )
+                            should_submit = True
+                            new_version = old_version + 1
+                    else:
+                        # ✅ Data baru, submit pertama kali dengan version 1
+                        should_submit = True
+                        new_version = 1
+                        print(
+                            f"INFO - New submission for {job} {group_key} with {seamancode} ({nama}): version 1"
+                        )
+
+                    if not should_submit:
                         continue
 
                     # Parse dates
@@ -784,15 +839,15 @@ def submit_all_rotations(job):
                         days=6
                     )  # H+6 dari created_at, sama dengan tanggal
 
-                    # Insert ke rotation_submissions
+                    # Insert ke rotation_submissions dengan versioning
                     insert_query = """
                         INSERT INTO rotation_submissions
                         (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
                          start_date, end_date, first_rotation_date, tanggal, tanggal_ready,
-                         auto_accept_at, status_data)
+                         auto_accept_at, status_data, version, is_active)
                         VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from,
                                 :mutation_to, :start_date, :end_date, :first_rotation_date, :tanggal,
-                                :tanggal_ready, :auto_accept_at, :status_data)
+                                :tanggal_ready, :auto_accept_at, :status_data, :version, :is_active)
                         RETURNING id
                     """
 
@@ -813,6 +868,8 @@ def submit_all_rotations(job):
                             "tanggal_ready": tanggal_ready,
                             "auto_accept_at": auto_accept_at,
                             "status_data": "PENDING",
+                            "version": new_version,
+                            "is_active": True,
                         },
                     )
 
@@ -832,7 +889,7 @@ def submit_all_rotations(job):
                     )
 
                     print(
-                        f"DONE - Submitted {seamancode} ({nama}) to {mutation_to} on {first_rotation_date}"
+                        f"DONE - Submitted {seamancode} ({nama}) version {new_version} to {mutation_to} (status: PENDING, is_active: TRUE)"
                     )
 
                 # Commit semua submissions
@@ -1007,16 +1064,17 @@ def check_job_submitted(job):
     """
     Check if ALL locked rotations for a job have been submitted
 
-    Logic:
+    Logic dengan Versioning:
     - Get all locked rotation group_keys for this job
-    - Check if ALL of them exist in rotation_submissions
-    - Return True only if ALL locked rotations have been submitted
+    - Check if ALL of them exist in rotation_submissions dengan is_active = TRUE
+    - Return True only if ALL locked rotations have been submitted dengan status aktif
+    - Status CHANGE dengan is_active = FALSE tidak dianggap submitted
 
     Args:
         job: Job title
 
     Returns:
-        Boolean - True jika SEMUA locked rotations sudah di-submit
+        Boolean - True jika SEMUA locked rotations sudah di-submit dengan is_active = TRUE
     """
     try:
         # Get all locked rotations for this job
@@ -1038,7 +1096,9 @@ def check_job_submitted(job):
             query = f"""
                 SELECT COUNT(DISTINCT group_key)
                 FROM rotation_submissions
-                WHERE job = :job AND group_key IN ({placeholders})
+                WHERE job = :job
+                AND group_key IN ({placeholders})
+                AND is_active = TRUE
             """
 
             # Prepare parameters
@@ -1066,6 +1126,91 @@ def check_job_submitted(job):
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
         return False
+
+
+def check_has_pending_changes(job):
+    """
+    Check if there are any rotation submissions with status CHANGE and is_active = FALSE
+    yang perlu di-resubmit, KECUALI jika sudah ada version lebih tinggi dengan is_active = TRUE
+
+    Logic:
+    - Cari semua data dengan status CHANGE dan is_active = FALSE
+    - Filter: hanya ambil yang BELUM punya version lebih tinggi dengan is_active = TRUE
+    - Return: count dan affected_groups yang benar-benar perlu resubmit
+
+    Args:
+        job: Job title
+
+    Returns:
+        Dict dengan has_changes (boolean), count (int), dan affected_groups (list)
+    """
+    try:
+        with engine.connect() as conn:
+            # Get count and affected groups
+            # HANYA ambil CHANGE yang BELUM di-resubmit (belum ada version lebih tinggi)
+            query = """
+                SELECT
+                    COUNT(DISTINCT rs_change.group_key) as total_count,
+                    ARRAY_AGG(DISTINCT rs_change.group_key) as groups
+                FROM rotation_submissions rs_change
+                WHERE rs_change.job = :job
+                AND rs_change.status_data = 'CHANGE'
+                AND rs_change.is_active = FALSE
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM rotation_submissions rs_newer
+                    WHERE rs_newer.job = rs_change.job
+                    AND rs_newer.group_key = rs_change.group_key
+                    AND rs_newer.version > rs_change.version
+                    AND rs_newer.is_active = TRUE
+                )
+            """
+            result = conn.execute(text(query), {"job": job})
+            row = result.fetchone()
+
+            count = row[0] if row[0] else 0
+            affected_groups = row[1] if row[1] else []
+
+            if count > 0:
+                print(
+                    f"INFO - Found {count} pending changes for {job} in groups: {affected_groups}"
+                )
+
+                # Debug: Show details of pending changes (only those without newer versions)
+                debug_query = """
+                    SELECT rs_change.seamancode, rs_change.group_key,
+                           rs_change.status_data, rs_change.is_active, rs_change.version
+                    FROM rotation_submissions rs_change
+                    WHERE rs_change.job = :job
+                    AND rs_change.status_data = 'CHANGE'
+                    AND rs_change.is_active = FALSE
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM rotation_submissions rs_newer
+                        WHERE rs_newer.job = rs_change.job
+                        AND rs_newer.group_key = rs_change.group_key
+                        AND rs_newer.version > rs_change.version
+                        AND rs_newer.is_active = TRUE
+                    )
+                    ORDER BY rs_change.group_key, rs_change.seamancode
+                """
+                debug_result = conn.execute(text(debug_query), {"job": job})
+                for row in debug_result.fetchall():
+                    print(
+                        f"  - seaman {row[0]}: {row[1]}, status={row[2]}, active={row[3]}, version={row[4]}"
+                    )
+            else:
+                print(f"INFO - No pending changes for {job}")
+
+            return {
+                "has_changes": count > 0,
+                "count": count,
+                "affected_groups": affected_groups,
+            }
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        return {"has_changes": False, "count": 0, "affected_groups": []}
 
 
 def get_submitted_seamancodes(job):
@@ -1138,12 +1283,13 @@ def update_rotation_status_change(seamancode, tanggal_ready):
             trans = conn.begin()
 
             try:
-                # 1. Find rotation dengan seamancode ini
+                # 1. Find rotation dengan seamancode ini (ambil yang is_active = TRUE dan version tertinggi)
                 find_query = """
-                    SELECT id, job, group_key, created_at, status_data
+                    SELECT id, job, group_key, created_at, status_data, version
                     FROM rotation_submissions
                     WHERE seamancode = :seamancode
-                    ORDER BY created_at DESC
+                    AND is_active = TRUE
+                    ORDER BY version DESC
                     LIMIT 1
                 """
                 result = conn.execute(text(find_query), {"seamancode": seamancode})
@@ -1159,12 +1305,19 @@ def update_rotation_status_change(seamancode, tanggal_ready):
                 job = target_rotation[1]
                 group_key = target_rotation[2]
                 created_at = target_rotation[3]
+                current_version = target_rotation[5]
 
-                # 2. Update seamancode tersebut menjadi CHANGE
+                print(
+                    f"INFO - Found seamancode {seamancode}: version {current_version}, will set to CHANGE and is_active=FALSE"
+                )
+
+                # 2. Update seamancode tersebut menjadi CHANGE dan set is_active = FALSE
                 update_change_query = """
                     UPDATE rotation_submissions
                     SET status_data = 'CHANGE',
                         tanggal_ready = :tanggal_ready,
+                        auto_accept_at = :auto_accept_at,
+                        is_active = FALSE,
                         updated_at = NOW()
                     WHERE id = :rotation_id
                 """
@@ -1173,6 +1326,7 @@ def update_rotation_status_change(seamancode, tanggal_ready):
                     {
                         "rotation_id": rotation_id,
                         "tanggal_ready": tanggal_ready_dt,
+                        "auto_accept_at": tanggal_ready_dt,
                     },
                 )
 
