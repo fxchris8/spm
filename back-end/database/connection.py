@@ -885,10 +885,6 @@ def submit_all_rotations(job):
                             ),  # Gunakan tanggal, bukan tanggal_ready
                             "mutationfrom": last_location,
                             "mutationto": mutation_to,
-                            "familiarisasi1": 0,
-                            "familiarisasi2": 0,
-                            "familiarisasi3": 0,
-                            "familiarisasi4": 0,
                         }
                     )
 

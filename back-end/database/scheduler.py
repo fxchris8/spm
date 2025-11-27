@@ -178,8 +178,8 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "--manual":
-        # Manual sync untuk testing
+        # Manual sync
         manual_sync_all()
     else:
-        # Production: start scheduler
+        # Start scheduler
         start_scheduler()
