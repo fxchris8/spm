@@ -72,7 +72,7 @@ def send_rotation_change_notification(
         # Determine status badge color and text
         if status_data == "CHANGE":
             status_color = "#FF9800"  # Orange
-            status_text = "PERUBAHAN JADWAL"
+            status_text = "KRU TIDAK READY"
         elif status_data == "ACCEPTED":
             status_color = "#4CAF50"  # Green
             status_text = "DITERIMA"
@@ -87,7 +87,7 @@ def send_rotation_change_notification(
         base_url = os.getenv("BASE_URL", "http://localhost:3000")
 
         # Create email content
-        subject = f"[URGENT] Perubahan Jadwal Rotasi Kru - {nama} ({job})"
+        subject = f"[URGENT] Perubahan Jadwal Rotation Plan Kru - {nama} ({job})"
 
         # Ubah group_key apbila container_rotation1 maka menjadi Group 1, dan begitu selanjutnya
         if group_key.startswith("container_rotation"):
@@ -204,13 +204,11 @@ def send_rotation_change_notification(
                 </div>
 
                 <div class="content">
-                    <h2 style="color: #333; margin-top: 0;">Notifikasi Perubahan Jadwal Rotasi</h2>
+                    <h2 style="color: #333; margin-top: 0;">Notifikasi Perubahan Jadwal Rotation Plan</h2>
 
                     <div class="urgent-box">
                         <p style="margin: 0; font-size: 16px; color: #991b1b;">
-                            <strong>SEGERA DITINDAKLANJUTI!</strong><br>
-                            Tim IT Pusat telah mengirimkan permintaan perubahan jadwal rotasi untuk kru kapal berikut.
-                            Harap segera koordinasikan penggantian/perubahan kru sesuai dengan tanggal yang ditentukan.
+                            <strong>PERLU DILAKUKAN PENGGANTIAN TERHADAP KRU SEBAGAI BERIKUT!</strong><br>
                         </p>
                     </div>
 
@@ -244,23 +242,19 @@ def send_rotation_change_notification(
                             <td><strong style="color: {status_color}; font-size: 16px;">{tanggal_formatted}</strong></td>
                         </tr>
                         <tr>
-                            <td>Status Perubahan</td>
-                            <td><strong>{status_data}</strong></td>
-                        </tr>
-                        <tr>
                             <td>Waktu Notifikasi</td>
                             <td>{datetime.now().strftime("%d %B %Y, %H:%M:%S WIB")}</td>
                         </tr>
                     </table>
 
                     <div class="action-box">
-                        <strong>Tindakan Yang Harus Dilakukan:</strong>
-                        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                            <li>Segera verifikasi ketersediaan kru pengganti</li>
-                            <li>Koordinasikan dengan divisi terkait untuk proses pergantian kru</li>
-                            <li>Pastikan kru siap pada tanggal yang telah ditentukan</li>
-                            <li>Update status di sistem setelah pergantian selesai</li>
-                        </ul>
+                        <strong>
+                            SEGERA RIVISI ROTATION PLAN PADA 
+                            <a href="http://pe.spil.co.id:8047/" target="_blank" style="text-decoration: underline;">
+                            WEBSITE PROGRAM ROTATION PLAN
+                            </a>
+                            !
+                        </strong>
                     </div>
                 </div>
 
@@ -279,45 +273,50 @@ def send_rotation_change_notification(
 
         # Plain text fallback
         text_body = f"""
-{'=' * 80}
+============================================================================
 SPM - SHIP PERSONNEL MANAGEMENT
 PT Salam Pacific Indonesia Lines
-{'=' * 80}
+============================================================================
 
-NOTIFIKASI PERUBAHAN JADWAL ROTASI - SEGERA DITINDAKLANJUTI!
+NOTIFIKASI PERUBAHAN JADWAL ROTATION PLAN – SEGERA DITINDAKLANJUTI!
+
+PERLU DILAKUKAN PENGGANTIAN TERHADAP KRU SEBAGAI BERIKUT:
 
 STATUS: {status_text}
 
-Tim IT Pusat telah mengirimkan permintaan perubahan jadwal rotasi untuk kru kapal.
-Harap segera koordinasikan penggantian/perubahan kru sesuai tanggal yang ditentukan.
-
-{'=' * 80}
+----------------------------------------------------------------------------
 
 INFORMASI KRU:
-- Nama Kru           : {nama}
-- Seaman Code        : {seamancode}
-- Jabatan            : {job}
-- Group Rotasi       : {group_key}
-- Kapal Tujuan       : {mutation_to}
-- Tanggal Kru Ready  : {tanggal_formatted}
-- Status Perubahan   : {status_data}
-- Waktu Notifikasi   : {datetime.now().strftime("%d %B %Y, %H:%M:%S WIB")}
+- Nama Kru            : {nama}
+- Seaman Code         : {seamancode}
+- Jabatan             : {job}
+- Group Rotasi        : {group_key}
+- Kapal Tujuan        : {mutation_to}
+- Tanggal Kru Ready   : {tanggal_formatted}
+- Status Perubahan    : {status_data}
+- Waktu Notifikasi    : {datetime.now().strftime("%d %B %Y, %H:%M:%S WIB")}
 
-{'=' * 80}
+----------------------------------------------------------------------------
 
-TINDAKAN YANG HARUS DILAKUKAN:
-1. Segera verifikasi ketersediaan kru pengganti
-2. Koordinasikan dengan divisi terkait untuk proses pergantian kru
-3. Pastikan kru siap pada tanggal yang telah ditentukan
-4. Update status di sistem setelah pergantian selesai
+TINDAKAN YANG WAJIB DILAKUKAN:
 
-{'=' * 80}
+SEGERA RIVISI ROTATION PLAN PADA WEBSITE PROGRAM ROTATION PLAN!
+URL: http://pe.spil.co.id:8047/
 
-Akses sistem: {base_url}/
+Langkah yang harus dilakukan:
+1. Segera verifikasi ketersediaan kru pengganti.
+2. Koordinasikan dengan divisi terkait.
+3. Pastikan kru siap pada tanggal yang sudah ditentukan.
+4. Update status pada sistem setelah proses selesai.
 
-Email otomatis dari sistem. Harap tidak membalas email ini.
-(c) {datetime.now().year} PT Salam Pacific Indonesia Lines. All rights reserved.
-        """
+----------------------------------------------------------------------------
+
+Email otomatis dari sistem SPM.
+Harap tidak membalas email ini.
+
+(c) {datetime.now().year} PT Salam Pacific Indonesia Lines — All rights reserved.
+"""
+
 
         # Send email to all recipients
         sent_count = 0

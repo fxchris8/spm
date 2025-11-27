@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { useRotationSubmissions } from '../hooks/useSeniorRotation';
-import { Spinner } from 'flowbite-react';
+import { LoadingComponent } from './LoadingComponent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPaperPlane,
@@ -104,16 +104,7 @@ export function OutMessage() {
   }, [submissions]);
 
   if (loading) {
-    return (
-      <section className="p-6 flex-1 overflow-y-auto">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <Spinner size="xl" color="info" />
-            <p className="mt-4 text-gray-600 text-lg">Loading submissions...</p>
-          </div>
-        </div>
-      </section>
-    );
+    return <LoadingComponent message="Loading submissions..." />;
   }
 
   return (

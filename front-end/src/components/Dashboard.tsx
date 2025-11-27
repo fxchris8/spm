@@ -9,21 +9,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSimilarSeamen } from '../hooks/useSimilarSeamen';
-
-// interface Seaman {
-//   'SEAMAN CODE': string;
-//   'SEAFARER CODE': string;
-//   'SEAMAN NAME': string;
-//   RANK: string;
-//   VESSEL: string;
-//   UMUR: number;
-//   CERTIFICATE: string;
-//   'DAY REMAINS': number;
-// }
+import { LoadingComponent, LoadingSpinner } from './LoadingComponent';
 
 export function Dashboard() {
   const { seamenData, loading } = useDashboardData();
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSeamanCode, setSelectedSeamanCode] = useState<string | null>(
     null
@@ -100,18 +89,7 @@ export function Dashboard() {
   );
 
   if (loading) {
-    return (
-      <section className="p-6 flex-1 overflow-y-auto">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 text-lg">
-              Loading dashboard data...
-            </p>
-          </div>
-        </div>
-      </section>
-    );
+    return <LoadingComponent message="Loading dashboard data..." />;
   }
 
   return (
@@ -295,9 +273,8 @@ export function Dashboard() {
             <h2 className="text-xl font-semibold mb-4">Top 5 Similar Seamen</h2>
 
             {loadingSimilar ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="ml-4 text-gray-600">Loading similar seamen...</p>
+              <div className="py-8">
+                <LoadingSpinner size="md" message="Loading similar seamen..." />
               </div>
             ) : (
               <div className="overflow-x-auto">

@@ -11,6 +11,7 @@ import { SearchOnDuty } from './components/SearchOnDuty';
 import { SearchOffDuty } from './components/SearchOffDuty';
 import { InMessage } from './components/InMessage';
 import { OutMessage } from './components/OutMessage';
+import { ComingSoonComponent } from './components/ComingSoonComponent';
 import { Route, Routes, Navigate } from 'react-router-dom';
 
 export function App() {
@@ -55,6 +56,14 @@ export function App() {
             <Route path="/manalagi_rotation" element={<RotationManalagi />} />
             <Route path="/in_message" element={<InMessage />} />
             <Route path="/out_message" element={<OutMessage />} />
+            <Route
+              path="/confirmation_resignation"
+              element={<ComingSoonComponent title="Resignation Confirmation" />}
+            />
+            <Route
+              path="/confirmation_approve_permite"
+              element={<ComingSoonComponent title="Approve Permite" />}
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

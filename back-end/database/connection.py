@@ -885,6 +885,10 @@ def submit_all_rotations(job):
                             ),  # Gunakan tanggal, bukan tanggal_ready
                             "mutationfrom": last_location,
                             "mutationto": mutation_to,
+                            "familiarisasi1": 0,
+                            "familiarisasi2": 0,
+                            "familiarisasi3": 0,
+                            "familiarisasi4": 0,
                         }
                     )
 
@@ -933,7 +937,7 @@ def submit_all_rotations(job):
                     try:
                         # Kirim ke Apollo API pusat
                         response = requests.post(
-                            "https://kocak.spil.co.id/pe/ins-rotation-notif",
+                            "http://test.apollo.spil.co.id:3773/pe/ins-rotation-notif",
                             json=notif,
                             timeout=10,
                         )

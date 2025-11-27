@@ -19,6 +19,7 @@ import {
   useLockRotation,
   formatJobName,
 } from '../hooks/useJuniorRotation';
+import { LoadingSpinner } from './LoadingComponent';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -71,9 +72,8 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
   if (loading) {
     return (
       <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm">
-        <div className="flex items-center justify-center py-8">
-          <Spinner />
-          <span className="ml-2 text-gray-600">Loading promotion data...</span>
+        <div className="py-8">
+          <LoadingSpinner size="md" message="Loading promotion data..." />
         </div>
       </div>
     );
@@ -355,9 +355,8 @@ export function JuniorRotation({
       {selectedGroup && (
         <>
           {isLoadingAnyData ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="xl" />
-              <span className="ml-3 text-gray-700">Loading data...</span>
+            <div className="py-12">
+              <LoadingSpinner size="lg" message="Loading data..." />
             </div>
           ) : (
             <>
@@ -414,10 +413,10 @@ export function JuniorRotation({
                                       crew.daysElapsed > 365
                                         ? 'bg-red-100 text-red-800'
                                         : crew.daysRemaining < 7
-                                          ? 'bg-red-100 text-red-800'
-                                          : crew.daysRemaining < 30
-                                            ? 'bg-orange-100 text-orange-800'
-                                            : 'bg-green-100 text-green-800'
+                                        ? 'bg-red-100 text-red-800'
+                                        : crew.daysRemaining < 30
+                                        ? 'bg-orange-100 text-orange-800'
+                                        : 'bg-green-100 text-green-800'
                                     }`}
                                   >
                                     {crew.daysElapsed > 365
@@ -630,8 +629,8 @@ export function JuniorRotation({
                                   isSelected
                                     ? 'bg-green-50'
                                     : isLockedElsewhere
-                                      ? 'bg-gray-50 opacity-60'
-                                      : ''
+                                    ? 'bg-gray-50 opacity-60'
+                                    : ''
                                 }`}
                               >
                                 <td className="px-4 py-3 font-medium text-gray-900">
