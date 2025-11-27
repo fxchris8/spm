@@ -1,10 +1,6 @@
 'use client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faRocket,
-  faClock,
-  faTools,
-} from '@fortawesome/free-solid-svg-icons';
+import { faRocket, faClock, faTools } from '@fortawesome/free-solid-svg-icons';
 
 interface ComingSoonProps {
   title?: string;

@@ -137,7 +137,10 @@ export function SidebarComponent() {
           <Sidebar.Collapse
             icon={() => <HiOutlineCheckCircle className="w-6 h-6" />}
             label="Confirmation"
-            open={isParentActive(['/confirmation_resignation', '/confirmation_approve_permite'])}
+            open={isParentActive([
+              '/confirmation_resignation',
+              '/confirmation_approve_permite',
+            ])}
           >
             <Sidebar.Item
               onClick={() => handleNavigation('/confirmation_resignation')}
@@ -149,7 +152,9 @@ export function SidebarComponent() {
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/confirmation_approve_permite')}
-              icon={() => <HiOutlineClipboardDocumentCheck className="w-6 h-6" />}
+              icon={() => (
+                <HiOutlineClipboardDocumentCheck className="w-6 h-6" />
+              )}
               active={isActive('/confirmation_approve_permite')}
               className="cursor-pointer"
             >

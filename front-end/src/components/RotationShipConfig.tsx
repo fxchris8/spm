@@ -416,8 +416,8 @@ export default function RotationShipConfig() {
                           config.type === 'senior'
                             ? 'success'
                             : config.type === 'junior'
-                            ? 'warning'
-                            : 'purple'
+                              ? 'warning'
+                              : 'purple'
                         }
                       >
                         {config.type}

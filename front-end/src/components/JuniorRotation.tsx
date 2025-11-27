@@ -413,10 +413,10 @@ export function JuniorRotation({
                                       crew.daysElapsed > 365
                                         ? 'bg-red-100 text-red-800'
                                         : crew.daysRemaining < 7
-                                        ? 'bg-red-100 text-red-800'
-                                        : crew.daysRemaining < 30
-                                        ? 'bg-orange-100 text-orange-800'
-                                        : 'bg-green-100 text-green-800'
+                                          ? 'bg-red-100 text-red-800'
+                                          : crew.daysRemaining < 30
+                                            ? 'bg-orange-100 text-orange-800'
+                                            : 'bg-green-100 text-green-800'
                                     }`}
                                   >
                                     {crew.daysElapsed > 365
@@ -629,8 +629,8 @@ export function JuniorRotation({
                                   isSelected
                                     ? 'bg-green-50'
                                     : isLockedElsewhere
-                                    ? 'bg-gray-50 opacity-60'
-                                    : ''
+                                      ? 'bg-gray-50 opacity-60'
+                                      : ''
                                 }`}
                               >
                                 <td className="px-4 py-3 font-medium text-gray-900">

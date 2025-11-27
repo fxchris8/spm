@@ -619,7 +619,10 @@ export function ManalagiRotation({
 
                         {loadingPotential ? (
                           <div className="py-8">
-                            <LoadingSpinner size="md" message="Loading potential promotion data..." />
+                            <LoadingSpinner
+                              size="md"
+                              message="Loading potential promotion data..."
+                            />
                           </div>
                         ) : potentialTable && potentialTable.data.length > 0 ? (
                           <div className="overflow-x-auto">

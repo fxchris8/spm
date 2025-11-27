@@ -83,9 +83,6 @@ def send_rotation_change_notification(
             status_color = "#9E9E9E"  # Gray
             status_text = status_data
 
-        # Get dynamic base URL from environment or use localhost
-        base_url = os.getenv("BASE_URL", "http://localhost:3000")
-
         # Create email content
         subject = f"[URGENT] Perubahan Jadwal Rotation Plan Kru - {nama} ({job})"
 
@@ -316,7 +313,6 @@ Harap tidak membalas email ini.
 
 (c) {datetime.now().year} PT Salam Pacific Indonesia Lines — All rights reserved.
 """
-
 
         # Send email to all recipients
         sent_count = 0
