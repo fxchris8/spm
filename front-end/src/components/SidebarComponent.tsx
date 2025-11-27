@@ -12,6 +12,9 @@ import {
   HiOutlineEnvelope,
   HiOutlineArrowDownCircle,
   HiOutlineArrowUpCircle,
+  HiOutlineCheckCircle,
+  HiOutlineUserGroup,
+  HiOutlineClipboardDocumentCheck,
 } from 'react-icons/hi2';
 import { GiShipWheel } from 'react-icons/gi';
 import { MdAutorenew } from 'react-icons/md';
@@ -129,6 +132,33 @@ export function SidebarComponent() {
               className="cursor-pointer"
             >
               Out - Message
+            </Sidebar.Item>
+          </Sidebar.Collapse>
+          <Sidebar.Collapse
+            icon={() => <HiOutlineCheckCircle className="w-6 h-6" />}
+            label="Confirmation"
+            open={isParentActive([
+              '/confirmation_resignation',
+              '/confirmation_approve_permite',
+            ])}
+          >
+            <Sidebar.Item
+              onClick={() => handleNavigation('/confirmation_resignation')}
+              icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
+              active={isActive('/confirmation_resignation')}
+              className="cursor-pointer"
+            >
+              Resignation
+            </Sidebar.Item>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/confirmation_approve_permite')}
+              icon={() => (
+                <HiOutlineClipboardDocumentCheck className="w-6 h-6" />
+              )}
+              active={isActive('/confirmation_approve_permite')}
+              className="cursor-pointer"
+            >
+              Approve Permite
             </Sidebar.Item>
           </Sidebar.Collapse>
         </Sidebar.ItemGroup>

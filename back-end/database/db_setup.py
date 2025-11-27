@@ -13,32 +13,21 @@ load_dotenv()
 # CONFIGURATION
 # ============================================================================
 
-# Database configuration
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
-
-# ⚠️ IMPORTANT: Ubah nama database ini saat deploy ke production
-DB_NAME_DEV = "dev-spm-spil"  # Development database name
-DB_NAME_PROD = "prod-spm-spil"  # Production database name (ganti saat deploy)
-
-# Pilih environment (change to 'production' when deploying)
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-DB_NAME = DB_NAME_DEV if ENVIRONMENT == "development" else DB_NAME_PROD
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+POSTGRES_URL = os.getenv("POSTGRES_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 print("=" * 60)
-print(f"DATABASE INITIALIZATION - {ENVIRONMENT.upper()} MODE")
+print("DATABASE INITIALIZATION")
 print("=" * 60)
 print(f"Database Name: {DB_NAME}")
 print(f"Host: {DB_HOST}:{DB_PORT}")
 print(f"User: {DB_USER}")
 print("=" * 60)
-
-# Connection URLs
-POSTGRES_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/postgres"
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
 
 # ============================================================================
 # SQL SCRIPTS
@@ -134,6 +123,7 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
     id SERIAL PRIMARY KEY,
     group_key VARCHAR(255),
     job VARCHAR(50),
+    vessel VARCHAR(50),
     schedule_data TEXT,
     crew_data TEXT,
     reliever_data TEXT,
@@ -239,12 +229,12 @@ CREATE TABLE IF NOT EXISTS rotation_ships (
     order_index INT CHECK (order_index >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     CONSTRAINT fk_rotation_ships_group
-        FOREIGN KEY (rotation_group_id) 
-        REFERENCES rotation_groups(id) 
+        FOREIGN KEY (rotation_group_id)
+        REFERENCES rotation_groups(id)
         ON DELETE CASCADE,
-    
+
     UNIQUE(rotation_group_id, ship_name)
 );
 
@@ -252,6 +242,39 @@ CREATE TABLE IF NOT EXISTS rotation_ships (
 CREATE INDEX IF NOT EXISTS idx_rotation_ships_group ON rotation_ships(rotation_group_id);
 """
 
+# Table: rotation_submissions
+CREATE_TABLE_ROTATION_SUBMISSIONS = """
+-- Table: rotation_submissions
+CREATE TABLE IF NOT EXISTS rotation_submissions (
+    id SERIAL PRIMARY KEY,
+    job VARCHAR(50),
+    group_key VARCHAR(100),
+    seamancode VARCHAR(100),
+    nama VARCHAR(255),
+    last_location VARCHAR(255),
+    mutation_from VARCHAR(255),
+    mutation_to VARCHAR(255),
+    start_date DATE,
+    end_date DATE,
+    first_rotation_date DATE,
+    tanggal DATE,
+    tanggal_ready DATE,
+    auto_accept_at TIMESTAMP,
+    status_data VARCHAR(100) DEFAULT 'PENDING',
+    version INT,
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for rotation_submissions
+CREATE INDEX IF NOT EXISTS idx_rotation_job ON rotation_submissions (job);
+CREATE INDEX IF NOT EXISTS idx_rotation_group_key ON rotation_submissions (group_key);
+CREATE INDEX IF NOT EXISTS idx_rotation_seamancode ON rotation_submissions (seamancode);
+CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_data);
+CREATE INDEX IF NOT EXISTS idx_rotation_tanggal ON rotation_submissions (tanggal);
+"""
 
 # ============================================================================
 # INITIALIZATION FUNCTIONS
@@ -261,7 +284,7 @@ CREATE INDEX IF NOT EXISTS idx_rotation_ships_group ON rotation_ships(rotation_g
 def create_database():
     """Create database if not exists"""
     try:
-        print("\n[1/8] Creating database...")
+        print("\n[1/9] Creating database...")
         engine = create_engine(
             POSTGRES_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT"
         )
@@ -300,11 +323,12 @@ def create_tables():
             ("rotation_configs", CREATE_TABLE_ROTATION_CONFIGS),
             ("rotation_groups", CREATE_TABLE_ROTATION_GROUPS),
             ("rotation_ships", CREATE_TABLE_ROTATION_SHIPS),
+            ("rotation_submissions", CREATE_TABLE_ROTATION_SUBMISSIONS),
         ]
 
         with engine.connect() as conn:
             for idx, (table_name, sql) in enumerate(tables, start=2):
-                print(f"\n[{idx}/8] Creating table: {table_name}...")
+                print(f"\n[{idx}/9] Creating table: {table_name}...")
                 conn.execute(text(sql))
                 conn.commit()
                 print(f"[SUCCES] Table '{table_name}' created successfully")
@@ -320,7 +344,7 @@ def create_tables():
 def verify_database():
     """Verify all tables are created"""
     try:
-        print("\n[9/8] Verifying database setup...")
+        print("\n[10/9] Verifying database setup...")
         engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
         expected_tables = [
@@ -331,6 +355,7 @@ def verify_database():
             "rotation_configs",
             "rotation_groups",
             "rotation_ships",
+            "rotation_submissions",
         ]
 
         with engine.connect() as conn:
@@ -417,7 +442,7 @@ if __name__ == "__main__":
     import sys
 
     if "--drop" in sys.argv:
-        # Drop database (untuk testing)
+        # Drop database
         confirm = input(
             f"Are you sure you want to DROP database '{DB_NAME}'? (yes/no): "
         )

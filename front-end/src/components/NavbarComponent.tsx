@@ -7,7 +7,7 @@ export function NavbarComponent() {
   const handleLogout = () => {
     // logout logic
     alert('Logout Clicked');
-    console.log('Logout clicked');
+    // console.log('Logout clicked');
   };
 
   return (

@@ -19,6 +19,7 @@ import {
   useLockRotation,
   formatJobName,
 } from '../hooks/useJuniorRotation';
+import { LoadingSpinner } from './LoadingComponent';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -71,9 +72,8 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
   if (loading) {
     return (
       <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm">
-        <div className="flex items-center justify-center py-8">
-          <Spinner />
-          <span className="ml-2 text-gray-600">Loading promotion data...</span>
+        <div className="py-8">
+          <LoadingSpinner size="md" message="Loading promotion data..." />
         </div>
       </div>
     );
@@ -197,10 +197,10 @@ export function JuniorRotation({
         setSelectedReplacement(
           (relieverData as Record<string, ReplacementOption | null>) || {}
         );
-        console.log(
-          'SUCCES! Loaded locked selections for group:',
-          selectedGroup
-        );
+        // console.log(
+        //   'SUCCES! Loaded locked selections for group:',
+        //   selectedGroup
+        // );
       } catch (error) {
         console.error('FAILED! Error parsing locked reliever data:', error);
         setSelectedReplacement({});
@@ -232,10 +232,10 @@ export function JuniorRotation({
     setSelectedReplacement(prev => {
       const updated = { ...prev };
 
-      console.log('🧩 handleReplacementChange triggered:', {
-        seamancode,
-        selectedCode,
-      });
+      // console.log('🧩 handleReplacementChange triggered:', {
+      //   seamancode,
+      //   selectedCode,
+      // });
 
       if (!selectedCode || selectedCode === '') {
         delete updated[seamancode];
@@ -249,7 +249,7 @@ export function JuniorRotation({
         }
       }
 
-      console.log('SUCCES! Updated state:', updated);
+      // console.log('SUCCES! Updated state:', updated);
       return updated;
     });
   };
@@ -355,9 +355,8 @@ export function JuniorRotation({
       {selectedGroup && (
         <>
           {isLoadingAnyData ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="xl" />
-              <span className="ml-3 text-gray-700">Loading data...</span>
+            <div className="py-12">
+              <LoadingSpinner size="lg" message="Loading data..." />
             </div>
           ) : (
             <>

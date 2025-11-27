@@ -18,6 +18,7 @@ import {
 } from '../hooks/useManalagiRotation';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
+import { LoadingSpinner } from './LoadingComponent';
 
 interface TableJson {
   columns: string[];
@@ -79,7 +80,7 @@ export function ManalagiRotation({
   }>({ show: false, type: 'info', message: '' });
 
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
-  const { lockedRotations } = useLockedRotations(job);
+  const { lockedRotations } = useLockedRotations(job, vessel);
 
   // Calculate locked codes from all rotations
   const lockedCadanganCodes = useMemo(() => {
@@ -283,6 +284,7 @@ export function ManalagiRotation({
       await lockRotation({
         groupKey: selectedGroup,
         job: job.toUpperCase(),
+        vessel: vessel.toUpperCase(),
         scheduleTable,
         nahkodaTable,
         daratTable,
@@ -312,6 +314,7 @@ export function ManalagiRotation({
       await unlockRotation({
         groupKey: selectedGroup,
         job,
+        vessel,
       });
 
       showAlert('success', `Rotation for ${selectedGroup} has been unlocked!`);
@@ -512,12 +515,8 @@ export function ManalagiRotation({
 
       {/* Loading state for group selection */}
       {loadingGroup && !isCurrentGroupLocked ? (
-        <div className="flex flex-col justify-center items-center mt-6">
-          <Spinner color="info" size="xl" />
-          <span className="mt-2 text-gray-700">Loading data...</span>
-          {/* {loadingGroup && ' (mutasi)'}
-          {loadingCadangan && ' (cadangan)'}
-          {loadingPotential && ' (potential)'} */}
+        <div className="mt-6 py-12">
+          <LoadingSpinner size="lg" message="Loading data..." />
         </div>
       ) : (
         (!isLoadingAnyData || hasData) && (
@@ -621,11 +620,11 @@ export function ManalagiRotation({
                         </div>
 
                         {loadingPotential ? (
-                          <div className="flex justify-center items-center py-8">
-                            <Spinner color="info" size="md" />
-                            <span className="ml-2 text-gray-700">
-                              Loading data...
-                            </span>
+                          <div className="py-8">
+                            <LoadingSpinner
+                              size="md"
+                              message="Loading potential promotion data..."
+                            />
                           </div>
                         ) : potentialTable && potentialTable.data.length > 0 ? (
                           <div className="overflow-x-auto">

@@ -30,6 +30,7 @@ import {
 import { exportRotationToExcel } from './ExportRotationExcel';
 import { exportRotationToPDF } from './ExportRotationPDF';
 import { Spinner } from 'flowbite-react';
+import { LoadingSpinner } from './LoadingComponent';
 
 interface TableJson {
   columns: string[];
@@ -91,7 +92,7 @@ export function SeniorRotation({
   }>({ show: false, type: 'info', message: '' });
 
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
-  const { lockedRotations } = useLockedRotations(job);
+  const { lockedRotations } = useLockedRotations(job, vessel);
 
   // Calculate locked codes from all rotations
   const lockedCadanganCodes = useMemo(() => {
@@ -151,12 +152,12 @@ export function SeniorRotation({
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();
   const { lockRotation, unlockRotation } = useLockRotation();
   const { submitRotations, loading: loadingSubmit } = useSubmitRotations();
-  const { isSubmitted } = useJobSubmitted(job);
+  const { isSubmitted } = useJobSubmitted(job, vessel);
   const {
     hasChanges,
     count: changesCount,
     affectedGroups,
-  } = usePendingChanges(job);
+  } = usePendingChanges(job, vessel);
 
   // Helper function to show alert
   const showAlert = (
@@ -319,6 +320,7 @@ export function SeniorRotation({
       await lockRotation({
         groupKey: selectedGroup,
         job: job.toUpperCase(),
+        vessel: vessel.toUpperCase(),
         scheduleTable,
         nahkodaTable,
         daratTable,
@@ -356,6 +358,7 @@ export function SeniorRotation({
       await unlockRotation({
         groupKey: selectedGroup,
         job,
+        vessel,
       });
 
       showAlert('success', `Rotation for ${selectedGroup} has been unlocked!`);
@@ -663,12 +666,8 @@ export function SeniorRotation({
 
       {/* Loading state for group selection */}
       {loadingGroup && !isCurrentGroupLocked ? (
-        <div className="flex flex-col justify-center items-center mt-6">
-          <Spinner color="info" size="xl" />
-          <span className="mt-2 text-gray-700">Loading data...</span>
-          {/* {loadingGroup && ' (mutasi)'}
-          {loadingCadangan && ' (cadangan)'}
-          {loadingPotential && ' (potential)'} */}
+        <div className="mt-6 py-12">
+          <LoadingSpinner size="lg" message="Loading group data..." />
         </div>
       ) : (
         (!isLoadingAnyData || hasData) && (
@@ -776,11 +775,11 @@ export function SeniorRotation({
                         </div>
 
                         {loadingPotential ? (
-                          <div className="flex justify-center items-center py-8">
-                            <Spinner color="info" size="md" />
-                            <span className="ml-2 text-gray-700">
-                              Loading data...
-                            </span>
+                          <div className="py-8">
+                            <LoadingSpinner
+                              size="md"
+                              message="Loading potential promotion data..."
+                            />
                           </div>
                         ) : potentialTable && potentialTable.data.length > 0 ? (
                           <div className="overflow-x-auto">

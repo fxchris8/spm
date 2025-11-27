@@ -29,11 +29,14 @@ interface LockedRotation {
 
 // ============= FETCH FUNCTIONS =============
 
-// Fetch locked rotations for a specific job
+// Fetch locked rotations for a specific job and vessel
 async function fetchLockedRotations(
-  job: string
+  job: string,
+  vessel: string
 ): Promise<Record<string, LockedRotation>> {
-  const response = await fetch(`${API_BASE_URL}/locked-rotations?job=${job}`);
+  const response = await fetch(
+    `${API_BASE_URL}/locked-rotations?job=${job}&vessel=${vessel}`
+  );
   const data = await response.json();
 
   if (data.status === 'success') {
@@ -230,13 +233,17 @@ async function lockRotation(payload: any): Promise<any> {
 }
 
 // Unlock rotation
-async function unlockRotation(groupKey: string, job: string): Promise<any> {
+async function unlockRotation(
+  groupKey: string,
+  job: string,
+  vessel: string
+): Promise<any> {
   const response = await fetch(
-    `${API_BASE_URL}/locked-rotations/${groupKey}?job=${job}`,
+    `${API_BASE_URL}/locked-rotations/${groupKey}?job=${job}&vessel=${vessel}`,
     {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupKey, job }),
+      body: JSON.stringify({ groupKey, job, vessel }),
     }
   );
 
@@ -249,11 +256,11 @@ async function unlockRotation(groupKey: string, job: string): Promise<any> {
 
 // ============= CUSTOM HOOKS =============
 
-// Hook untuk locked rotations (load once per job)
-export function useLockedRotations(job: string) {
+// Hook untuk locked rotations (load once per job and vessel)
+export function useLockedRotations(job: string, vessel: string) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['locked-rotations', job],
-    queryFn: () => fetchLockedRotations(job),
+    queryKey: ['locked-rotations', job, vessel],
+    queryFn: () => fetchLockedRotations(job, vessel),
     staleTime: 5 * 60 * 1000, // Fresh 5 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
   });
@@ -383,17 +390,17 @@ export function useMutasiData(
               if (type === 'senior' || type === 'junior') {
                 // Untuk container: SKIP jika last vessel adalah manalagi
                 if (MANALAGI_VESSELS.has(lastVessel)) {
-                  console.log(
-                    `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
-                  );
+                  // console.log(
+                  //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
+                  // );
                   return null; // Skip seaman ini
                 }
               } else if (type === 'manalagi') {
                 // Untuk manalagi: SKIP jika last vessel adalah container
                 if (CONTAINER_VESSELS.has(lastVessel)) {
-                  console.log(
-                    `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
-                  );
+                  // console.log(
+                  // //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
+                  // );
                   return null; // Skip seaman ini
                 }
               }
@@ -661,12 +668,19 @@ export function useLockRotation() {
   });
 
   const unlockMutation = useMutation({
-    mutationFn: ({ groupKey, job }: { groupKey: string; job: string }) =>
-      unlockRotation(groupKey, job),
+    mutationFn: ({
+      groupKey,
+      job,
+      vessel,
+    }: {
+      groupKey: string;
+      job: string;
+      vessel: string;
+    }) => unlockRotation(groupKey, job, vessel),
     onSuccess: (_, variables) => {
       // Invalidate locked rotations query
       queryClient.invalidateQueries({
-        queryKey: ['locked-rotations', variables.job],
+        queryKey: ['locked-rotations', variables.job, variables.vessel],
       });
       // ✅ PERBAIKAN: Invalidate semua data untuk group ini
       queryClient.invalidateQueries({
@@ -714,12 +728,15 @@ export function useSubmitRotations() {
       return response.json();
     },
     onSuccess: (_, job) => {
-      // Invalidate locked rotations and submission status
+      // Invalidate ALL queries related to this job (for all vessels)
       queryClient.invalidateQueries({
         queryKey: ['locked-rotations', job],
       });
       queryClient.invalidateQueries({
         queryKey: ['job-submitted', job],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['pending-changes', job],
       });
     },
   });
@@ -732,12 +749,12 @@ export function useSubmitRotations() {
 }
 
 // Hook untuk check job submitted status
-export function useJobSubmitted(job: string) {
+export function useJobSubmitted(job: string, vessel: string) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['job-submitted', job],
+    queryKey: ['job-submitted', job, vessel],
     queryFn: async () => {
       const response = await fetch(
-        `${API_BASE_URL}/check-job-submitted?job=${job.toUpperCase()}`
+        `${API_BASE_URL}/check-job-submitted?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
       );
       const result = await response.json();
       return result.is_submitted || false;
@@ -754,12 +771,12 @@ export function useJobSubmitted(job: string) {
 }
 
 // Hook untuk check pending changes (status CHANGE with is_active FALSE)
-export function usePendingChanges(job: string) {
+export function usePendingChanges(job: string, vessel: string) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['pending-changes', job],
+    queryKey: ['pending-changes', job, vessel],
     queryFn: async () => {
       const response = await fetch(
-        `${API_BASE_URL}/check-pending-changes?job=${job.toUpperCase()}`
+        `${API_BASE_URL}/check-pending-changes?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
       );
       const result = await response.json();
       return {

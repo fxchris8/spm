@@ -12,6 +12,7 @@ import {
 } from 'flowbite-react';
 
 import { CallComponent } from './CallComponent';
+import { LoadingSpinner } from './LoadingComponent';
 
 interface SearchProps {
   type: string;
@@ -29,6 +30,9 @@ export function SearchComponent({ type, part }: SearchProps) {
 
   // Loading state untuk memastikan request POST options selesai
   const [loadingOptions, setLoadingOptions] = useState<boolean>(true);
+
+  // Loading state untuk search results
+  const [loadingSearch, setLoadingSearch] = useState<boolean>(false);
 
   // Controlled state untuk input form
   const [ageMin, setAgeMin] = useState<number>(0);
@@ -131,6 +135,7 @@ export function SearchComponent({ type, part }: SearchProps) {
       PART: part,
     };
 
+    setLoadingSearch(true);
     try {
       const res = await fetch(`${API_BASE_URL}/get-manual-search`, {
         method: 'POST',
@@ -144,6 +149,8 @@ export function SearchComponent({ type, part }: SearchProps) {
     } catch (error) {
       console.error('Error fetching search results:', error);
       alert('Failed to fetch search results');
+    } finally {
+      setLoadingSearch(false);
     }
   };
 
@@ -165,7 +172,9 @@ export function SearchComponent({ type, part }: SearchProps) {
       <Card className="mb-4">
         <h3 className="text-xl font-bold">Search for Crew Candidate</h3>
         {loadingOptions ? (
-          <div>Loading options...</div>
+          <div className="py-8">
+            <LoadingSpinner size="md" message="Loading options..." />
+          </div>
         ) : (
           <form
             id="search-form"
@@ -290,53 +299,69 @@ export function SearchComponent({ type, part }: SearchProps) {
       {/* Card untuk Tabel Hasil Pencarian */}
       <Card>
         <h3 className="text-xl font-bold">Results Candidate</h3>
-        <div className="mt-4">
-          <Table id="results-table" className="w-full" hoverable>
-            <Table.Head>
-              <Table.HeadCell>SEAMAN CODE</Table.HeadCell>
-              <Table.HeadCell>SEAFARER CODE</Table.HeadCell>
-              <Table.HeadCell>SEAMAN NAME</Table.HeadCell>
-              <Table.HeadCell>RANK</Table.HeadCell>
-              <Table.HeadCell>VESSEL</Table.HeadCell>
-              <Table.HeadCell>UMUR</Table.HeadCell>
-              <Table.HeadCell>CERTIFICATE</Table.HeadCell>
-              <Table.HeadCell>DAY REMAINS</Table.HeadCell>
-              <Table.HeadCell>CALL</Table.HeadCell>
-            </Table.Head>
-            <Table.Body className="divide-y">
-              {currentResults.map((item, idx) => (
-                <Table.Row key={idx}>
-                  <Table.Cell>{item.seamancode}</Table.Cell>
-                  <Table.Cell>{item.seafarercode}</Table.Cell>
-                  <Table.Cell>{item.name}</Table.Cell>
-                  <Table.Cell>{item.last_position}</Table.Cell>
-                  <Table.Cell>{item.last_location}</Table.Cell>
-                  <Table.Cell>{item.age}</Table.Cell>
-                  <Table.Cell>{item.certificate}</Table.Cell>
-                  <Table.Cell>{item.day_remains}</Table.Cell>
-                  <Table.Cell>
-                    <CallComponent
-                      phone1={item.phone_number_1}
-                      phone2={item.phone_number_2}
-                      phone3={item.phone_number_3}
-                      phone4={item.phone_number_4}
-                    />
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-4">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={onPageChange}
-                showIcons={true}
-              />
-            </div>
-          )}
-        </div>
+        {loadingSearch ? (
+          <div className="py-12">
+            <LoadingSpinner size="lg" message="Searching candidates..." />
+          </div>
+        ) : (
+          <div className="mt-4">
+            <Table id="results-table" className="w-full" hoverable>
+              <Table.Head>
+                <Table.HeadCell>SEAMAN CODE</Table.HeadCell>
+                <Table.HeadCell>SEAFARER CODE</Table.HeadCell>
+                <Table.HeadCell>SEAMAN NAME</Table.HeadCell>
+                <Table.HeadCell>RANK</Table.HeadCell>
+                <Table.HeadCell>VESSEL</Table.HeadCell>
+                <Table.HeadCell>UMUR</Table.HeadCell>
+                <Table.HeadCell>CERTIFICATE</Table.HeadCell>
+                <Table.HeadCell>DAY REMAINS</Table.HeadCell>
+                <Table.HeadCell>CALL</Table.HeadCell>
+              </Table.Head>
+              <Table.Body className="divide-y">
+                {currentResults.length > 0 ? (
+                  currentResults.map((item, idx) => (
+                    <Table.Row key={idx}>
+                      <Table.Cell>{item.seamancode}</Table.Cell>
+                      <Table.Cell>{item.seafarercode}</Table.Cell>
+                      <Table.Cell>{item.name}</Table.Cell>
+                      <Table.Cell>{item.last_position}</Table.Cell>
+                      <Table.Cell>{item.last_location}</Table.Cell>
+                      <Table.Cell>{item.age}</Table.Cell>
+                      <Table.Cell>{item.certificate}</Table.Cell>
+                      <Table.Cell>{item.day_remains}</Table.Cell>
+                      <Table.Cell>
+                        <CallComponent
+                          phone1={item.phone_number_1}
+                          phone2={item.phone_number_2}
+                          phone3={item.phone_number_3}
+                          phone4={item.phone_number_4}
+                        />
+                      </Table.Cell>
+                    </Table.Row>
+                  ))
+                ) : (
+                  <Table.Row>
+                    <Table.Cell colSpan={9} className="text-center py-8">
+                      <p className="text-gray-500">
+                        No results found. Please search for candidates.
+                      </p>
+                    </Table.Cell>
+                  </Table.Row>
+                )}
+              </Table.Body>
+            </Table>
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={onPageChange}
+                  showIcons={true}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );

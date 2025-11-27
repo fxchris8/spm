@@ -21,6 +21,7 @@ import {
   useRotationShipConfig,
   RotationConfig,
 } from '../hooks/useRotationShipConfig';
+import { LoadingComponent } from './LoadingComponent';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -272,16 +273,7 @@ export default function RotationShipConfig() {
   }, [configs, filterType, filterPart, filterPosition]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 text-lg">
-            Loading rotation configurations...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingComponent message="Loading rotation configurations..." />;
   }
 
   return (
