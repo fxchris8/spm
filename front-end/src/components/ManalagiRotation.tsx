@@ -80,7 +80,7 @@ export function ManalagiRotation({
   }>({ show: false, type: 'info', message: '' });
 
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
-  const { lockedRotations } = useLockedRotations(job);
+  const { lockedRotations } = useLockedRotations(job, vessel);
 
   // Calculate locked codes from all rotations
   const lockedCadanganCodes = useMemo(() => {
@@ -284,6 +284,7 @@ export function ManalagiRotation({
       await lockRotation({
         groupKey: selectedGroup,
         job: job.toUpperCase(),
+        vessel: vessel.toUpperCase(),
         scheduleTable,
         nahkodaTable,
         daratTable,
@@ -313,6 +314,7 @@ export function ManalagiRotation({
       await unlockRotation({
         groupKey: selectedGroup,
         job,
+        vessel,
       });
 
       showAlert('success', `Rotation for ${selectedGroup} has been unlocked!`);

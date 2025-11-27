@@ -2,6 +2,7 @@
 # Scheduler untuk sync data dari API ASLI ke Supabase setiap 00:01
 
 import json
+import os
 from datetime import datetime
 
 import pandas as pd
@@ -11,6 +12,11 @@ from apscheduler.triggers.cron import CronTrigger
 
 # Import database functions dari connection.py
 from connection import sync_mutations_to_database, sync_seamen_to_database
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL_PUSAT = os.getenv("API_BASE_URL_PUSAT")
 
 print("=" * 60)
 print("SEAMEN & MUTATIONS SCHEDULER")
@@ -27,7 +33,7 @@ def fetch_seamen_from_original_api():
     print(f"START - [{datetime.now()}] Starting seamen sync from ORIGINAL API...")
 
     try:
-        url = "http://nanika.spil.co.id:3021/get-seamen"
+        url = f"{API_BASE_URL_PUSAT}/get-seamen"
         payload = json.dumps(
             {
                 "age": 0,
@@ -68,7 +74,7 @@ def fetch_mutations_from_original_api():
     print(f"START - [{datetime.now()}] Starting mutations sync from ORIGINAL API...")
 
     try:
-        url = "http://nanika.spil.co.id:3021/get-mutation"
+        url = f"{API_BASE_URL_PUSAT}/get-mutation"
         payload = json.dumps(
             {
                 "seaman_name": "",

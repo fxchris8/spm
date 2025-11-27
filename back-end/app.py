@@ -1916,9 +1916,10 @@ def filter_history():
 
 @app.route("/api/locked-rotations", methods=["GET"])
 def api_get_locked_rotations():
-    """Get all locked rotations for a specific job"""
+    """Get all locked rotations for a specific job and vessel"""
     try:
         job = request.args.get("job", "").upper()
+        vessel = request.args.get("vessel", "").upper()
 
         if not job:
             return (
@@ -1927,7 +1928,8 @@ def api_get_locked_rotations():
             )
 
         # Fetch dari database menggunakan fungsi di database.py
-        locked_data = get_locked_rotations(job=job)
+        # vessel is optional - if provided, filter by both job and vessel
+        locked_data = get_locked_rotations(job=job, vessel=vessel if vessel else None)
 
         return jsonify({"status": "success", "data": locked_data})
 
@@ -1946,6 +1948,7 @@ def api_save_locked_rotation():
         required_fields = [
             "groupKey",
             "job",
+            "vessel",
             "scheduleTable",
             "nahkodaTable",
             "lockedSeamanCodes",
@@ -1959,6 +1962,7 @@ def api_save_locked_rotation():
 
         group_key = data["groupKey"]
         job = data["job"].upper()
+        vessel = data["vessel"].upper()
         schedule_table = data["scheduleTable"]
         nahkoda_table = data["nahkodaTable"]
         darat_table = data.get("daratTable")
@@ -1978,6 +1982,7 @@ def api_save_locked_rotation():
         result = save_locked_rotation(
             group_key=group_key,
             job=job,
+            vessel=vessel,
             schedule_data=schedule_table,
             crew_data=nahkoda_table,
             reliever_data=darat_table,
@@ -1999,6 +2004,7 @@ def api_unlock_rotation(group_key):
     """Unlock a rotation"""
     try:
         job = request.args.get("job", "").upper()
+        vessel = request.args.get("vessel", "").upper()
 
         if not job:
             return (
@@ -2006,8 +2012,14 @@ def api_unlock_rotation(group_key):
                 400,
             )
 
+        if not vessel:
+            return (
+                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                400,
+            )
+
         # Unlock menggunakan fungsi di database.py
-        result = unlock_rotation(group_key=group_key, job=job)
+        result = unlock_rotation(group_key=group_key, job=job, vessel=vessel)
 
         if result["success"]:
             return jsonify({"status": "success", "message": result["message"]})
@@ -2077,6 +2089,7 @@ def api_check_job_submitted():
     """Check if job has been submitted"""
     try:
         job = request.args.get("job", "").upper()
+        vessel = request.args.get("vessel", "").upper()
 
         if not job:
             return (
@@ -2084,7 +2097,13 @@ def api_check_job_submitted():
                 400,
             )
 
-        is_submitted = check_job_submitted(job=job)
+        if not vessel:
+            return (
+                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                400,
+            )
+
+        is_submitted = check_job_submitted(job=job, vessel=vessel)
 
         return jsonify({"status": "success", "is_submitted": is_submitted})
 
@@ -2101,6 +2120,7 @@ def api_check_pending_changes():
     """
     try:
         job = request.args.get("job", "").upper()
+        vessel = request.args.get("vessel", "").upper()
 
         if not job:
             return (
@@ -2108,7 +2128,13 @@ def api_check_pending_changes():
                 400,
             )
 
-        result = check_has_pending_changes(job=job)
+        if not vessel:
+            return (
+                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                400,
+            )
+
+        result = check_has_pending_changes(job=job, vessel=vessel)
 
         return jsonify(
             {

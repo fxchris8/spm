@@ -41,10 +41,87 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
   - Export data ke Excel
   - Search dan filter data crew
 
-## Cara Menjalankan Localhost
+---
 
+## Cara Menjalankan Aplikasi
 
-### 1. Setup Backend (Flask)
+### Option 1: Menggunakan Docker (Recommended for Production)
+
+Docker deployment menyediakan environment yang konsisten dan mudah di-deploy.
+
+#### Prerequisites
+- Docker Engine (v20.10+)
+- Docker Compose (v2.0+)
+
+#### Setup dan Menjalankan
+
+```bash
+# 1. Clone repository
+git clone <repository-url>
+cd spm
+
+# 2. Copy environment file
+cp .env.docker .env
+
+# 3. Edit .env dan isi semua nilai yang diperlukan
+# Pastikan DB_PASSWORD, EMAIL, dan API credentials sudah diisi
+nano .env  # atau gunakan text editor favorit Anda
+
+# 4. Build dan jalankan semua services
+docker-compose up -d
+
+# 5. Setup database (hanya pertama kali)
+docker exec -it spm-backend python database/db_setup.py
+docker exec -it spm-backend python database/seeder.py
+
+# 6. Cek logs untuk memastikan semua berjalan
+docker-compose logs -f
+
+# 7. Akses aplikasi
+# - Frontend: http://localhost:8047
+# - Backend API: http://localhost:8048
+# - PostgreSQL: localhost:5432
+```
+
+#### Perintah Docker yang Berguna
+
+```bash
+# Stop semua services
+docker-compose down
+
+# Stop dan hapus semua data (termasuk database)
+docker-compose down -v
+
+# Rebuild image setelah perubahan kode
+docker-compose up -d --build
+
+# Lihat logs service tertentu
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f database
+docker-compose logs -f scheduler
+
+# Restart service tertentu
+docker-compose restart backend
+
+# Masuk ke container untuk debugging
+docker exec -it spm-backend sh
+docker exec -it spm-frontend sh
+docker exec -it spm-postgres psql -U postgres -d spm
+```
+
+#### Port Mapping (Docker)
+- **Frontend**: `8047` → internal `5173` (development) atau `80` (production)
+- **Backend**: `8048` → internal `5000`
+- **PostgreSQL**: `5432` → internal `5432`
+
+---
+
+### Option 2: Menjalankan Localhost (Development)
+
+Untuk development dengan live reload dan debugging.
+
+#### 1. Setup Backend (Flask)
 
 ##### a. Install Dependencies
 ```bash
@@ -112,7 +189,8 @@ npm install
 # Salin file .env.example menjadi .env (jika ada)
 cp .env.example .env
 
-# Edit file .env untuk konfigurasi API endpoint, dll
+# Edit file .env untuk konfigurasi API endpoint
+# VITE_API_BASE_URL=http://localhost:8048/api
 ```
 
 ##### c. Jalankan Development Server
@@ -123,3 +201,74 @@ npm run dev
 # Server akan berjalan di http://localhost:5173
 ```
 
+#### Port Mapping (Localhost)
+- **Frontend**: `5173` (Vite default)
+- **Backend**: `8048`
+- **PostgreSQL**: `5432` (tergantung instalasi PostgreSQL lokal Anda)
+
+---
+
+## Environment Variables
+
+### Backend (.env di back-end/)
+```env
+# Database
+DB_HOST=localhost         # atau 'database' untuk Docker
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=spm
+
+# Email
+EMAIL_SENDER=your-email@example.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_RECIPIENTS=recipient@example.com
+
+# External APIs
+API_BASE_URL_PUSAT=https://api-pusat.example.com
+API_BASE_URL_IT=https://api-it.example.com
+```
+
+### Frontend (.env di front-end/)
+```env
+VITE_API_BASE_URL=http://localhost:8048/api
+```
+
+### Docker (.env di /)
+```env
+# Database
+DB_HOST=database
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_secure_password_here
+DB_NAME=spm
+
+# Email
+EMAIL_SENDER=your-email@example.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_RECIPIENTS=recipient@example.com
+
+# External APIs
+API_BASE_URL_PUSAT=https://api-pusat.example.com
+API_BASE_URL_IT=https://api-it.example.com
+
+# Flask
+FLASK_ENV=production
+FLASK_DEBUG=0
+
+VITE_API_BASE_URL=http://localhost:8048/api
+
+BUILD_TARGET=development
+```
+
+---
+
+## Contributors
+
+- [@hilmifawwazsaad](https://github.com/hilmifawwazsaad)
+- [@fxchris8](https://github.com/fxchris8)
+- [@FourzeBlitz](https://github.com/FourzeBlitz)
+- [@FransiscusSuhargo](https://github.com/FransiscusSuhargo)
+- [@Miuura](https://github.com/Miuura)
+
+---

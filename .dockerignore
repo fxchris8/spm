@@ -1,0 +1,42 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+docs/
+
+# Environment files (will be mounted as volumes)
+.env
+.env.*
+!.env.example
+!.env.docker
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (no need to copy into image)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Data directories (will be mounted as volumes)
+data/
+postgres_data/
+
+# Backup files
+*.bak
+*.backup

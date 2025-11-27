@@ -13,6 +13,7 @@ from sqlalchemy.pool import NullPool
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+API_BASE_URL_IT = os.getenv("API_BASE_URL_IT")
 
 if not DATABASE_URL:
     raise Exception("DATABASE_URL not found in .env file")
@@ -164,11 +165,22 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
 # ============================================================================
 
 
-def get_locked_rotations(job=None):
+def get_locked_rotations(job=None, vessel=None):
     try:
-        if job:
+        if job and vessel:
             query = """
-                SELECT id, group_key, job, schedule_data, crew_data, reliever_data, 
+                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
+                       locked_seaman_codes, locked_at, locked_by, is_active
+                FROM locked_rotation_schedules
+                WHERE job = :job AND vessel = :vessel AND is_active = TRUE
+                ORDER BY locked_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query), {"job": job, "vessel": vessel})
+                rows = result.fetchall()
+        elif job:
+            query = """
+                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
                        locked_seaman_codes, locked_at, locked_by, is_active
                 FROM locked_rotation_schedules
                 WHERE job = :job AND is_active = TRUE
@@ -179,7 +191,7 @@ def get_locked_rotations(job=None):
                 rows = result.fetchall()
         else:
             query = """
-                SELECT id, group_key, job, schedule_data, crew_data, reliever_data, 
+                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
                        locked_seaman_codes, locked_at, locked_by, is_active
                 FROM locked_rotation_schedules
                 WHERE is_active = TRUE
@@ -198,19 +210,20 @@ def get_locked_rotations(job=None):
                     "id": row[0],
                     "group_key": row[1],
                     "job": row[2],
+                    "vessel": row[3],
                     "schedule_data": (
-                        json.loads(row[3]) if row[3] else None
-                    ),  # Parse JSON string
-                    "crew_data": (
                         json.loads(row[4]) if row[4] else None
                     ),  # Parse JSON string
-                    "reliever_data": (
+                    "crew_data": (
                         json.loads(row[5]) if row[5] else None
                     ),  # Parse JSON string
-                    "locked_seaman_codes": row[6],
-                    "locked_at": row[7].isoformat() if row[7] else None,
-                    "locked_by": row[8],
-                    "is_active": row[9],
+                    "reliever_data": (
+                        json.loads(row[6]) if row[6] else None
+                    ),  # Parse JSON string
+                    "locked_seaman_codes": row[7],
+                    "locked_at": row[8].isoformat() if row[8] else None,
+                    "locked_by": row[9],
+                    "is_active": row[10],
                 }
             )
 
@@ -225,6 +238,7 @@ def get_locked_rotations(job=None):
 def save_locked_rotation(
     group_key,
     job,
+    vessel,
     schedule_data,
     crew_data,
     reliever_data,
@@ -237,26 +251,29 @@ def save_locked_rotation(
         crew_json = json.dumps(crew_data)
         reliever_json = json.dumps(reliever_data) if reliever_data else None
 
-        # First, deactivate any existing active lock for this group+job
+        # First, deactivate any existing active lock for this group+job+vessel
         deactivate_query = """
             UPDATE locked_rotation_schedules
             SET is_active = FALSE, unlocked_at = NOW()
-            WHERE group_key = :group_key AND job = :job AND is_active = TRUE
+            WHERE group_key = :group_key AND job = :job AND vessel = :vessel AND is_active = TRUE
         """
 
         # Then insert new lock
         insert_query = """
-            INSERT INTO locked_rotation_schedules 
-            (group_key, job, schedule_data, crew_data, reliever_data, 
+            INSERT INTO locked_rotation_schedules
+            (group_key, job, vessel, schedule_data, crew_data, reliever_data,
              locked_seaman_codes, locked_by, is_active, locked_at)
-            VALUES (:group_key, :job, :schedule_data, :crew_data, :reliever_data, 
+            VALUES (:group_key, :job, :vessel, :schedule_data, :crew_data, :reliever_data,
                     :locked_seaman_codes, :locked_by, TRUE, NOW())
             RETURNING id
         """
 
         with engine.connect() as conn:
             # Deactivate existing
-            conn.execute(text(deactivate_query), {"group_key": group_key, "job": job})
+            conn.execute(
+                text(deactivate_query),
+                {"group_key": group_key, "job": job, "vessel": vessel},
+            )
 
             # Insert new (dengan JSON string, bukan JSONB)
             result = conn.execute(
@@ -264,6 +281,7 @@ def save_locked_rotation(
                 {
                     "group_key": group_key,
                     "job": job,
+                    "vessel": vessel,
                     "schedule_data": schedule_json,  # JSON string
                     "crew_data": crew_json,  # JSON string
                     "reliever_data": reliever_json,  # JSON string or None
@@ -275,7 +293,9 @@ def save_locked_rotation(
             conn.commit()
             new_id = result.fetchone()[0]
 
-        print(f"DONE - Saved locked rotation for {group_key} ({job}) with ID {new_id}")
+        print(
+            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}) with ID {new_id}"
+        )
         return {
             "success": True,
             "message": f"Rotasi untuk {group_key} berhasil di-lock",
@@ -287,23 +307,27 @@ def save_locked_rotation(
         raise Exception(f"Failed to save locked rotation: {str(e)}")
 
 
-def unlock_rotation(group_key, job):
+def unlock_rotation(group_key, job, vessel):
     try:
         query = """
             UPDATE locked_rotation_schedules
             SET is_active = FALSE, unlocked_at = NOW()
-            WHERE group_key = :group_key AND job = :job AND is_active = TRUE
+            WHERE group_key = :group_key AND job = :job AND vessel = :vessel AND is_active = TRUE
             RETURNING id
         """
 
         with engine.connect() as conn:
-            result = conn.execute(text(query), {"group_key": group_key, "job": job})
+            result = conn.execute(
+                text(query), {"group_key": group_key, "job": job, "vessel": vessel}
+            )
             conn.commit()
 
             unlocked = result.fetchone()
 
             if unlocked:
-                print(f"DONE - Unlocked rotation for {group_key} ({job})")
+                print(
+                    f"DONE - Unlocked rotation for {group_key} ({job}, vessel {vessel})"
+                )
                 return {
                     "success": True,
                     "message": f"Rotasi untuk {group_key} berhasil di-unlock",
@@ -933,7 +957,7 @@ def submit_all_rotations(job):
                     try:
                         # Kirim ke Apollo API pusat
                         response = requests.post(
-                            "http://test.apollo.spil.co.id:3773/pe/ins-rotation-notif",
+                            f"{API_BASE_URL_IT}/pe/ins-rotation-notif",
                             json=notif,
                             timeout=10,
                         )
@@ -1060,25 +1084,26 @@ def get_rotation_submissions(job=None):
         raise Exception(f"Failed to fetch rotation submissions: {str(e)}")
 
 
-def check_job_submitted(job):
+def check_job_submitted(job, vessel):
     """
     Check if ALL locked rotations for a job have been submitted
 
     Logic dengan Versioning:
-    - Get all locked rotation group_keys for this job
+    - Get all locked rotation group_keys for this job and vessel
     - Check if ALL of them exist in rotation_submissions dengan is_active = TRUE
     - Return True only if ALL locked rotations have been submitted dengan status aktif
     - Status CHANGE dengan is_active = FALSE tidak dianggap submitted
 
     Args:
         job: Job title
+        vessel: Vessel name (CONTAINER/MANALAGI)
 
     Returns:
         Boolean - True jika SEMUA locked rotations sudah di-submit dengan is_active = TRUE
     """
     try:
-        # Get all locked rotations for this job
-        locked_rotations = get_locked_rotations(job=job)
+        # Get all locked rotations for this job and vessel
+        locked_rotations = get_locked_rotations(job=job, vessel=vessel)
 
         if not locked_rotations or len(locked_rotations) == 0:
             # Tidak ada rotations yang di-lock, anggap belum submitted
@@ -1128,7 +1153,7 @@ def check_job_submitted(job):
         return False
 
 
-def check_has_pending_changes(job):
+def check_has_pending_changes(job, vessel):
     """
     Check if there are any rotation submissions with status CHANGE and is_active = FALSE
     yang perlu di-resubmit, KECUALI jika sudah ada version lebih tinggi dengan is_active = TRUE
@@ -1136,24 +1161,38 @@ def check_has_pending_changes(job):
     Logic:
     - Cari semua data dengan status CHANGE dan is_active = FALSE
     - Filter: hanya ambil yang BELUM punya version lebih tinggi dengan is_active = TRUE
+    - Filter by vessel untuk memisahkan CONTAINER dan MANALAGI
     - Return: count dan affected_groups yang benar-benar perlu resubmit
 
     Args:
         job: Job title
+        vessel: Vessel name (CONTAINER/MANALAGI)
 
     Returns:
         Dict dengan has_changes (boolean), count (int), dan affected_groups (list)
     """
     try:
         with engine.connect() as conn:
+            # Get all locked group_keys for this job and vessel
+            locked_rotations = get_locked_rotations(job=job, vessel=vessel)
+            if not locked_rotations:
+                return {"has_changes": False, "count": 0, "affected_groups": []}
+
+            locked_group_keys = [rotation["group_key"] for rotation in locked_rotations]
+
             # Get count and affected groups
             # HANYA ambil CHANGE yang BELUM di-resubmit (belum ada version lebih tinggi)
-            query = """
+            # DAN hanya untuk group_keys yang di-lock untuk vessel ini
+            placeholders = ", ".join(
+                [f":key{i}" for i in range(len(locked_group_keys))]
+            )
+            query = f"""
                 SELECT
                     COUNT(DISTINCT rs_change.group_key) as total_count,
                     ARRAY_AGG(DISTINCT rs_change.group_key) as groups
                 FROM rotation_submissions rs_change
                 WHERE rs_change.job = :job
+                AND rs_change.group_key IN ({placeholders})
                 AND rs_change.status_data = 'CHANGE'
                 AND rs_change.is_active = FALSE
                 AND NOT EXISTS (
@@ -1165,7 +1204,13 @@ def check_has_pending_changes(job):
                     AND rs_newer.is_active = TRUE
                 )
             """
-            result = conn.execute(text(query), {"job": job})
+
+            # Prepare parameters
+            params = {"job": job}
+            for i, key in enumerate(locked_group_keys):
+                params[f"key{i}"] = key
+
+            result = conn.execute(text(query), params)
             row = result.fetchone()
 
             count = row[0] if row[0] else 0
@@ -1173,15 +1218,16 @@ def check_has_pending_changes(job):
 
             if count > 0:
                 print(
-                    f"INFO - Found {count} pending changes for {job} in groups: {affected_groups}"
+                    f"INFO - Found {count} pending changes for {job} ({vessel}) in groups: {affected_groups}"
                 )
 
                 # Debug: Show details of pending changes (only those without newer versions)
-                debug_query = """
+                debug_query = f"""
                     SELECT rs_change.seamancode, rs_change.group_key,
                            rs_change.status_data, rs_change.is_active, rs_change.version
                     FROM rotation_submissions rs_change
                     WHERE rs_change.job = :job
+                    AND rs_change.group_key IN ({placeholders})
                     AND rs_change.status_data = 'CHANGE'
                     AND rs_change.is_active = FALSE
                     AND NOT EXISTS (
@@ -1194,7 +1240,7 @@ def check_has_pending_changes(job):
                     )
                     ORDER BY rs_change.group_key, rs_change.seamancode
                 """
-                debug_result = conn.execute(text(debug_query), {"job": job})
+                debug_result = conn.execute(text(debug_query), params)
                 for row in debug_result.fetchall():
                     print(
                         f"  - seaman {row[0]}: {row[1]}, status={row[2]}, active={row[3]}, version={row[4]}"

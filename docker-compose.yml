@@ -1,27 +1,62 @@
 version: '3.8'
 
 services:
-  # Backend API (app.py)
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    container_name: spm-postgres
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME:-spm}
+    restart: unless-stopped
+    networks:
+      - spm-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Flask)
   backend:
-    build: 
+    build:
       context: ./back-end
-      dockerfile: Dockerfile
-    container_name: flask-backend
+      dockerfile: DockerFile
+    container_name: spm-backend
     ports:
       - "8048:5000"
     volumes:
       - ./back-end:/app
       - ./data:/data
     environment:
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-      - DATABASE_URL=${DATABASE_URL}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_DEBUG=${FLASK_DEBUG:-0}
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-spm}
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@database:5432/${DB_NAME:-spm}
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_RECIPIENTS=${EMAIL_RECIPIENTS}
+      - API_BASE_URL_PUSAT=${API_BASE_URL_PUSAT}
+      - API_BASE_URL_IT=${API_BASE_URL_IT}
     env_file:
       - ./back-end/.env
     command: python app.py
     restart: unless-stopped
     networks:
       - spm-net
+    depends_on:
+      database:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
@@ -29,20 +64,30 @@ services:
       retries: 3
       start_period: 40s
 
-  # Scheduler (database.py) - Service terpisah!
+  # Scheduler (Background Task for Data Sync)
   scheduler:
-    build: 
+    build:
       context: ./back-end
-      dockerfile: Dockerfile
-    container_name: seamen-scheduler
+      dockerfile: DockerFile
+    container_name: spm-scheduler
     volumes:
       - ./back-end:/app
       - ./data:/data
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-spm}
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@database:5432/${DB_NAME:-spm}
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_RECIPIENTS=${EMAIL_RECIPIENTS}
+      - API_BASE_URL_PUSAT=${API_BASE_URL_PUSAT}
+      - API_BASE_URL_IT=${API_BASE_URL_IT}
     env_file:
       - ./back-end/.env
-    command: python database.py
+    command: python database/scheduler.py
     restart: unless-stopped
     networks:
       - spm-net
@@ -55,24 +100,30 @@ services:
       timeout: 10s
       retries: 3
 
-  # Frontend
+  # Frontend (React + Vite)
   frontend:
     build:
       context: ./front-end
       dockerfile: Dockerfile
-    container_name: vite-frontend
+      target: ${BUILD_TARGET:-development}
+    container_name: spm-frontend
     ports:
-      - "8047:5173"
+      - "8047:5173"  # Development mode
+      # - "8047:80"   # Production mode (uncomment if using production target)
     volumes:
       - ./front-end:/app
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=$(VITE_API_BASE_URL)
+      - VITE_API_BASE_URL=http://localhost:8048/api
     depends_on:
       - backend
     restart: unless-stopped
     networks:
       - spm-net
+
+volumes:
+  postgres_data:
+    name: spm_postgres_data
 
 networks:
   spm-net:

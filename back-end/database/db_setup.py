@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
     id SERIAL PRIMARY KEY,
     group_key VARCHAR(255),
     job VARCHAR(50),
+    vessel VARCHAR(50),
     schedule_data TEXT,
     crew_data TEXT,
     reliever_data TEXT,

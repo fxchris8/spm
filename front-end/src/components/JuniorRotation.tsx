@@ -197,10 +197,10 @@ export function JuniorRotation({
         setSelectedReplacement(
           (relieverData as Record<string, ReplacementOption | null>) || {}
         );
-        console.log(
-          'SUCCES! Loaded locked selections for group:',
-          selectedGroup
-        );
+        // console.log(
+        //   'SUCCES! Loaded locked selections for group:',
+        //   selectedGroup
+        // );
       } catch (error) {
         console.error('FAILED! Error parsing locked reliever data:', error);
         setSelectedReplacement({});
@@ -232,10 +232,10 @@ export function JuniorRotation({
     setSelectedReplacement(prev => {
       const updated = { ...prev };
 
-      console.log('🧩 handleReplacementChange triggered:', {
-        seamancode,
-        selectedCode,
-      });
+      // console.log('🧩 handleReplacementChange triggered:', {
+      //   seamancode,
+      //   selectedCode,
+      // });
 
       if (!selectedCode || selectedCode === '') {
         delete updated[seamancode];
@@ -249,7 +249,7 @@ export function JuniorRotation({
         }
       }
 
-      console.log('SUCCES! Updated state:', updated);
+      // console.log('SUCCES! Updated state:', updated);
       return updated;
     });
   };
