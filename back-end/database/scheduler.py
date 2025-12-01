@@ -63,7 +63,7 @@ def fetch_seamen_from_original_api():
         else:
             print(f"FAIL - ORIGINAL API returned status code {response.status_code}")
             return None
- 
+
     except Exception as e:
         print(f"FAIL - Error fetching from ORIGINAL API: {str(e)}")
         return None
