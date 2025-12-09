@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS rotation_submissions (
     status_data VARCHAR(100) DEFAULT 'PENDING',
     version INT,
     is_active BOOLEAN DEFAULT TRUE,
+    stage VARCHAR(100),
 
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()

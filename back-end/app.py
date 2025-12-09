@@ -2903,7 +2903,8 @@ def api_change_schedule_rotation():
     {
         "seamencode": "12345",
         "tanggalready": "25-12-2025",
-        "statusdata": "CHANGE"
+        "statusdata": "CHANGE",
+        "stage": "STAGE_1"
     }
 
     Response:
@@ -2915,6 +2916,7 @@ def api_change_schedule_rotation():
         "accepted_count": 5,
         "job": "NAKHODA",
         "group_key": "container_rotation1",
+        "stage": "STAGE_1",
         "auto_accepted_info": {
             "auto_accepted_count": 2
         },
@@ -2937,6 +2939,7 @@ def api_change_schedule_rotation():
         seamancode = data.get("seamencode") or data.get("seamanCode")
         tanggal_ready = data.get("tanggalready") or data.get("tanggalReady")
         status_data = data.get("statusdata") or data.get("statusData")
+        stage = data.get("stage")
 
         if not seamancode:
             return jsonify({"error": "Missing required field: seamencode"}), 400
@@ -2952,11 +2955,14 @@ def api_change_schedule_rotation():
                 400,
             )
 
+        if not stage:
+            return jsonify({"error": "Missing required field: stage"}), 400
+
         # 1. Auto-accept expired rotations first
         auto_accept_result = auto_accept_expired_rotations()
 
         # 2. Update rotation status
-        result = update_rotation_status_change(seamancode, tanggal_ready)
+        result = update_rotation_status_change(seamancode, tanggal_ready, stage)
 
         if result["success"]:
             # Include auto-accept info in response

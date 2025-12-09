@@ -1030,7 +1030,7 @@ def get_rotation_submissions(job=None):
                 SELECT id, job, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
-                       status_data, created_at, updated_at
+                       status_data, created_at, updated_at, stage
                 FROM rotation_submissions
                 WHERE job = :job
                 ORDER BY created_at DESC
@@ -1043,7 +1043,7 @@ def get_rotation_submissions(job=None):
                 SELECT id, job, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
-                       status_data, created_at, updated_at
+                       status_data, created_at, updated_at, stage
                 FROM rotation_submissions
                 ORDER BY created_at DESC
             """
@@ -1073,6 +1073,7 @@ def get_rotation_submissions(job=None):
                     "status_data": row[14],
                     "created_at": row[15].isoformat() if row[15] else None,
                     "updated_at": row[16].isoformat() if row[16] else None,
+                    "stage": row[17],
                 }
             )
 
@@ -1298,7 +1299,7 @@ def get_submitted_seamancodes(job):
         return []
 
 
-def update_rotation_status_change(seamancode, tanggal_ready):
+def update_rotation_status_change(seamancode, tanggal_ready, stage):
     """
     Update rotation submission status berdasarkan request dari tim pusat.
 
@@ -1310,6 +1311,7 @@ def update_rotation_status_change(seamancode, tanggal_ready):
     Args:
         seamancode: Seamancode yang request CHANGE
         tanggal_ready: Tanggal ready dari tim pusat (format: DD-MM-YYYY)
+        stage: Stage dari tim pusat (string)
 
     Returns:
         Dict dengan 'success', 'message', dan detail perubahan
@@ -1363,6 +1365,7 @@ def update_rotation_status_change(seamancode, tanggal_ready):
                     SET status_data = 'CHANGE',
                         tanggal_ready = :tanggal_ready,
                         auto_accept_at = :auto_accept_at,
+                        stage = :stage,
                         is_active = FALSE,
                         updated_at = NOW()
                     WHERE id = :rotation_id
@@ -1373,6 +1376,7 @@ def update_rotation_status_change(seamancode, tanggal_ready):
                         "rotation_id": rotation_id,
                         "tanggal_ready": tanggal_ready_dt,
                         "auto_accept_at": tanggal_ready_dt,
+                        "stage": stage,
                     },
                 )
 
@@ -1420,6 +1424,7 @@ def update_rotation_status_change(seamancode, tanggal_ready):
                     "accepted_count": accepted_count,
                     "job": job,
                     "group_key": group_key,
+                    "stage": stage,
                 }
 
             except Exception as e:

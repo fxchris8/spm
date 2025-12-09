@@ -253,6 +253,7 @@ export function OutMessage() {
                 'Auto Accept At',
                 'Status',
                 'Created At',
+                'Stage',
               ].map(header => (
                 <th
                   key={header}
@@ -331,6 +332,9 @@ export function OutMessage() {
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
                     {new Date(item.created_at).toLocaleDateString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3 text-sm border-b">
+                    {item.stage || '-'}
                   </td>
                 </tr>
               ))
