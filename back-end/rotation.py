@@ -3,8 +3,17 @@ import pandas as pd
 from database.connection import get_seamen_as_data
 from models.model import filter_in_vessel, vessel_group_id_deck
 
+# ============================================================================
+# GLOBAL VARIABLES & CONFIGURATIONS
+# ============================================================================
+
 # Global variable to store index to first rotation date mapping
 _last_index_to_first_date = {}
+
+
+# ============================================================================
+# BAGIAN 1: UTILITY FUNCTIONS
+# ============================================================================
 
 
 def add_first_rotation_date_column(df):
@@ -20,6 +29,11 @@ def add_first_rotation_date_column(df):
     else:
         df["first_rotation_date"] = ""
     return df
+
+
+# ============================================================================
+# BAGIAN 2: VESSEL GROUP CONFIGURATIONS
+# ============================================================================
 
 
 KELOMPOK = {
@@ -161,6 +175,11 @@ def get_month_index(month_name, year):
     return month_dict[month_name] + (year - year) * 12
 
 
+# ============================================================================
+# BAGIAN 3: CREW DATA FETCHING
+# ============================================================================
+
+
 def get_nganggur(job):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
@@ -169,6 +188,11 @@ def get_nganggur(job):
     filtered_cadangan = filtered_cadangan.sort_values(by="last_location")
 
     return filtered_cadangan[["name", "last_location", "seamancode"]]
+
+
+# ============================================================================
+# BAGIAN 4: ROTATION SCHEDULE GENERATION
+# ============================================================================
 
 
 def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA"):
@@ -338,6 +362,11 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
     return schedule.fillna("")
 
 
+# ============================================================================
+# BAGIAN 5: JOB-SPECIFIC ROTATION FUNCTIONS
+# ============================================================================
+
+
 def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
@@ -388,9 +417,14 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
         )
 
-    # Tambah Index huruf
-    alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", alphabet)
+    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
+    if quantity == "ONE":
+        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
+        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
+    else:
+        # Untuk crew biasa, gunakan A, B, C...
+        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
+    filtered_df_nahkoda.insert(0, "Index", index_list)
 
     # Pastikan kolom lengkap
     for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
@@ -463,9 +497,14 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
             [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
         )
 
-    # Tambah Index huruf
-    alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", alphabet)
+    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
+    if quantity == "ONE":
+        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
+        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
+    else:
+        # Untuk crew biasa, gunakan A, B, C...
+        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
+    filtered_df_nahkoda.insert(0, "Index", index_list)
 
     # Pastikan kolom lengkap
     for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
@@ -538,9 +577,14 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
             [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
         )
 
-    # Tambah Index huruf
-    alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", alphabet)
+    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
+    if quantity == "ONE":
+        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
+        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
+    else:
+        # Untuk crew biasa, gunakan A, B, C...
+        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
+    filtered_df_nahkoda.insert(0, "Index", index_list)
 
     # Pastikan kolom lengkap
     for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
@@ -613,9 +657,14 @@ def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL
             [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
         )
 
-    # Tambah Index huruf
-    alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", alphabet)
+    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
+    if quantity == "ONE":
+        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
+        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
+    else:
+        # Untuk crew biasa, gunakan A, B, C...
+        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
+    filtered_df_nahkoda.insert(0, "Index", index_list)
 
     # Pastikan kolom lengkap
     for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:

@@ -7,7 +7,6 @@ import {
   faPaperPlane,
   faClock,
   faCheckCircle,
-  faTimesCircle,
   faExchangeAlt,
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -107,14 +106,60 @@ export function OutMessage() {
     return <LoadingComponent message="Loading submissions..." />;
   }
 
+  const handleResetAll = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to RESET ALL rotations? This will:\n- Soft delete ALL rotation submissions\n- Reset ALL locked schedules\n- Allow you to create new rotations from scratch\n\nThis action cannot be undone!`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/soft-delete-rotation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(
+          `Success! ${data.deleted_count} rotation(s) deleted and ${data.reset_count} locked schedule(s) reset.`
+        );
+        window.location.reload();
+      } else {
+        alert(`Error: ${data.error || 'Failed to reset rotations'}`);
+      }
+    } catch (error) {
+      console.error('Error resetting rotations:', error);
+      alert('An error occurred while resetting rotations');
+    }
+  };
+
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        Out Information (Rotation Submissions)
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">
+          Out Information (Rotation Submissions)
+        </h1>
+        <button
+          onClick={handleResetAll}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium flex items-center gap-2"
+          title="Reset all rotations for next batch"
+        >
+          Reset All for Next Batch
+        </button>
+      </div>
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {/* Total Submissions */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
           <div className="p-4 bg-gray-100 rounded-xl mr-4">
@@ -125,7 +170,7 @@ export function OutMessage() {
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">
-              Total Submissions
+              Total Out Messages
             </p>
             <h2 className="text-3xl font-bold text-gray-900">
               {statusCounts.total}
@@ -177,22 +222,6 @@ export function OutMessage() {
             <p className="text-sm text-gray-600 font-medium">Change</p>
             <h2 className="text-3xl font-bold text-orange-600">
               {statusCounts.change}
-            </h2>
-          </div>
-        </div>
-
-        {/* Rejected */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-red-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faTimesCircle}
-              className="text-3xl text-red-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">Rejected</p>
-            <h2 className="text-3xl font-bold text-red-600">
-              {statusCounts.rejected}
             </h2>
           </div>
         </div>
@@ -343,12 +372,12 @@ export function OutMessage() {
         </table>
       </div>
 
-      {/* Count */}
+      {/* Count
       <div className="mt-4 text-sm text-gray-600">
         Showing {indexOfFirstItem + 1}-
         {Math.min(indexOfLastItem, filteredSubmissions.length)} of{' '}
         {filteredSubmissions.length} submissions
-      </div>
+      </div> */}
 
       {/* Pagination */}
       {totalPages > 1 && (

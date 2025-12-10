@@ -746,14 +746,15 @@ def submit_all_rotations(job):
                         )
                         continue
 
-                    # ✅ CHECK: Apakah group ini pernah di-submit sebelumnya?
                     # Cek berdasarkan JOB + GROUP_KEY (bukan seamancode!)
                     # Karena saat CHANGE, seamannya bisa berbeda (diganti)
+                    # PENTING: Cek juga is_deleted untuk menentukan apakah ini batch baru
                     check_query = """
-                        SELECT id, version, status_data, is_active, seamancode
+                        SELECT id, version, status_data, is_active, seamancode, is_deleted
                         FROM rotation_submissions
                         WHERE job = :job
                         AND group_key = :group_key
+                        AND (is_deleted = FALSE OR is_deleted IS NULL)
                         ORDER BY version DESC
                         LIMIT 1
                     """
@@ -766,10 +767,12 @@ def submit_all_rotations(job):
                     # Debug log
                     if existing_record:
                         print(
-                            f"DEBUG - Found existing record for {job} {group_key}: seaman={existing_record[4]}, version={existing_record[1]}, status={existing_record[2]}, active={existing_record[3]}"
+                            f"DEBUG - Found existing record for {job} {group_key}: seaman={existing_record[4]}, version={existing_record[1]}, status={existing_record[2]}, active={existing_record[3]}, deleted={existing_record[5]}"
                         )
                     else:
-                        print(f"DEBUG - No existing record for {job} {group_key}")
+                        print(
+                            f"DEBUG - No existing record for {job} {group_key} (atau sudah di-soft delete)"
+                        )
 
                     # Tentukan apakah perlu submit atau skip
                     should_submit = False
@@ -781,7 +784,6 @@ def submit_all_rotations(job):
                         old_is_active = existing_record[3]
                         old_seamancode = existing_record[4]
 
-                        # ✅ Jika status CHANGE dan is_active FALSE -> perlu resubmit dengan version baru
                         # Seamancode bisa berbeda karena diganti
                         if old_status == "CHANGE" and not old_is_active:
                             should_submit = True
@@ -789,7 +791,6 @@ def submit_all_rotations(job):
                             print(
                                 f"INFO - Resubmitting {job} {group_key}: CHANGE detected (old: {old_seamancode}, new: {seamancode}), version {old_version} -> {new_version}"
                             )
-                        # ✅ Jika sudah ada record aktif (PENDING/ACCEPTED) -> skip
                         elif old_is_active and old_status in ["PENDING", "ACCEPTED"]:
                             print(
                                 f"INFO - Skipping {job} {group_key}: already submitted with {old_seamancode} (version {old_version}, status {old_status})"
@@ -806,11 +807,12 @@ def submit_all_rotations(job):
                             should_submit = True
                             new_version = old_version + 1
                     else:
-                        # ✅ Data baru, submit pertama kali dengan version 1
+                        # ✅ Data baru ATAU batch baru setelah soft delete
+                        # Jika semua record sebelumnya is_deleted=TRUE, maka ini submit pertama untuk batch baru
                         should_submit = True
                         new_version = 1
                         print(
-                            f"INFO - New submission for {job} {group_key} with {seamancode} ({nama}): version 1"
+                            f"INFO - New submission for {job} {group_key} with {seamancode} ({nama}): version 1 (batch baru)"
                         )
 
                     if not should_submit:
@@ -1032,6 +1034,78 @@ def get_rotation_submissions(job=None):
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
                 FROM rotation_submissions
+                WHERE job = :job AND (is_deleted = FALSE OR is_deleted IS NULL)
+                ORDER BY created_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query), {"job": job})
+                rows = result.fetchall()
+        else:
+            query = """
+                SELECT id, job, group_key, seamancode, nama, last_location,
+                       mutation_from, mutation_to, start_date, end_date,
+                       first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
+                       status_data, created_at, updated_at, stage
+                FROM rotation_submissions
+                WHERE is_deleted = FALSE OR is_deleted IS NULL
+                ORDER BY created_at DESC
+            """
+            with engine.connect() as conn:
+                result = conn.execute(text(query))
+                rows = result.fetchall()
+
+        # Convert to list of dicts
+        records = []
+        for row in rows:
+            records.append(
+                {
+                    "id": row[0],
+                    "job": row[1],
+                    "group_key": row[2],
+                    "seamancode": row[3],
+                    "nama": row[4],
+                    "last_location": row[5],
+                    "mutation_from": row[6],
+                    "mutation_to": row[7],
+                    "start_date": row[8].isoformat() if row[8] else None,
+                    "end_date": row[9].isoformat() if row[9] else None,
+                    "first_rotation_date": row[10].isoformat() if row[10] else None,
+                    "tanggal": row[11].isoformat() if row[11] else None,
+                    "tanggal_ready": row[12].isoformat() if row[12] else None,
+                    "auto_accept_at": row[13].isoformat() if row[13] else None,
+                    "status_data": row[14],
+                    "created_at": row[15].isoformat() if row[15] else None,
+                    "updated_at": row[16].isoformat() if row[16] else None,
+                    "stage": row[17],
+                }
+            )
+
+        print(f"DONE - Fetched {len(records)} submission records")
+        return records
+
+    except Exception as e:
+        print(f"FAIL - Database Error: {str(e)}")
+        raise Exception(f"Failed to fetch rotation submissions: {str(e)}")
+
+
+def get_all_rotation_submissions(job=None):
+    """
+    Get ALL rotation submissions including soft-deleted ones, optionally filtered by job
+
+    Args:
+        job: Optional job filter (e.g. 'NAKHODA', 'KKM')
+
+    Returns:
+        List of submission records (including soft-deleted)
+    """
+    try:
+        if job:
+            query = """
+                SELECT id, job, group_key, seamancode, nama, last_location,
+                       mutation_from, mutation_to, start_date, end_date,
+                       first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
+                       status_data, created_at, updated_at, stage
+                FROM rotation_submissions
                 WHERE job = :job
                 ORDER BY created_at DESC
             """
@@ -1077,12 +1151,14 @@ def get_rotation_submissions(job=None):
                 }
             )
 
-        print(f"DONE - Fetched {len(records)} submission records")
+        print(
+            f"DONE - Fetched {len(records)} submission records (including soft-deleted)"
+        )
         return records
 
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to fetch rotation submissions: {str(e)}")
+        raise Exception(f"Failed to fetch all rotation submissions: {str(e)}")
 
 
 def check_job_submitted(job, vessel):
@@ -1116,6 +1192,7 @@ def check_job_submitted(job, vessel):
         # Check berapa banyak yang sudah ada di rotation_submissions
         with engine.connect() as conn:
             # Query untuk hitung group_keys yang sudah di-submit
+            # PENTING: Hanya hitung yang belum di-soft delete
             placeholders = ", ".join(
                 [f":key{i}" for i in range(len(locked_group_keys))]
             )
@@ -1125,6 +1202,7 @@ def check_job_submitted(job, vessel):
                 WHERE job = :job
                 AND group_key IN ({placeholders})
                 AND is_active = TRUE
+                AND (is_deleted = FALSE OR is_deleted IS NULL)
             """
 
             # Prepare parameters
@@ -1163,6 +1241,7 @@ def check_has_pending_changes(job, vessel):
     - Cari semua data dengan status CHANGE dan is_active = FALSE
     - Filter: hanya ambil yang BELUM punya version lebih tinggi dengan is_active = TRUE
     - Filter by vessel untuk memisahkan CONTAINER dan MANALAGI
+    - Filter: hanya data yang is_deleted = FALSE
     - Return: count dan affected_groups yang benar-benar perlu resubmit
 
     Args:
@@ -1184,6 +1263,7 @@ def check_has_pending_changes(job, vessel):
             # Get count and affected groups
             # HANYA ambil CHANGE yang BELUM di-resubmit (belum ada version lebih tinggi)
             # DAN hanya untuk group_keys yang di-lock untuk vessel ini
+            # DAN hanya yang tidak di-soft delete
             placeholders = ", ".join(
                 [f":key{i}" for i in range(len(locked_group_keys))]
             )
@@ -1196,6 +1276,7 @@ def check_has_pending_changes(job, vessel):
                 AND rs_change.group_key IN ({placeholders})
                 AND rs_change.status_data = 'CHANGE'
                 AND rs_change.is_active = FALSE
+                AND (rs_change.is_deleted = FALSE OR rs_change.is_deleted IS NULL)
                 AND NOT EXISTS (
                     SELECT 1
                     FROM rotation_submissions rs_newer
@@ -1203,6 +1284,7 @@ def check_has_pending_changes(job, vessel):
                     AND rs_newer.group_key = rs_change.group_key
                     AND rs_newer.version > rs_change.version
                     AND rs_newer.is_active = TRUE
+                    AND (rs_newer.is_deleted = FALSE OR rs_newer.is_deleted IS NULL)
                 )
             """
 
@@ -1231,6 +1313,7 @@ def check_has_pending_changes(job, vessel):
                     AND rs_change.group_key IN ({placeholders})
                     AND rs_change.status_data = 'CHANGE'
                     AND rs_change.is_active = FALSE
+                    AND (rs_change.is_deleted = FALSE OR rs_change.is_deleted IS NULL)
                     AND NOT EXISTS (
                         SELECT 1
                         FROM rotation_submissions rs_newer
@@ -1238,6 +1321,7 @@ def check_has_pending_changes(job, vessel):
                         AND rs_newer.group_key = rs_change.group_key
                         AND rs_newer.version > rs_change.version
                         AND rs_newer.is_active = TRUE
+                        AND (rs_newer.is_deleted = FALSE OR rs_newer.is_deleted IS NULL)
                     )
                     ORDER BY rs_change.group_key, rs_change.seamancode
                 """
@@ -1277,12 +1361,14 @@ def get_submitted_seamancodes(job):
         List of seamancodes yang harus di-exclude dari selection
     """
     try:
+        # PENTING: Hanya ambil seamancodes dari data yang BELUM di-soft delete
         query = """
             SELECT DISTINCT seamancode
             FROM rotation_submissions
             WHERE job = :job
             AND status_data IN ('PENDING', 'CHANGE', 'ACCEPTED')
             AND (tanggal_ready IS NULL OR tanggal_ready > NOW())
+            AND (is_deleted = FALSE OR is_deleted IS NULL)
         """
 
         with engine.connect() as conn:
@@ -1332,11 +1418,13 @@ def update_rotation_status_change(seamancode, tanggal_ready, stage):
 
             try:
                 # 1. Find rotation dengan seamancode ini (ambil yang is_active = TRUE dan version tertinggi)
+                # PENTING: Hanya cari di data yang BELUM di-soft delete
                 find_query = """
                     SELECT id, job, group_key, created_at, status_data, version
                     FROM rotation_submissions
                     WHERE seamancode = :seamancode
                     AND is_active = TRUE
+                    AND (is_deleted = FALSE OR is_deleted IS NULL)
                     ORDER BY version DESC
                     LIMIT 1
                 """
@@ -1385,7 +1473,7 @@ def update_rotation_status_change(seamancode, tanggal_ready, stage):
                 )
 
                 # 3. Update semua rotation lain dalam batch yang sama (created_at sama) menjadi ACCEPTED
-                # Hanya update yang masih PENDING
+                # Hanya update yang masih PENDING dan BELUM di-soft delete
                 update_accepted_query = """
                     UPDATE rotation_submissions
                     SET status_data = 'ACCEPTED',
@@ -1394,6 +1482,7 @@ def update_rotation_status_change(seamancode, tanggal_ready, stage):
                       AND created_at = :created_at
                       AND seamancode != :seamancode
                       AND status_data = 'PENDING'
+                      AND (is_deleted = FALSE OR is_deleted IS NULL)
                     RETURNING seamancode, nama
                 """
                 accepted_result = conn.execute(
@@ -1491,6 +1580,65 @@ def auto_accept_expired_rotations():
     except Exception as e:
         print(f"FAIL - Error auto-accepting expired rotations: {str(e)}")
         return {"success": False, "auto_accepted_count": 0, "error": str(e)}
+
+
+def soft_delete_rotation_and_reset_locks():
+    """
+    Soft delete SEMUA rotation submission dan reset SEMUA locked_rotation_schedule.
+
+    Logic:
+    1. Set is_deleted = TRUE untuk SEMUA rotation_submissions
+    2. Hapus SEMUA locked_rotation_schedule
+
+    Returns:
+        Dict dengan 'success', 'message', dan detail operasi
+    """
+    try:
+        with engine.connect() as conn:
+            trans = conn.begin()
+
+            try:
+                # 1. Soft delete ALL rotation submissions
+                delete_query = """
+                    UPDATE rotation_submissions
+                    SET is_deleted = TRUE,
+                        updated_at = NOW()
+                    WHERE is_deleted = FALSE OR is_deleted IS NULL
+                    RETURNING id, seamancode, nama, job
+                """
+                result = conn.execute(text(delete_query))
+                deleted_rows = result.fetchall()
+                deleted_count = len(deleted_rows)
+
+                print(f"INFO - Soft deleted {deleted_count} rotation submissions")
+                for row in deleted_rows:
+                    print(f"       - ID {row[0]}: {row[1]} ({row[2]}) - {row[3]}")
+
+                # 2. Delete ALL locked_rotation_schedules
+                reset_query = """
+                    DELETE FROM locked_rotation_schedules
+                """
+                result = conn.execute(text(reset_query))
+                reset_count = result.rowcount
+
+                print(f"INFO - Deleted {reset_count} locked rotation schedules")
+
+                trans.commit()
+
+                return {
+                    "success": True,
+                    "message": f"Successfully soft deleted ALL {deleted_count} rotation(s) and reset ALL {reset_count} locked schedule(s)",
+                    "deleted_count": deleted_count,
+                    "reset_count": reset_count,
+                }
+
+            except Exception as e:
+                trans.rollback()
+                raise e
+
+    except Exception as e:
+        print(f"FAIL - Error in soft delete and reset: {str(e)}")
+        raise Exception(f"Failed to soft delete and reset: {str(e)}")
 
 
 # ============================================================================

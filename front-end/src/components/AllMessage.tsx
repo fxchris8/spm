@@ -1,33 +1,28 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { useRotationSubmissions } from '../hooks/useSeniorRotation';
+import { useAllRotationSubmissions } from '../hooks/useSeniorRotation';
 import { LoadingComponent } from './LoadingComponent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faInbox,
+  faList,
+  faClock,
+  faCheckCircle,
   faExchangeAlt,
-  faTimesCircle,
 } from '@fortawesome/free-solid-svg-icons';
 
-export function InMessage() {
+export function AllMessage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch all submissions
-  const { submissions, loading } = useRotationSubmissions();
+  // Fetch all submissions (including soft-deleted)
+  const { submissions, loading } = useAllRotationSubmissions();
 
-  // Filter submissions - hanya yang sudah ada response dari pusat (tanggal_ready tidak null)
-  const incomingMessages = useMemo(() => {
-    // Filter hanya yang sudah ada tanggal_ready (sudah di-respond oleh tim pusat)
-    return submissions.filter((sub: any) => sub.tanggal_ready !== null);
-  }, [submissions]);
-
-  // Apply additional filters
+  // Filter submissions
   const filteredSubmissions = useMemo(() => {
-    let result = incomingMessages;
+    let result = submissions;
 
     // Filter by job
     if (jobFilter !== 'ALL') {
@@ -54,7 +49,7 @@ export function InMessage() {
     }
 
     return result;
-  }, [incomingMessages, jobFilter, statusFilter, searchTerm]);
+  }, [submissions, jobFilter, statusFilter, searchTerm]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -93,64 +88,81 @@ export function InMessage() {
     return pages;
   };
 
-  // Count by status for incoming messages
+  // Count by status
   const statusCounts = useMemo(() => {
     return {
-      total: incomingMessages.length,
-      change: incomingMessages.filter((s: any) => s.status_data === 'CHANGE')
+      total: submissions.length,
+      pending: submissions.filter((s: any) => s.status_data === 'PENDING')
         .length,
-      familiarisasi: incomingMessages.filter(
-        (s: any) =>
-          s.status_data === 'CHANGE' &&
-          s.stage?.toUpperCase() === 'FAMILIARISASI'
-      ).length,
-      konfirmasi: incomingMessages.filter(
-        (s: any) =>
-          s.status_data === 'CHANGE' && s.stage?.toUpperCase() === 'KONFIRMASI'
-      ).length,
+      accepted: submissions.filter((s: any) => s.status_data === 'ACCEPTED')
+        .length,
+      rejected: submissions.filter((s: any) => s.status_data === 'REJECTED')
+        .length,
+      change: submissions.filter((s: any) => s.status_data === 'CHANGE').length,
     };
-  }, [incomingMessages]);
+  }, [submissions]);
 
   if (loading) {
-    return <LoadingComponent message="Loading incoming messages..." />;
+    return <LoadingComponent message="Loading all messages..." />;
   }
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        In Information (Messages from IT)
+        All Messages
       </h1>
-
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This page shows rotation submissions that have
-          received responses from the central IT team. Only entries with a
-          confirmed ready date are displayed here.
-        </p>
-      </div>
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {/* Total Messages */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-blue-100 rounded-xl mr-4">
+          <div className="p-4 bg-indigo-100 rounded-xl mr-4">
             <FontAwesomeIcon
-              icon={faInbox}
-              className="text-3xl text-blue-600"
+              icon={faList}
+              className="text-3xl text-indigo-600"
             />
           </div>
           <div>
-            <p className="text-sm text-gray-600 font-medium">
-              Total In Messages
-            </p>
+            <p className="text-sm text-gray-600 font-medium">Total Messages</p>
             <h2 className="text-3xl font-bold text-gray-900">
               {statusCounts.total}
             </h2>
           </div>
         </div>
 
-        {/* Change Requests */}
+        {/* Pending */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-yellow-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faClock}
+              className="text-3xl text-yellow-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Pending</p>
+            <h2 className="text-3xl font-bold text-yellow-600">
+              {statusCounts.pending}
+            </h2>
+          </div>
+        </div>
+
+        {/* Accepted */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+          <div className="p-4 bg-green-100 rounded-xl mr-4">
+            <FontAwesomeIcon
+              icon={faCheckCircle}
+              className="text-3xl text-green-600"
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 font-medium">Accepted</p>
+            <h2 className="text-3xl font-bold text-green-600">
+              {statusCounts.accepted}
+            </h2>
+          </div>
+        </div>
+
+        {/* Change */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
           <div className="p-4 bg-orange-100 rounded-xl mr-4">
             <FontAwesomeIcon
@@ -159,45 +171,9 @@ export function InMessage() {
             />
           </div>
           <div>
-            <p className="text-sm text-gray-600 font-medium">Change Requests</p>
+            <p className="text-sm text-gray-600 font-medium">Change</p>
             <h2 className="text-3xl font-bold text-orange-600">
               {statusCounts.change}
-            </h2>
-          </div>
-        </div>
-
-        {/* Change Dari Familiarisasi */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-yellow-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faTimesCircle}
-              className="text-3xl text-yellow-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">
-              Change from Konfirmasi
-            </p>
-            <h2 className="text-3xl font-bold text-yellow-600">
-              {statusCounts.konfirmasi}
-            </h2>
-          </div>
-        </div>
-
-        {/* KONFIRMASI */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-yellow-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faTimesCircle}
-              className="text-3xl text-yellow-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">
-              Change from Familiarisasi
-            </p>
-            <h2 className="text-3xl font-bold text-yellow-600">
-              {statusCounts.familiarisasi}
             </h2>
           </div>
         </div>
@@ -208,7 +184,7 @@ export function InMessage() {
         {/* Search */}
         <input
           type="text"
-          placeholder="Search messages..."
+          placeholder="Search all messages..."
           className="w-full p-2 border rounded-lg shadow-sm"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
@@ -234,16 +210,17 @@ export function InMessage() {
           className="p-2 border rounded-lg shadow-sm"
         >
           <option value="ALL">All Status</option>
-          <option value="CHANGE">CHANGE</option>
+          <option value="PENDING">PENDING</option>
           <option value="ACCEPTED">ACCEPTED</option>
           <option value="REJECTED">REJECTED</option>
+          <option value="CHANGE">CHANGE</option>
         </select>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl shadow-md bg-white">
         <table className="min-w-full border-collapse">
-          <thead className="bg-blue-800 text-white">
+          <thead className="bg-indigo-800 text-white">
             <tr>
               {[
                 'Job',
@@ -252,14 +229,15 @@ export function InMessage() {
                 'Name',
                 'Mutation From',
                 'Mutation To',
+                'Tanggal',
                 'Tanggal Ready',
+                'Auto Accept At',
                 'Status',
                 'Stage',
-                'Updated At',
               ].map(header => (
                 <th
                   key={header}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-blue-700"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-indigo-700"
                 >
                   {header}
                 </th>
@@ -269,13 +247,16 @@ export function InMessage() {
           <tbody className="divide-y divide-gray-200">
             {currentItems.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
-                  No incoming messages found
+                <td
+                  colSpan={13}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
+                  No messages found
                 </td>
               </tr>
             ) : (
               currentItems.map((item: any, idx: number) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
+                <tr key={idx} className="hover:bg-indigo-50 transition">
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.job}
                   </td>
@@ -294,36 +275,43 @@ export function InMessage() {
                   <td className="px-4 py-3 text-sm text-gray-600 border-b">
                     {item.mutation_from}
                   </td>
-                  <td className="px-4 py-3 text-sm text-blue-600 font-medium border-b">
+                  <td className="px-4 py-3 text-sm text-indigo-600 font-medium border-b">
                     {item.mutation_to}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold border-b">
+                  <td className="px-4 py-3 text-sm border-b">
+                    {item.tanggal
+                      ? new Date(item.tanggal).toLocaleDateString('id-ID')
+                      : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm border-b">
                     {item.tanggal_ready
                       ? new Date(item.tanggal_ready).toLocaleDateString('id-ID')
                       : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
+                    {item.auto_accept_at
+                      ? new Date(item.auto_accept_at).toLocaleDateString(
+                          'id-ID'
+                        )
+                      : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm border-b">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.status_data === 'CHANGE'
-                          ? 'bg-orange-100 text-orange-800'
+                        item.status_data === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800'
                           : item.status_data === 'ACCEPTED'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : item.status_data === 'CHANGE'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {item.status_data}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm border-b">{item.stage}</td>
                   <td className="px-4 py-3 text-sm border-b">
-                    {new Date(item.updated_at).toLocaleDateString('id-ID', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {item.stage || '-'}
                   </td>
                 </tr>
               ))
@@ -362,7 +350,7 @@ export function InMessage() {
                   onClick={() => setCurrentPage(page as number)}
                   className={`px-3 py-1 border rounded-lg shadow-sm hover:bg-gray-100 ${
                     currentPage === page
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
+                      ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                       : ''
                   }`}
                 >

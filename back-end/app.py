@@ -17,6 +17,7 @@ from database.connection import (
     create_rotation_config,
     delete_rotation_config,
     get_all_locked_seaman_codes,
+    get_all_rotation_submissions,
     get_locked_rotations,
     get_mutations_as_data,
     get_rotation_config_by_id,
@@ -48,6 +49,11 @@ from rotation import (
 app = Flask(__name__)
 CORS(app=app)
 app.secret_key = "supersecretkey"
+
+
+# ============================================================================
+# BAGIAN 1: BASIC & UTILITY ENDPOINTS
+# ============================================================================
 
 
 # Route to check if the app is working
@@ -396,6 +402,11 @@ def get_top_5_similar(target_seaman_code):
         return {"status": "error", "message": str(e)}
 
 
+# ============================================================================
+# BAGIAN 2: DASHBOARD & DATA FETCHING
+# ============================================================================
+
+
 # Route to serve the main dashboard
 @app.route("/api/dashboard-data")
 def get_dashboard_data():
@@ -429,6 +440,11 @@ def get_dashboard_data():
 
     # Kembalikan data sebagai JSON
     return data.to_json(orient="records")
+
+
+# ============================================================================
+# BAGIAN 3: SIMILARITY & RECOMMENDATION ENGINE
+# ============================================================================
 
 
 # Route to get the top 5 similar seamen
@@ -727,11 +743,12 @@ def container_rotation_api():
         schedule_json = df_to_json(schedule_df)
         nahkoda_json = df_to_json(crew_df)  # ← Tetap pakai nama variable "nahkoda_json"
 
-        # Jika ada cadangan2
+        # Jika ada cadangan2 (reliever data)
         darat_json = None
         if cadangan2:
-            print(f"[DEBUG] Memproses cadangan2 untuk job='{job}'")
+            print(f"[DEBUG] Memproses cadangan2 (reliever) untuk job='{job}'")
 
+            # Parameter "ONE" akan membuat fungsi menghasilkan index Z0, Z1, Z2...
             if job == "NAKHODA":
                 darat_df = get_nahkoda(
                     selected_group, cadangan2, type_vessel, part, "ONE"
@@ -749,6 +766,8 @@ def container_rotation_api():
 
             darat_json = df_to_json(darat_df)
             print(f"[DEBUG] Darat DataFrame shape: {darat_df.shape}")
+            if not darat_df.empty:
+                print(f"[DEBUG] Reliever Index pertama: {darat_df.iloc[0]['Index']}")
 
         # RESPONSE - TETAP GUNAKAN KEY "nahkoda"
         print(f"[DEBUG] Mengirim response dengan job='{job}'")
@@ -768,6 +787,11 @@ def container_rotation_api():
 
         traceback.print_exc()
         return jsonify({"error": "Terjadi kesalahan internal", "message": str(e)}), 500
+
+
+# ============================================================================
+# BAGIAN 4: CADANGAN (BACKUP/RESERVE) CREW DATA
+# ============================================================================
 
 
 @app.route("/api/cadangan-KKM")
@@ -1101,6 +1125,11 @@ def get_manual_search():
     ].to_dict(orient="records")
 
     return jsonify(result)
+
+
+# ============================================================================
+# BAGIAN 5: PROMOTION CANDIDATES (KENAIKAN PANGKAT)
+# ============================================================================
 
 
 @app.route("/api/seamen/promotion-candidates-nakhoda", methods=["GET"])
@@ -1910,7 +1939,7 @@ def filter_history():
 
 
 # ============================================================================
-# LOCKED ROTATIONS API ENDPOINTS
+# BAGIAN 6: LOCKED ROTATIONS MANAGEMENT
 # ============================================================================
 
 
@@ -2065,9 +2094,14 @@ def api_submit_all_rotations():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ============================================================================
+# BAGIAN 7: ROTATION SUBMISSIONS & STATUS
+# ============================================================================
+
+
 @app.route("/api/rotation-submissions", methods=["GET"])
 def api_get_rotation_submissions():
-    """Get all rotation submissions"""
+    """Get all rotation submissions (excluding soft-deleted)"""
     try:
         job = request.args.get("job", None)
         if job:
@@ -2081,6 +2115,25 @@ def api_get_rotation_submissions():
 
     except Exception as e:
         app.logger.error(f"Error fetching rotation submissions: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/all-rotation-submissions", methods=["GET"])
+def api_get_all_rotation_submissions():
+    """Get ALL rotation submissions including soft-deleted ones"""
+    try:
+        job = request.args.get("job", None)
+        if job:
+            job = job.upper()
+
+        submissions = get_all_rotation_submissions(job=job)
+
+        return jsonify(
+            {"status": "success", "data": submissions, "count": len(submissions)}
+        )
+
+    except Exception as e:
+        app.logger.error(f"Error fetching all rotation submissions: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -2205,6 +2258,11 @@ def api_get_submitted_seaman_codes():
     except Exception as e:
         app.logger.error(f"Error fetching submitted seaman codes: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ============================================================================
+# BAGIAN 8: CREW RELIEF & REPLACEMENT
+# ============================================================================
 
 
 @app.route("/api/get_crew_to_relieve", methods=["GET"])
@@ -2616,6 +2674,11 @@ def api_get_available_replacements():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ============================================================================
+# BAGIAN 9: SCHEDULE ROTATION OPERATIONS
+# ============================================================================
+
+
 @app.route("/api/submit_schedule_rotation", methods=["POST"])
 def api_submit_schedule_rotation():
     """Submit schedule rotation assignments"""
@@ -2792,7 +2855,7 @@ def api_get_rotation_summary():
 
 
 # ============================================================================
-# ROTATION CONFIGS ROUTES
+# BAGIAN 10: ROTATION CONFIGS (CRUD)
 # ============================================================================
 
 
@@ -2892,6 +2955,11 @@ def api_delete_rotation_config(config_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# BAGIAN 11: CHANGE SCHEDULE ROTATION (TIM PUSAT)
+# ============================================================================
 
 
 @app.route("/api/change-schedule-rotation", methods=["POST"])
@@ -3022,6 +3090,41 @@ def api_change_schedule_rotation():
     except ValueError as e:
         # Validation error (e.g., invalid date format)
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# BAGIAN 12: SOFT DELETE & RESET (NEXT BATCH)
+# ============================================================================
+
+
+@app.route("/api/soft-delete-rotation", methods=["POST"])
+def api_soft_delete_rotation():
+    """
+    POST - API untuk soft delete SEMUA rotation submission dan reset SEMUA locked schedules
+
+    Request body: {} (tidak perlu parameter)
+
+    Response:
+    {
+        "success": true,
+        "message": "Successfully soft deleted ALL 25 rotation(s) and reset ALL 48 locked schedule(s)",
+        "deleted_count": 25,
+        "reset_count": 48
+    }
+    """
+    try:
+        from database.connection import soft_delete_rotation_and_reset_locks
+
+        # Execute soft delete and reset ALL
+        result = soft_delete_rotation_and_reset_locks()
+
+        if result["success"]:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 404
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -9,6 +9,7 @@ import { RotationJunior } from './components/RotationJunior';
 import { RotationManalagi } from './components/RotationManalagi';
 import { SearchOnDuty } from './components/SearchOnDuty';
 import { SearchOffDuty } from './components/SearchOffDuty';
+import { AllMessage } from './components/AllMessage';
 import { InMessage } from './components/InMessage';
 import { OutMessage } from './components/OutMessage';
 import { ComingSoonComponent } from './components/ComingSoonComponent';
@@ -54,17 +55,9 @@ export function App() {
             <Route path="/senior_rotation" element={<RotationSenior />} />
             <Route path="/junior_rotation" element={<RotationJunior />} />
             <Route path="/manalagi_rotation" element={<RotationManalagi />} />
+            <Route path="/all_message" element={<AllMessage />} />
             <Route path="/in_message" element={<InMessage />} />
             <Route path="/out_message" element={<OutMessage />} />
-            <Route
-              path="/confirmation_resignation"
-              element={<ComingSoonComponent title="Resignation Confirmation" />}
-            />
-            <Route
-              path="/confirmation_approve_permite"
-              element={<ComingSoonComponent title="Approve Permite" />}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
