@@ -704,17 +704,7 @@ def container_rotation_api():
         selected_group = data["selected_group"]
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
-        type_vessel_raw = data.get("type")
-
-        # Map vessel codes
-        vessel_mapping = {
-            "senior": "container",
-            "junior": "container",
-            "manalagi": "manalagi",
-        }
-        type_vessel = vessel_mapping.get(type_vessel_raw, type_vessel_raw)
-
-        print(f"[DEBUG] Vessel: {type_vessel_raw} → {type_vessel}")
+        type_vessel = data.get("categorization")
         part = data.get("part")
 
         # LOGGING
@@ -2864,7 +2854,8 @@ def api_get_rotation_configs():
     """GET - Ambil semua rotation configs"""
     try:
         rotation_type = request.args.get("type")  # Optional filter
-        configs = get_rotation_configs(rotation_type)
+        categorization = request.args.get("categorization")  # Optional filter
+        configs = get_rotation_configs(rotation_type, categorization)
         return jsonify(configs), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2903,6 +2894,7 @@ def api_create_rotation_config():
             rotation_type=data["type"],
             part=data["part"],
             groups=data["groups"],
+            categorization=data.get("categorization", "container"),
         )
 
         return jsonify(result), 201
@@ -2932,6 +2924,7 @@ def api_update_rotation_config(config_id):
             rotation_type=data["type"],
             part=data["part"],
             groups=data["groups"],
+            categorization=data.get("categorization"),
         )
 
         return jsonify(result), 200

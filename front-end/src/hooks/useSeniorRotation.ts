@@ -182,6 +182,7 @@ async function generateSchedule(payload: {
   standby: string[];
   darat: string[];
   part: string;
+  categorization?: string; // container, manalagi, bc
 }): Promise<GroupDataResponse> {
   // Buat selected_group digabung dengan vessel
   // console.log('Generating schedule with payload:', payload);
@@ -198,7 +199,10 @@ async function generateSchedule(payload: {
     cadangan2: payload.darat,
     type: payload.type,
     part: payload.part,
+    categorization: payload.categorization,
   };
+
+  console.log('Final payload for generateSchedule:', finalPayload);
 
   const response = await fetch(
     `${API_BASE_URL}/container-rotation?job=${formattedJob}`,

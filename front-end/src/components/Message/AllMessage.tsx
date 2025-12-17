@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { useAllRotationSubmissions } from '../hooks/useSeniorRotation';
-import { LoadingComponent } from './LoadingComponent';
+import { useAllRotationSubmissions } from '../../hooks/useSeniorRotation';
+import { LoadingComponent } from '../LoadingComponent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faList,

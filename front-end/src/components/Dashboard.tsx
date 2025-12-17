@@ -7,6 +7,14 @@ import {
   faShip,
   faHouse,
 } from '@fortawesome/free-solid-svg-icons';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from 'recharts';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSimilarSeamen } from '../hooks/useSimilarSeamen';
 import { LoadingComponent, LoadingSpinner } from './LoadingComponent';
@@ -88,6 +96,28 @@ export function Dashboard() {
     excludedStatus.includes(s.VESSEL?.toUpperCase())
   );
 
+  // Hitung distribusi offboard berdasarkan status
+  const offboardDistribution = useMemo(() => {
+    const statusCounts = {
+      'PENDING CUTI': 0,
+      'PENDING GAJI': 0,
+      'DARAT BIASA': 0,
+      DARAT: 0,
+      'DARAT STAND-BY': 0,
+    };
+
+    offboardSeamen.forEach(seaman => {
+      const vessel = seaman.VESSEL?.toUpperCase();
+      if (vessel && vessel in statusCounts) {
+        statusCounts[vessel as keyof typeof statusCounts]++;
+      }
+    });
+
+    return Object.entries(statusCounts)
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }));
+  }, [offboardSeamen]);
+
   if (loading) {
     return <LoadingComponent message="Loading dashboard data..." />;
   }
@@ -98,51 +128,147 @@ export function Dashboard() {
         Ship Personnel Management
       </h1>
 
-      {/* === Dashboard Cards === */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Total Seamen */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-red-100 rounded-xl mr-4">
-            <FontAwesomeIcon icon={faUsers} className="text-3xl text-red-600" />
+      {/* === Dashboard with Pie Charts === */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 gap-4">
+          {/* Total Seamen */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+            <div className="p-4 bg-red-100 rounded-xl mr-4">
+              <FontAwesomeIcon
+                icon={faUsers}
+                className="text-3xl text-red-600"
+              />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Total Seamen</p>
+              <h2 className="text-3xl font-bold text-gray-900">
+                {seamenData.length}
+              </h2>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">Total Seamen</p>
-            <h2 className="text-3xl font-bold text-gray-900">
-              {seamenData.length}
-            </h2>
+
+          {/* Total Onboard */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+            <div className="p-4 bg-green-100 rounded-xl mr-4">
+              <FontAwesomeIcon
+                icon={faShip}
+                className="text-3xl text-green-600"
+              />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Total Onboard</p>
+              <h2 className="text-3xl font-bold text-gray-900">
+                {onboardSeamen.length}
+              </h2>
+            </div>
+          </div>
+
+          {/* Total Offboard */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
+            <div className="p-4 bg-blue-100 rounded-xl mr-4">
+              <FontAwesomeIcon
+                icon={faHouse}
+                className="text-3xl text-blue-600"
+              />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 font-medium">
+                Total Offboard
+              </p>
+              <h2 className="text-3xl font-bold text-gray-900">
+                {offboardSeamen.length}
+              </h2>
+            </div>
           </div>
         </div>
 
-        {/* Total Onboard */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-green-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faShip}
-              className="text-3xl text-green-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">Total Onboard</p>
-            <h2 className="text-3xl font-bold text-gray-900">
-              {onboardSeamen.length}
-            </h2>
-          </div>
+        {/* Pie Chart 1 - Seamen Distribution */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Seamen Distribution
+          </h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <PieChart>
+              <Pie
+                data={[
+                  {
+                    name: 'Onboard',
+                    value: onboardSeamen.length,
+                    color: '#10b981',
+                  },
+                  {
+                    name: 'Offboard',
+                    value: offboardSeamen.length,
+                    color: '#3b82f6',
+                  },
+                ]}
+                cx="50%"
+                cy="45%"
+                labelLine={false}
+                label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                outerRadius={90}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {[
+                  {
+                    name: 'Onboard',
+                    value: onboardSeamen.length,
+                    color: '#10b981',
+                  },
+                  {
+                    name: 'Offboard',
+                    value: offboardSeamen.length,
+                    color: '#3b82f6',
+                  },
+                ].map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Total Offboard */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-blue-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faHouse}
-              className="text-3xl text-blue-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">Total Offboard</p>
-            <h2 className="text-3xl font-bold text-gray-900">
-              {offboardSeamen.length}
-            </h2>
-          </div>
+        {/* Pie Chart 2 - Offboard Distribution */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Offboard Distribution
+          </h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <PieChart>
+              <Pie
+                data={offboardDistribution}
+                cx="50%"
+                cy="45%"
+                labelLine={false}
+                label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                outerRadius={90}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {offboardDistribution.map((entry, index) => {
+                  const colors = [
+                    '#ef4444',
+                    '#f59e0b',
+                    '#3b82f6',
+                    '#8b5cf6',
+                    '#ec4899',
+                  ];
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={colors[index % colors.length]}
+                    />
+                  );
+                })}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

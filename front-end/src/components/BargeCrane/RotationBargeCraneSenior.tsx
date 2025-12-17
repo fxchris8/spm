@@ -1,20 +1,20 @@
-// src/components/RotationSchedule.tsx
+// src/components/BargeCrane/RotationBargeCraneSenior.tsx
 'use client';
 
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
-import { JuniorRotation } from './JuniorRotation';
-import { useRotationConfigs } from '../hooks/useRotationConfigs';
+import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
+import { useRotationConfigs } from '../../hooks/useRotationConfigs';
 
-export function RotationJunior() {
-  const { configs, loading, error } = useRotationConfigs('junior');
+export function RotationBargeCraneSenior() {
+  const { configs, loading, error } = useRotationConfigs('senior', 'bc');
 
-  // Urutan tabs untuk schedule
-  const scheduleOrder = ['mualimII', 'mualimIII', 'masinisIII', 'masinisIV'];
+  // Urutan tabs untuk barge crane
+  const bargeCraneOrder = ['nakhoda', 'KKM'];
 
   const sortedConfigs = [...configs].sort((a, b) => {
-    const indexA = scheduleOrder.indexOf(a.job_title);
-    const indexB = scheduleOrder.indexOf(b.job_title);
+    const indexA = bargeCraneOrder.indexOf(a.job_title);
+    const indexB = bargeCraneOrder.indexOf(b.job_title);
 
     // Jika tidak ada di urutan, taruh di akhir
     if (indexA === -1) return 1;
@@ -28,7 +28,7 @@ export function RotationJunior() {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading junior rotations...</p>
+          <p className="mt-4 text-gray-600">Loading barge crane rotations...</p>
         </div>
       </div>
     );
@@ -46,22 +46,26 @@ export function RotationJunior() {
   if (configs.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Tidak ada konfigurasi rotasi schedule</p>
+        <p className="text-gray-600">Tidak ada konfigurasi rotasi barge crane</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <Tabs aria-label="Crew rotation tabs" variant="underline">
+    <div className="flex flex-col gap-3 mb-0">
+      <Tabs aria-label="Default tabs" variant="default">
         {sortedConfigs.map((config, index) => (
           <Tabs.Item
             key={config.id}
             active={index === 0}
-            title={formatJobTitle(config.job_title)}
+            title={
+              config.job_title === 'KKM'
+                ? 'KKM'
+                : formatJobTitle(config.job_title)
+            }
             icon={HiUserCircle}
           >
-            <JuniorRotation
+            <BargeCraneSeniorRotation
               vessel={config.vessel}
               type={config.type}
               part={config.part}
@@ -75,11 +79,7 @@ export function RotationJunior() {
   );
 }
 
-// Helper function untuk format job title
 function formatJobTitle(jobTitle: string): string {
-  // Convert camelCase to Title Case
-  // mualimII -> Mualim II
-  // masinisIII -> Masinis III
   return jobTitle
     .replace(/([A-Z]+)/g, ' $1')
     .replace(/([A-Z][a-z])/g, ' $1')

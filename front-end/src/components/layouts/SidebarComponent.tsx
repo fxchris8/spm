@@ -12,9 +12,10 @@ import {
   HiOutlineEnvelope,
   HiOutlineArrowDownCircle,
   HiOutlineArrowUpCircle,
+  HiOutlineUserGroup,
+  HiOutlineUser,
 } from 'react-icons/hi2';
 import { GiShipWheel } from 'react-icons/gi';
-import { MdAutorenew } from 'react-icons/md';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function SidebarComponent() {
@@ -75,40 +76,83 @@ export function SidebarComponent() {
             Rotation Ship
           </Sidebar.Item>
 
-          <Sidebar.Collapse
-            icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
-            label="Rotation"
+            <Sidebar.Collapse
+            icon={() => <HiOutlineCube className="w-6 h-6" />}
+            label="Container Rotation"
             open={isParentActive([
               '/senior_rotation',
               '/junior_rotation',
-              '/manalagi_rotation',
             ])}
-          >
+            >
             <Sidebar.Item
               onClick={() => handleNavigation('/senior_rotation')}
-              icon={() => <HiOutlineCube className="w-6 h-6" />}
+              icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
               active={isActive('/senior_rotation')}
               className="cursor-pointer"
             >
-              Senior Rotation
+              Senior
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/junior_rotation')}
-              icon={() => <GiShipWheel className="w-6 h-6" />}
+              icon={() => <HiOutlineUser className="w-6 h-6" />}
               active={isActive('/junior_rotation')}
               className="cursor-pointer"
             >
-              Junior Rotation
+              Junior
             </Sidebar.Item>
+            </Sidebar.Collapse>
+
+            <Sidebar.Collapse
+            icon={() => <GiShipWheel className="w-6 h-6" />}
+            label="Manalagi Rotation"
+            open={isParentActive([
+              '/manalagi_senior_rotation',
+              '/manalagi_junior_rotation',
+            ])}
+            >
             <Sidebar.Item
-              onClick={() => handleNavigation('/manalagi_rotation')}
-              icon={() => <MdAutorenew className="w-6 h-6" />}
-              active={isActive('/manalagi_rotation')}
+              onClick={() => handleNavigation('/manalagi_senior_rotation')}
+              icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
+              active={isActive('/manalagi_senior_rotation')}
               className="cursor-pointer"
             >
-              Manalagi Rotation
+              Senior
             </Sidebar.Item>
-          </Sidebar.Collapse>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/manalagi_junior_rotation')}
+              icon={() => <HiOutlineUser className="w-6 h-6" />}
+              active={isActive('/manalagi_junior_rotation')}
+              className="cursor-pointer"
+            >
+              Junior
+            </Sidebar.Item>
+            </Sidebar.Collapse>
+
+            <Sidebar.Collapse
+            icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
+            label="Barge Crane Rotation"
+            open={isParentActive([
+              '/barge_crane_senior_rotation',
+              '/barge_crane_junior_rotation',
+            ])}
+            >
+            <Sidebar.Item
+              onClick={() => handleNavigation('/barge_crane_senior_rotation')}
+              icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
+              active={isActive('/barge_crane_senior_rotation')}
+              className="cursor-pointer"
+            >
+              Senior
+            </Sidebar.Item>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/barge_crane_junior_rotation')}
+              icon={() => <HiOutlineUser className="w-6 h-6" />}
+              active={isActive('/barge_crane_junior_rotation')}
+              className="cursor-pointer"
+            >
+              Junior
+            </Sidebar.Item>
+            </Sidebar.Collapse>
           <Sidebar.Collapse
             icon={() => <HiOutlineEnvelope className="w-6 h-6" />}
             label="Messages"

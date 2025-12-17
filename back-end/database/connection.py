@@ -1699,12 +1699,13 @@ def validate_rotation_config(vessel, rotation_type, part, groups=None):
     return True
 
 
-def get_rotation_configs(rotation_type=None):
+def get_rotation_configs(rotation_type=None, categorization=None):
     """
     Fetch rotation configs dari database dengan groups dan ships
 
     Args:
-        rotation_type: Optional filter by type ('container' atau 'schedule')
+        rotation_type: Optional filter by type ('senior', 'junior')
+        categorization: Optional filter by categorization ('container', 'manalagi', 'bc')
 
     Returns:
         List of dicts dengan struktur:
@@ -1714,6 +1715,7 @@ def get_rotation_configs(rotation_type=None):
             'vessel': str,
             'type': str,
             'part': str,
+            'categorization': str,
             'groups': {
                 'container_rotation1': ['KM. SHIP1', 'KM. SHIP2'],
                 'container_rotation2': ['KM. SHIP3', 'KM. SHIP4']
@@ -1721,26 +1723,30 @@ def get_rotation_configs(rotation_type=None):
         }
     """
     try:
-        # Build query dengan optional type filter
+        # Build query dengan optional filters
+        where_clauses = []
+        params = {}
+
         if rotation_type:
-            query = """
-                SELECT id, job_title, vessel, type, part, created_at, updated_at
-                FROM rotation_configs
-                WHERE type = :rotation_type
-                ORDER BY job_title
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query), {"rotation_type": rotation_type})
-                configs = result.fetchall()
-        else:
-            query = """
-                SELECT id, job_title, vessel, type, part, created_at, updated_at
-                FROM rotation_configs
-                ORDER BY job_title
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query))
-                configs = result.fetchall()
+            where_clauses.append("type = :rotation_type")
+            params["rotation_type"] = rotation_type
+
+        if categorization:
+            where_clauses.append("categorization = :categorization")
+            params["categorization"] = categorization
+
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+        query = f"""
+            SELECT id, job_title, vessel, type, part, categorization, created_at, updated_at
+            FROM rotation_configs
+            WHERE {where_sql}
+            ORDER BY job_title
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), params)
+            configs = result.fetchall()
 
         # Convert to list of dicts dengan groups
         config_list = []
@@ -1787,9 +1793,10 @@ def get_rotation_configs(rotation_type=None):
                     "vessel": config[2],
                     "type": config[3],
                     "part": config[4],
+                    "categorization": config[5],
                     "groups": groups_dict,
-                    "created_at": config[5].isoformat() if config[5] else None,
-                    "updated_at": config[6].isoformat() if config[6] else None,
+                    "created_at": config[6].isoformat() if config[6] else None,
+                    "updated_at": config[7].isoformat() if config[7] else None,
                 }
 
                 config_list.append(config_dict)
@@ -1873,14 +1880,17 @@ def get_rotation_config_by_id(config_id):
         raise Exception(f"Failed to fetch rotation config: {str(e)}")
 
 
-def create_rotation_config(job_title, vessel, rotation_type, part, groups):
+def create_rotation_config(
+    job_title, vessel, rotation_type, part, groups, categorization=None
+):
     """
     Create new rotation config dengan groups dan ships
 
     Args:
         job_title: Job title (e.g. 'mualimII')
         vessel: Vessel code ('D', 'E', 'F', 'G')
-        rotation_type: Type ('container' atau 'schedule')
+        rotation_type: Type ('senior' atau 'junior')
+        categorization: Categorization ('container', 'manalagi', 'barge_crane', etc.)
         part: Part ('deck' atau 'engine')
         groups: Dict dengan format:
             {
@@ -1902,8 +1912,8 @@ def create_rotation_config(job_title, vessel, rotation_type, part, groups):
             try:
                 # Insert config
                 config_query = """
-                    INSERT INTO rotation_configs (job_title, vessel, type, part)
-                    VALUES (:job_title, :vessel, :type, :part)
+                    INSERT INTO rotation_configs (job_title, vessel, type, part, categorization)
+                    VALUES (:job_title, :vessel, :type, :part, :categorization)
                     RETURNING id
                 """
                 result = conn.execute(
@@ -1913,6 +1923,7 @@ def create_rotation_config(job_title, vessel, rotation_type, part, groups):
                         "vessel": vessel,
                         "type": rotation_type,
                         "part": part,
+                        "categorization": categorization,
                     },
                 )
                 config_id = result.fetchone()[0]
@@ -1978,13 +1989,15 @@ def create_rotation_config(job_title, vessel, rotation_type, part, groups):
         raise Exception(f"Failed to create rotation config: {str(e)}")
 
 
-def update_rotation_config(config_id, job_title, vessel, rotation_type, part, groups):
+def update_rotation_config(
+    config_id, job_title, vessel, rotation_type, part, groups, categorization=None
+):
     """
     Update existing rotation config
 
     Args:
         config_id: ID of config to update
-        job_title, vessel, rotation_type, part, groups: Same as create_rotation_config
+        job_title, vessel, rotation_type, categorization, part, groups: Same as create_rotation_config
 
     Returns:
         Dict dengan 'success'
@@ -2005,6 +2018,7 @@ def update_rotation_config(config_id, job_title, vessel, rotation_type, part, gr
                         vessel = :vessel,
                         type = :type,
                         part = :part,
+                        categorization = :categorization,
                         updated_at = NOW()
                     WHERE id = :config_id
                 """
@@ -2016,6 +2030,7 @@ def update_rotation_config(config_id, job_title, vessel, rotation_type, part, gr
                         "vessel": vessel,
                         "type": rotation_type,
                         "part": part,
+                        "categorization": categorization,
                     },
                 )
 

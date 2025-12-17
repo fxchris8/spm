@@ -1,18 +1,21 @@
 'use client';
 
-import { NavbarComponent } from './components/NavbarComponent';
-import { SidebarComponent } from './components/SidebarComponent';
+import { NavbarComponent } from './components/layouts/NavbarComponent';
+import { SidebarComponent } from './components/layouts/SidebarComponent';
 import { Dashboard } from './components/Dashboard';
 import RotationShipConfig from './components/RotationShipConfig';
-import { RotationSenior } from './components/RotationSenior';
-import { RotationJunior } from './components/RotationJunior';
-import { RotationManalagi } from './components/RotationManalagi';
-import { SearchOnDuty } from './components/SearchOnDuty';
-import { SearchOffDuty } from './components/SearchOffDuty';
-import { AllMessage } from './components/AllMessage';
-import { InMessage } from './components/InMessage';
-import { OutMessage } from './components/OutMessage';
-import { ComingSoonComponent } from './components/ComingSoonComponent';
+import { RotationSenior } from './components/Container/RotationSenior';
+import { RotationJunior } from './components/Container/RotationJunior';
+import { RotationManalagiSenior } from './components/Manalagi/RotationManalagiSenior';
+import { RotationManalagiJunior } from './components/Manalagi/RotationManalagiJunior';
+import { RotationBargeCraneSenior } from './components/BargeCrane/RotationBargeCraneSenior';
+import { RotationBargeCraneJunior } from './components/BargeCrane/RotationBargeCraneJunior';
+import { SearchOnDuty } from './components/Search/SearchOnDuty';
+import { SearchOffDuty } from './components/Search/SearchOffDuty';
+import { AllMessage } from './components/Message/AllMessage';
+import { InMessage } from './components/Message/InMessage';
+import { OutMessage } from './components/Message/OutMessage';
+// import { ComingSoonComponent } from './components/ComingSoonComponent';
 import { Route, Routes, Navigate } from 'react-router-dom';
 
 export function App() {
@@ -54,7 +57,22 @@ export function App() {
             <Route path="/rotation_ship" element={<RotationShipConfig />} />
             <Route path="/senior_rotation" element={<RotationSenior />} />
             <Route path="/junior_rotation" element={<RotationJunior />} />
-            <Route path="/manalagi_rotation" element={<RotationManalagi />} />
+            <Route
+              path="/manalagi_senior_rotation"
+              element={<RotationManalagiSenior />}
+            />
+            <Route
+              path="/manalagi_junior_rotation"
+              element={<RotationManalagiJunior />}
+            />
+            <Route
+              path="/barge_crane_senior_rotation"
+              element={<RotationBargeCraneSenior />}
+            />
+            <Route
+              path="/barge_crane_junior_rotation"
+              element={<RotationBargeCraneJunior />}
+            />
             <Route path="/all_message" element={<AllMessage />} />
             <Route path="/in_message" element={<InMessage />} />
             <Route path="/out_message" element={<OutMessage />} />
