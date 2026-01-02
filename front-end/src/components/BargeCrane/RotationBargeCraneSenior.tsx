@@ -46,7 +46,9 @@ export function RotationBargeCraneSenior() {
   if (configs.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Tidak ada konfigurasi rotasi barge crane</p>
+        <p className="text-gray-600">
+          Tidak ada konfigurasi rotasi barge crane
+        </p>
       </div>
     );
   }

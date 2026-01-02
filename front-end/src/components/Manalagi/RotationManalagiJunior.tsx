@@ -1,4 +1,4 @@
-import { ComingSoonComponent } from "../ComingSoonComponent";
+import { ComingSoonComponent } from '../ComingSoonComponent';
 
 export function RotationManalagiJunior() {
   return (

@@ -106,7 +106,8 @@ export function InMessage() {
       ).length,
       konfirmasi: incomingMessages.filter(
         (s: any) =>
-          s.status_data === 'CHANGE' && s.stage?.toUpperCase() === 'KONFIRMASI ROB'
+          s.status_data === 'CHANGE' &&
+          s.stage?.toUpperCase() === 'KONFIRMASI ROB'
       ).length,
     };
   }, [incomingMessages]);

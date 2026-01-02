@@ -120,16 +120,24 @@ KELOMPOK = {
 word2vec_model = None
 
 
-def load_word2vec_model(model_path="word2vec_model.model"):
+def load_word2vec_model(model_path=None):
     """
     Memuat model Word2Vec.
     """
     global word2vec_model
+    import os
+
+    if model_path is None:
+        # Use absolute path relative to this file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(current_dir, "word2vec_model.model")
+
     try:
         word2vec_model = Word2Vec.load(model_path)
-        print("Word2Vec model loaded successfully.")
+        print(f"Word2Vec model loaded successfully from: {model_path}")
     except Exception as e:
         print(f"Error loading Word2Vec model: {e}")
+        word2vec_model = None
 
 
 # Fungsi untuk mendapatkan Vessel Group ID berdasarkan nama vessel
@@ -180,7 +188,7 @@ def getRecommendation(
     # Memfilter berdasarkan umur
     filtered_df = filtered_df[
         (filtered_df["age"] >= age_range[0]) & (filtered_df["age"] <= age_range[1])
-    ]
+    ].copy()
     print(filtered_df)
 
     # Menggabungkan fitur RANK dan CERTIFICATE untuk perhitungan similarity
@@ -190,6 +198,14 @@ def getRecommendation(
 
     # Fungsi untuk mengubah teks menjadi vektor Word2Vec
     def get_word2vec_vector(text):
+        # Check if model is loaded
+        if word2vec_model is None:
+            # Load model if not already loaded
+            load_word2vec_model()
+            if word2vec_model is None:
+                # Return zero vector with default size if model still can't be loaded
+                return np.zeros(100)
+
         words = text.split()
         word_vectors = [
             word2vec_model.wv[word] for word in words if word in word2vec_model.wv
@@ -301,9 +317,9 @@ def search_candidate(df, bagian, vessel_name, age_range):
         print("age 1 ", age_range[1])
 
         if vessel_group_id is None:
-            return (
-                pd.DataFrame()
-            )  # Return empty DataFrame if no matching vessel is found
+            # Return empty DataFrame with VESSEL GROUP ID column to prevent KeyError
+            empty_df = pd.DataFrame(columns=df.columns)
+            return empty_df
 
         # Memfilter data berdasarkan BAGIAN, VESSEL GROUP ID, dan umur
         filtered_data = df[
@@ -534,6 +550,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
 
     # Jika jenis kapal bukan 'container' atau 'manalagi', langsung isi dengan '1'
     if vessel not in ["container", "manalagi"]:
+        dataframe = dataframe.copy()
         dataframe["VESSEL GROUP ID"] = "1"
         return dataframe
 
@@ -563,7 +580,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             vessel_to_group[vessel] = group_id
 
     # Tambahkan kolom baru berdasarkan mapping
-    dataframe["VESSEL GROUP ID"] = (
+    dataframe.loc[:, "VESSEL GROUP ID"] = (
         dataframe["last_location"].map(vessel_to_group).fillna("UNKNOWN")
     )
 
@@ -576,3 +593,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     dataframe = dataframe[cols]
 
     return dataframe
+
+
+# Load the Word2Vec model when the module is imported
+load_word2vec_model()

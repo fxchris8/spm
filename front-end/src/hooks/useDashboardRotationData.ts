@@ -202,7 +202,10 @@ export function useDashboardRotationData() {
 
         return {
           groupKey,
-          groupName: groupKey.replace('container_rotation', 'Group ').replace('manalagi_rotation', 'Group ').replace('bc_rotation', 'Group '),
+          groupName: groupKey
+            .replace('container_rotation', 'Group ')
+            .replace('manalagi_rotation', 'Group ')
+            .replace('bc_rotation', 'Group '),
           isLocked: !!locked,
           wajib: locked ? extractNamesFromTable(locked.crew_data) : [],
           reliever: locked ? extractNamesFromTable(locked.reliever_data) : [],
@@ -231,7 +234,10 @@ export function useDashboardRotationData() {
 
         return {
           groupKey,
-          groupName: groupKey.replace('container_rotation', 'Group ').replace('manalagi_rotation', 'Group ').replace('bc_rotation', 'Group '),
+          groupName: groupKey
+            .replace('container_rotation', 'Group ')
+            .replace('manalagi_rotation', 'Group ')
+            .replace('bc_rotation', 'Group '),
           isLocked: !!locked,
           wajib: locked ? extractNamesFromTable(locked.crew_data) : [],
           reliever: locked ? extractNamesFromTable(locked.reliever_data) : [],

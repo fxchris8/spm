@@ -117,99 +117,128 @@ export function RotationSummary() {
                                 {formatJobTitle(job.jobTitle)}
                               </h5>
                               <div className="text-sm text-gray-700">
-                                <span className="font-medium">Jumlah Group:</span> {stats.totalGroups} Groups
+                                <span className="font-medium">
+                                  Jumlah Group:
+                                </span>{' '}
+                                {stats.totalGroups} Groups
                                 <span className="mx-2 text-gray-400">|</span>
-                                <span className="font-medium">Jumlah Group Lock:</span> {stats.lockedGroups} Groups
+                                <span className="font-medium">
+                                  Jumlah Group Lock:
+                                </span>{' '}
+                                {stats.lockedGroups} Groups
                                 <span className="mx-2 text-gray-400">|</span>
-                                <span className="font-medium">Jumlah Reliever:</span> {stats.totalRelievers} Reliever{stats.totalRelievers > 1 ? 's' : ''}
+                                <span className="font-medium">
+                                  Jumlah Reliever:
+                                </span>{' '}
+                                {stats.totalRelievers} Reliever
+                                {stats.totalRelievers > 1 ? 's' : ''}
                               </div>
                             </div>
 
                             {/* Accordion for Groups */}
-                            <Accordion collapseAll className="border-none rounded-none">
+                            <Accordion
+                              collapseAll
+                              className="border-none rounded-none"
+                            >
                               <Accordion.Panel>
                                 <Accordion.Title className="bg-gray-50 hover:bg-gray-100 py-2 focus:ring-0 text-sm">
                                   Lihat Detail Groups ({stats.totalGroups})
                                 </Accordion.Title>
                                 <Accordion.Content className="p-3">
                                   <div className="space-y-2">
-                                    {job.groups.map((group: any, groupIdx: number) => (
-                                      <div
-                                        key={groupIdx}
-                                        className={`p-3 rounded-md border ${
-                                          group.isLocked
-                                            ? 'bg-green-50 border-green-200'
-                                            : 'bg-white border-gray-200'
-                                        }`}
-                                      >
-                                        {/* Group Header */}
-                                        <div className="flex items-center justify-between mb-2">
-                                          <span className="font-medium text-gray-800">
-                                            {group.groupName}
-                                          </span>
-                                          {group.isLocked && (
-                                            <div className="flex items-center gap-1 text-green-700">
-                                              <HiLockClosed className="h-4 w-4" />
-                                              <span className="text-xs font-medium">
-                                                Locked
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Show names if locked */}
-                                        {group.isLocked && (
-                                          <div className="mt-2 space-y-2 text-sm">
-                                            {/* WAJIB */}
-                                            {group.wajib.length > 0 && (
-                                              <div>
-                                                <span className="font-semibold text-gray-700">
-                                                  {formatJobTitle(job.jobTitle)} WAJIB:
+                                    {job.groups.map(
+                                      (group: any, groupIdx: number) => (
+                                        <div
+                                          key={groupIdx}
+                                          className={`p-3 rounded-md border ${
+                                            group.isLocked
+                                              ? 'bg-green-50 border-green-200'
+                                              : 'bg-white border-gray-200'
+                                          }`}
+                                        >
+                                          {/* Group Header */}
+                                          <div className="flex items-center justify-between mb-2">
+                                            <span className="font-medium text-gray-800">
+                                              {group.groupName}
+                                            </span>
+                                            {group.isLocked && (
+                                              <div className="flex items-center gap-1 text-green-700">
+                                                <HiLockClosed className="h-4 w-4" />
+                                                <span className="text-xs font-medium">
+                                                  Locked
                                                 </span>
-                                                <div className="mt-1 ml-2">
-                                                  {group.wajib.map((name: string, idx: number) => (
-                                                    <div
-                                                      key={idx}
-                                                      className="text-gray-600"
-                                                    >
-                                                      • {name}
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            )}
-
-                                            {/* RELIEVER */}
-                                            {group.reliever.length > 0 && (
-                                              <div>
-                                                <span className="font-semibold text-gray-700">
-                                                  {formatJobTitle(job.jobTitle)} RELIEVER:
-                                                </span>
-                                                <div className="mt-1 ml-2">
-                                                  {group.reliever.map(
-                                                    (name: string, idx: number) => (
-                                                      <div
-                                                        key={idx}
-                                                        className="text-gray-600"
-                                                      >
-                                                        • {name}
-                                                      </div>
-                                                    )
-                                                  )}
-                                                </div>
                                               </div>
                                             )}
                                           </div>
-                                        )}
 
-                                        {/* Show message if not locked */}
-                                        {!group.isLocked && (
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            Not yet locked
-                                          </p>
-                                        )}
-                                      </div>
-                                    ))}
+                                          {/* Show names if locked */}
+                                          {group.isLocked && (
+                                            <div className="mt-2 space-y-2 text-sm">
+                                              {/* WAJIB */}
+                                              {group.wajib.length > 0 && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-700">
+                                                    {formatJobTitle(
+                                                      job.jobTitle
+                                                    )}{' '}
+                                                    WAJIB:
+                                                  </span>
+                                                  <div className="mt-1 ml-2">
+                                                    {group.wajib.map(
+                                                      (
+                                                        name: string,
+                                                        idx: number
+                                                      ) => (
+                                                        <div
+                                                          key={idx}
+                                                          className="text-gray-600"
+                                                        >
+                                                          • {name}
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* RELIEVER */}
+                                              {group.reliever.length > 0 && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-700">
+                                                    {formatJobTitle(
+                                                      job.jobTitle
+                                                    )}{' '}
+                                                    RELIEVER:
+                                                  </span>
+                                                  <div className="mt-1 ml-2">
+                                                    {group.reliever.map(
+                                                      (
+                                                        name: string,
+                                                        idx: number
+                                                      ) => (
+                                                        <div
+                                                          key={idx}
+                                                          className="text-gray-600"
+                                                        >
+                                                          • {name}
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Show message if not locked */}
+                                          {!group.isLocked && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              Not yet locked
+                                            </p>
+                                          )}
+                                        </div>
+                                      )
+                                    )}
                                   </div>
                                 </Accordion.Content>
                               </Accordion.Panel>
@@ -246,99 +275,128 @@ export function RotationSummary() {
                                 {formatJobTitle(job.jobTitle)}
                               </h5>
                               <div className="text-sm text-gray-700">
-                                <span className="font-medium">Jumlah Group:</span> {stats.totalGroups} Groups
+                                <span className="font-medium">
+                                  Jumlah Group:
+                                </span>{' '}
+                                {stats.totalGroups} Groups
                                 <span className="mx-2 text-gray-400">|</span>
-                                <span className="font-medium">Jumlah Group Lock:</span> {stats.lockedGroups} Groups
+                                <span className="font-medium">
+                                  Jumlah Group Lock:
+                                </span>{' '}
+                                {stats.lockedGroups} Groups
                                 <span className="mx-2 text-gray-400">|</span>
-                                <span className="font-medium">Jumlah Reliever:</span> {stats.totalRelievers} Reliever{stats.totalRelievers > 1 ? 's' : ''}
+                                <span className="font-medium">
+                                  Jumlah Reliever:
+                                </span>{' '}
+                                {stats.totalRelievers} Reliever
+                                {stats.totalRelievers > 1 ? 's' : ''}
                               </div>
                             </div>
 
                             {/* Accordion for Groups */}
-                            <Accordion collapseAll className="border-none rounded-none">
+                            <Accordion
+                              collapseAll
+                              className="border-none rounded-none"
+                            >
                               <Accordion.Panel>
                                 <Accordion.Title className="bg-gray-50 hover:bg-gray-100 py-2 focus:ring-0 text-sm">
                                   Lihat Detail Groups ({stats.totalGroups})
                                 </Accordion.Title>
                                 <Accordion.Content className="p-3">
                                   <div className="space-y-2">
-                                    {job.groups.map((group: any, groupIdx: number) => (
-                                      <div
-                                        key={groupIdx}
-                                        className={`p-3 rounded-md border ${
-                                          group.isLocked
-                                            ? 'bg-green-50 border-green-200'
-                                            : 'bg-white border-gray-200'
-                                        }`}
-                                      >
-                                        {/* Group Header */}
-                                        <div className="flex items-center justify-between mb-2">
-                                          <span className="font-medium text-gray-800">
-                                            {group.groupName}
-                                          </span>
-                                          {group.isLocked && (
-                                            <div className="flex items-center gap-1 text-green-700">
-                                              <HiLockClosed className="h-4 w-4" />
-                                              <span className="text-xs font-medium">
-                                                Locked
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Show names if locked */}
-                                        {group.isLocked && (
-                                          <div className="mt-2 space-y-2 text-sm">
-                                            {/* WAJIB */}
-                                            {group.wajib.length > 0 && (
-                                              <div>
-                                                <span className="font-semibold text-gray-700">
-                                                  {formatJobTitle(job.jobTitle)} WAJIB:
+                                    {job.groups.map(
+                                      (group: any, groupIdx: number) => (
+                                        <div
+                                          key={groupIdx}
+                                          className={`p-3 rounded-md border ${
+                                            group.isLocked
+                                              ? 'bg-green-50 border-green-200'
+                                              : 'bg-white border-gray-200'
+                                          }`}
+                                        >
+                                          {/* Group Header */}
+                                          <div className="flex items-center justify-between mb-2">
+                                            <span className="font-medium text-gray-800">
+                                              {group.groupName}
+                                            </span>
+                                            {group.isLocked && (
+                                              <div className="flex items-center gap-1 text-green-700">
+                                                <HiLockClosed className="h-4 w-4" />
+                                                <span className="text-xs font-medium">
+                                                  Locked
                                                 </span>
-                                                <div className="mt-1 ml-2">
-                                                  {group.wajib.map((name: string, idx: number) => (
-                                                    <div
-                                                      key={idx}
-                                                      className="text-gray-600"
-                                                    >
-                                                      • {name}
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            )}
-
-                                            {/* RELIEVER */}
-                                            {group.reliever.length > 0 && (
-                                              <div>
-                                                <span className="font-semibold text-gray-700">
-                                                  {formatJobTitle(job.jobTitle)} RELIEVER:
-                                                </span>
-                                                <div className="mt-1 ml-2">
-                                                  {group.reliever.map(
-                                                    (name: string, idx: number) => (
-                                                      <div
-                                                        key={idx}
-                                                        className="text-gray-600"
-                                                      >
-                                                        • {name}
-                                                      </div>
-                                                    )
-                                                  )}
-                                                </div>
                                               </div>
                                             )}
                                           </div>
-                                        )}
 
-                                        {/* Show message if not locked */}
-                                        {!group.isLocked && (
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            Not yet locked
-                                          </p>
-                                        )}
-                                      </div>
-                                    ))}
+                                          {/* Show names if locked */}
+                                          {group.isLocked && (
+                                            <div className="mt-2 space-y-2 text-sm">
+                                              {/* WAJIB */}
+                                              {group.wajib.length > 0 && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-700">
+                                                    {formatJobTitle(
+                                                      job.jobTitle
+                                                    )}{' '}
+                                                    WAJIB:
+                                                  </span>
+                                                  <div className="mt-1 ml-2">
+                                                    {group.wajib.map(
+                                                      (
+                                                        name: string,
+                                                        idx: number
+                                                      ) => (
+                                                        <div
+                                                          key={idx}
+                                                          className="text-gray-600"
+                                                        >
+                                                          • {name}
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* RELIEVER */}
+                                              {group.reliever.length > 0 && (
+                                                <div>
+                                                  <span className="font-semibold text-gray-700">
+                                                    {formatJobTitle(
+                                                      job.jobTitle
+                                                    )}{' '}
+                                                    RELIEVER:
+                                                  </span>
+                                                  <div className="mt-1 ml-2">
+                                                    {group.reliever.map(
+                                                      (
+                                                        name: string,
+                                                        idx: number
+                                                      ) => (
+                                                        <div
+                                                          key={idx}
+                                                          className="text-gray-600"
+                                                        >
+                                                          • {name}
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Show message if not locked */}
+                                          {!group.isLocked && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              Not yet locked
+                                            </p>
+                                          )}
+                                        </div>
+                                      )
+                                    )}
                                   </div>
                                 </Accordion.Content>
                               </Accordion.Panel>

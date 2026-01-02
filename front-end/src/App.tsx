@@ -16,7 +16,7 @@ import { AllMessage } from './components/Message/AllMessage';
 import { InMessage } from './components/Message/InMessage';
 import { OutMessage } from './components/Message/OutMessage';
 // import { ComingSoonComponent } from './components/ComingSoonComponent';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 export function App() {
   const NAVBAR_HEIGHT = '4rem';
