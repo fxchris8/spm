@@ -2,7 +2,7 @@
 
 import { NavbarComponent } from './components/layouts/NavbarComponent';
 import { SidebarComponent } from './components/layouts/SidebarComponent';
-import { Dashboard } from './components/Dashboard';
+import { Dashboard } from './components/Dashboard/Dashboard';
 import RotationShipConfig from './components/RotationShipConfig';
 import { RotationSenior } from './components/Container/RotationSenior';
 import { RotationJunior } from './components/Container/RotationJunior';
