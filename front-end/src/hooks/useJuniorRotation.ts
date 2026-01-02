@@ -273,14 +273,14 @@ async function fetchPromotionCandidates(
       rank: item.rank || item.last_position || '',
       history: Array.isArray(item.history)
         ? item.history
-            .filter(
-              (h: string) =>
-                h !== 'PENDING GAJI' &&
-                h !== 'PENDING CUTI' &&
-                h !== 'DARAT STAND-BY' &&
-                h !== 'DARAT BIASA'
-            )
-            .join(', ')
+          .filter(
+            (h: string) =>
+              h !== 'PENDING GAJI' &&
+              h !== 'PENDING CUTI' &&
+              h !== 'DARAT STAND-BY' &&
+              h !== 'DARAT BIASA'
+          )
+          .join(', ')
         : '',
       matchCount: item.matchCount || 0,
     }));
@@ -315,9 +315,10 @@ async function lockRotation(payload: {
 async function unlockRotation(payload: {
   selectedGroup: string;
   job: string;
+  vessel: string;
 }): Promise<any> {
   const response = await fetch(
-    `${API_BASE_URL}/locked-rotations/${payload.selectedGroup}?job=${payload.job}`,
+    `${API_BASE_URL}/locked-rotations/${payload.selectedGroup}?job=${payload.job}&vessel=${payload.vessel}`,
     {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -428,11 +429,11 @@ export function useReplacementOptions(
   const nextGroupInfo = groupKey
     ? calculateNextGroupInfo(groupKey, groups, getMappedJob(job))
     : {
-        nextGroupVessels: [],
-        nextGroupKey: '',
-        promotionVessels: [],
-        promotionJob: '',
-      };
+      nextGroupVessels: [],
+      nextGroupKey: '',
+      promotionVessels: [],
+      promotionJob: '',
+    };
 
   return {
     replacementOptions: data || [],

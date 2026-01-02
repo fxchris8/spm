@@ -182,13 +182,14 @@ CREATE_TABLE_ROTATION_CONFIGS = """
 CREATE TABLE IF NOT EXISTS rotation_configs (
     id BIGSERIAL PRIMARY KEY,
     job_title VARCHAR(50),
+    categorization VARCHAR(100),
     vessel VARCHAR(10),
     type VARCHAR(20),
     part VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    UNIQUE(job_title, type)
+
+    UNIQUE(job_title, type, categorization)
 );
 
 -- Index for rotation_configs
@@ -263,6 +264,8 @@ CREATE TABLE IF NOT EXISTS rotation_submissions (
     status_data VARCHAR(100) DEFAULT 'PENDING',
     version INT,
     is_active BOOLEAN DEFAULT TRUE,
+    stage VARCHAR(100),
+    is_deleted BOOLEAN DEFAULT FALSE,
 
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()

@@ -3,11 +3,11 @@
 
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
-import { ManalagiRotation } from './ManalagiRotation';
-import { useRotationConfigs } from '../hooks/useRotationConfigs';
+import { ManalagiSeniorRotation } from './ManalagiSeniorRotation';
+import { useRotationConfigs } from '../../hooks/useRotationConfigs';
 
-export function RotationManalagi() {
-  const { configs, loading, error } = useRotationConfigs('manalagi');
+export function RotationManalagiSenior() {
+  const { configs, loading, error } = useRotationConfigs('senior', 'manalagi');
 
   // Urutan tabs untuk manalagi
   const manalagiOrder = ['nakhoda', 'KKM'];
@@ -65,7 +65,8 @@ export function RotationManalagi() {
             }
             icon={HiUserCircle}
           >
-            <ManalagiRotation
+            <ManalagiSeniorRotation
+              categorization={config.categorization}
               vessel={config.vessel}
               type={config.type}
               part={config.part}

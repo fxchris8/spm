@@ -179,20 +179,14 @@ async function generateSchedule(payload: {
   standby: string[];
   darat: string[];
   part: string;
+  categorization?: string; // container, manalagi, bc
 }): Promise<GroupDataResponse> {
   // console.log('Generating schedule with payload MANALAGI:', payload);
   // Buat selected_group digabung dengan vessel
-  const mappedGroup = (() => {
-    const pattern = /(container_rotation|manalagi_kkm|manalagi_container)/;
-
-    // Kalau match salah satu dari tiga prefix → replace
-    if (pattern.test(payload.groupKey)) {
-      return payload.groupKey.replace(pattern, payload.vessel);
-    }
-
-    // Kalau tidak match sama sekali → tambahkan prefix baru di depan
-    return `${payload.vessel}_${payload.groupKey}`;
-  })();
+  const mappedGroup = payload.groupKey.replace(
+    'manalagi_rotation',
+    payload.vessel
+  );
 
   const formattedJob = payload.job.toUpperCase();
 
@@ -202,6 +196,7 @@ async function generateSchedule(payload: {
     cadangan2: payload.darat,
     type: payload.type,
     part: payload.part,
+    categorization: payload.categorization,
   };
 
   const response = await fetch(
@@ -279,7 +274,7 @@ export function useLockedRotations(job: string, vessel: string) {
 // Hook untuk mutasi data (lazy load per group)
 export function useMutasiData(
   job: string,
-  type: 'senior' | 'junior' | 'manalagi' | null,
+  type: 'senior' | 'junior' | 'manalagi' | 'bc' | null,
   groupKey: string | null,
   groups: Record<string, string[]>,
   lockedCadanganCodes: string[],

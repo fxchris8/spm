@@ -46,12 +46,15 @@ export default function RotationShipConfig() {
     vessel: 'D',
     type: 'senior',
     part: 'deck',
+    categorization: 'container',
     groups: {} as Record<string, string[]>,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFieldsLocked, setIsFieldsLocked] = useState(true);
 
   // Filter states
+  const [filterCategorization, setFilterCategorization] =
+    useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterPart, setFilterPart] = useState<string>('all');
   const [filterPosition, setFilterPosition] = useState<string>('all');
@@ -83,6 +86,7 @@ export default function RotationShipConfig() {
       vessel: 'D',
       type: 'senior',
       part: 'deck',
+      categorization: 'container',
       groups: {},
     });
     setShowCreateForm(true);
@@ -98,6 +102,7 @@ export default function RotationShipConfig() {
       vessel: config.vessel,
       type: config.type,
       part: config.part,
+      categorization: config.categorization || 'container',
       groups: config.groups,
     });
   };
@@ -172,11 +177,7 @@ export default function RotationShipConfig() {
 
   const addGroup = () => {
     const groupNumber = Object.keys(formData.groups).length + 1;
-    const typePrefix =
-      formData.type === 'senior' || formData.type === 'junior'
-        ? 'container'
-        : formData.type;
-    const groupKey = `${typePrefix}_rotation${groupNumber}`;
+    const groupKey = `${formData.categorization}_rotation${groupNumber}`;
     setFormData({
       ...formData,
       groups: {
@@ -238,6 +239,7 @@ export default function RotationShipConfig() {
     return match ? `Group ${match[1]}` : groupKey;
   };
 
+  const categorizationOrder = ['container', 'manalagi', 'bc'];
   const jobTitleOrder = [
     'nakhoda',
     'KKM',
@@ -248,11 +250,16 @@ export default function RotationShipConfig() {
     'mualimIII',
     'masinisIV',
   ];
-  const typeOrder = ['senior', 'junior', 'manalagi'];
+  const typeOrder = ['senior', 'junior'];
 
   const filteredAndSortedConfigs = useMemo(() => {
     return [...configs]
       .filter(config => {
+        if (
+          filterCategorization !== 'all' &&
+          config.categorization !== filterCategorization
+        )
+          return false;
         if (filterType !== 'all' && config.type !== filterType) return false;
         if (filterPart !== 'all' && config.part !== filterPart) return false;
         if (filterPosition !== 'all' && config.job_title !== filterPosition)
@@ -260,17 +267,30 @@ export default function RotationShipConfig() {
         return true;
       })
       .sort((a, b) => {
+        // 1. Sort by categorization first (container, manalagi, bc)
+        const categorizationIndexA = categorizationOrder.indexOf(
+          a.categorization
+        );
+        const categorizationIndexB = categorizationOrder.indexOf(
+          b.categorization
+        );
+        if (categorizationIndexA !== categorizationIndexB) {
+          return categorizationIndexA - categorizationIndexB;
+        }
+
+        // 2. Then sort by type (senior, junior)
         const typeIndexA = typeOrder.indexOf(a.type);
         const typeIndexB = typeOrder.indexOf(b.type);
         if (typeIndexA !== typeIndexB) return typeIndexA - typeIndexB;
 
+        // 3. Finally sort by job title
         const jobIndexA = jobTitleOrder.indexOf(a.job_title);
         const jobIndexB = jobTitleOrder.indexOf(b.job_title);
         if (jobIndexA === -1) return 1;
         if (jobIndexB === -1) return -1;
         return jobIndexA - jobIndexB;
       });
-  }, [configs, filterType, filterPart, filterPosition]);
+  }, [configs, filterCategorization, filterType, filterPart, filterPosition]);
 
   if (loading) {
     return <LoadingComponent message="Loading rotation configurations..." />;
@@ -306,7 +326,22 @@ export default function RotationShipConfig() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
+          <div>
+            <Label htmlFor="filter-categorization" className="mb-2 block">
+              Filter by Categorization
+            </Label>
+            <Select
+              id="filter-categorization"
+              value={filterCategorization}
+              onChange={e => setFilterCategorization(e.target.value)}
+            >
+              <option value="all">All Categorization</option>
+              <option value="container">Container</option>
+              <option value="manalagi">Manalagi</option>
+              <option value="bc">BC (Barge Crane)</option>
+            </Select>
+          </div>
           <div>
             <Label htmlFor="filter-type" className="mb-2 block">
               Filter by Type
@@ -319,7 +354,6 @@ export default function RotationShipConfig() {
               <option value="all">Semua Type</option>
               <option value="senior">Senior</option>
               <option value="junior">Junior</option>
-              <option value="manalagi">Manalagi</option>
             </Select>
           </div>
           <div>
@@ -390,6 +424,7 @@ export default function RotationShipConfig() {
       <div className="overflow-x-auto rounded-xl shadow-md">
         <Table striped>
           <Table.Head>
+            <Table.HeadCell>Categorization</Table.HeadCell>
             <Table.HeadCell>Type</Table.HeadCell>
             <Table.HeadCell>Part</Table.HeadCell>
             <Table.HeadCell>Vessel</Table.HeadCell>
@@ -400,7 +435,7 @@ export default function RotationShipConfig() {
           <Table.Body className="divide-y">
             {filteredAndSortedConfigs.length === 0 ? (
               <Table.Row>
-                <Table.Cell colSpan={6} className="text-center py-8">
+                <Table.Cell colSpan={7} className="text-center py-8">
                   <p className="text-gray-500">
                     Tidak ada konfigurasi yang sesuai dengan filter
                   </p>
@@ -413,12 +448,19 @@ export default function RotationShipConfig() {
                     <Table.Cell>
                       <Badge
                         color={
-                          config.type === 'senior'
-                            ? 'success'
-                            : config.type === 'junior'
-                              ? 'warning'
-                              : 'purple'
+                          config.categorization === 'container'
+                            ? 'indigo'
+                            : config.categorization === 'manalagi'
+                              ? 'pink'
+                              : 'cyan'
                         }
+                      >
+                        {config.categorization?.toUpperCase() || 'N/A'}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge
+                        color={config.type === 'senior' ? 'success' : 'warning'}
                       >
                         {config.type}
                       </Badge>
@@ -483,7 +525,7 @@ export default function RotationShipConfig() {
 
                   {expandedRowId === config.id && editingConfig && (
                     <Table.Row>
-                      <Table.Cell colSpan={6} className="bg-gray-50 p-0">
+                      <Table.Cell colSpan={7} className="bg-gray-50 p-0">
                         <Card className="m-4">
                           <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-gray-800">
@@ -561,14 +603,25 @@ function EditForm({
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
-          <Label htmlFor="type">
-            Type *
-            {editingConfig && isFieldsLocked && (
-              <span className="ml-2 text-xs text-amber-600"></span>
-            )}
-          </Label>
+          <Label htmlFor="categorization">Categorization *</Label>
+          <Select
+            id="categorization"
+            value={formData.categorization}
+            onChange={e =>
+              setFormData({ ...formData, categorization: e.target.value })
+            }
+            disabled={editingConfig ? isFieldsLocked : false}
+            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+          >
+            <option value="container">Container</option>
+            <option value="manalagi">Manalagi</option>
+            <option value="bc">BC (Barge Crane)</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="type">Type *</Label>
           <Select
             id="type"
             value={formData.type}
@@ -578,7 +631,6 @@ function EditForm({
           >
             <option value="senior">Senior</option>
             <option value="junior">Junior</option>
-            <option value="manalagi">Manalagi</option>
           </Select>
         </div>
         <div>

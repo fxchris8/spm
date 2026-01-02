@@ -4,11 +4,11 @@
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { SeniorRotation } from './SeniorRotation';
-import { useRotationContainer } from '../hooks/useRotationContainer';
+import { useRotationContainer } from '../../hooks/useRotationContainer';
 import { useMemo } from 'react';
 
 export function RotationSenior() {
-  const { configs, loading, error } = useRotationContainer('senior');
+  const { configs, loading, error } = useRotationContainer('senior', 'container');
 
   // Urutan tabs untuk container
   const containerOrder = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
@@ -71,6 +71,7 @@ export function RotationSenior() {
             {/* ✅ Lazy Loading: Component hanya render saat tab aktif */}
             <div>
               <SeniorRotation
+                categorization={config.categorization}
                 vessel={config.vessel}
                 type={config.type}
                 part={config.part}

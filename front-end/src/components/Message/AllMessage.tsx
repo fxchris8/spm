@@ -1,25 +1,24 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { useRotationSubmissions } from '../hooks/useSeniorRotation';
-import { LoadingComponent } from './LoadingComponent';
+import { useAllRotationSubmissions } from '../../hooks/useSeniorRotation';
+import { LoadingComponent } from '../LoadingComponent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane,
+  faList,
   faClock,
   faCheckCircle,
-  faTimesCircle,
   faExchangeAlt,
 } from '@fortawesome/free-solid-svg-icons';
 
-export function OutMessage() {
+export function AllMessage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch all submissions (no job filter initially)
-  const { submissions, loading } = useRotationSubmissions();
+  // Fetch all submissions (including soft-deleted)
+  const { submissions, loading } = useAllRotationSubmissions();
 
   // Filter submissions
   const filteredSubmissions = useMemo(() => {
@@ -104,29 +103,27 @@ export function OutMessage() {
   }, [submissions]);
 
   if (loading) {
-    return <LoadingComponent message="Loading submissions..." />;
+    return <LoadingComponent message="Loading all messages..." />;
   }
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        Out Information (Rotation Submissions)
+        All Messages
       </h1>
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        {/* Total Submissions */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Total Messages */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-gray-100 rounded-xl mr-4">
+          <div className="p-4 bg-indigo-100 rounded-xl mr-4">
             <FontAwesomeIcon
-              icon={faPaperPlane}
-              className="text-3xl text-gray-600"
+              icon={faList}
+              className="text-3xl text-indigo-600"
             />
           </div>
           <div>
-            <p className="text-sm text-gray-600 font-medium">
-              Total Submissions
-            </p>
+            <p className="text-sm text-gray-600 font-medium">Total Messages</p>
             <h2 className="text-3xl font-bold text-gray-900">
               {statusCounts.total}
             </h2>
@@ -180,22 +177,6 @@ export function OutMessage() {
             </h2>
           </div>
         </div>
-
-        {/* Rejected */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
-          <div className="p-4 bg-red-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faTimesCircle}
-              className="text-3xl text-red-600"
-            />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 font-medium">Rejected</p>
-            <h2 className="text-3xl font-bold text-red-600">
-              {statusCounts.rejected}
-            </h2>
-          </div>
-        </div>
       </div>
 
       {/* Filters */}
@@ -203,7 +184,7 @@ export function OutMessage() {
         {/* Search */}
         <input
           type="text"
-          placeholder="Search submissions..."
+          placeholder="Search all messages..."
           className="w-full p-2 border rounded-lg shadow-sm"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
@@ -239,7 +220,7 @@ export function OutMessage() {
       {/* Table */}
       <div className="overflow-x-auto rounded-xl shadow-md bg-white">
         <table className="min-w-full border-collapse">
-          <thead className="bg-gray-800 text-white">
+          <thead className="bg-indigo-800 text-white">
             <tr>
               {[
                 'Job',
@@ -252,11 +233,11 @@ export function OutMessage() {
                 'Tanggal Ready',
                 'Auto Accept At',
                 'Status',
-                'Created At',
+                'Stage',
               ].map(header => (
                 <th
                   key={header}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-gray-700"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-indigo-700"
                 >
                   {header}
                 </th>
@@ -267,15 +248,15 @@ export function OutMessage() {
             {currentItems.length === 0 ? (
               <tr>
                 <td
-                  colSpan={12}
+                  colSpan={13}
                   className="px-4 py-8 text-center text-gray-500"
                 >
-                  No submissions found
+                  No messages found
                 </td>
               </tr>
             ) : (
               currentItems.map((item: any, idx: number) => (
-                <tr key={idx} className="hover:bg-gray-50 transition">
+                <tr key={idx} className="hover:bg-indigo-50 transition">
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.job}
                   </td>
@@ -294,7 +275,7 @@ export function OutMessage() {
                   <td className="px-4 py-3 text-sm text-gray-600 border-b">
                     {item.mutation_from}
                   </td>
-                  <td className="px-4 py-3 text-sm text-blue-600 font-medium border-b">
+                  <td className="px-4 py-3 text-sm text-indigo-600 font-medium border-b">
                     {item.mutation_to}
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
@@ -320,17 +301,17 @@ export function OutMessage() {
                         item.status_data === 'PENDING'
                           ? 'bg-yellow-100 text-yellow-800'
                           : item.status_data === 'ACCEPTED'
-                            ? 'bg-green-100 text-green-800'
-                            : item.status_data === 'CHANGE'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : item.status_data === 'CHANGE'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {item.status_data}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
-                    {new Date(item.created_at).toLocaleDateString('id-ID')}
+                    {item.stage || '-'}
                   </td>
                 </tr>
               ))
@@ -339,12 +320,12 @@ export function OutMessage() {
         </table>
       </div>
 
-      {/* Count */}
+      {/* Count
       <div className="mt-4 text-sm text-gray-600">
         Showing {indexOfFirstItem + 1}-
         {Math.min(indexOfLastItem, filteredSubmissions.length)} of{' '}
-        {filteredSubmissions.length} submissions
-      </div>
+        {filteredSubmissions.length} messages
+      </div> */}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -369,7 +350,7 @@ export function OutMessage() {
                   onClick={() => setCurrentPage(page as number)}
                   className={`px-3 py-1 border rounded-lg shadow-sm hover:bg-gray-100 ${
                     currentPage === page
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
+                      ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                       : ''
                   }`}
                 >

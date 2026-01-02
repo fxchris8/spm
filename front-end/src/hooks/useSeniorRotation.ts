@@ -182,6 +182,7 @@ async function generateSchedule(payload: {
   standby: string[];
   darat: string[];
   part: string;
+  categorization?: string; // container, manalagi, bc
 }): Promise<GroupDataResponse> {
   // Buat selected_group digabung dengan vessel
   // console.log('Generating schedule with payload:', payload);
@@ -198,7 +199,10 @@ async function generateSchedule(payload: {
     cadangan2: payload.darat,
     type: payload.type,
     part: payload.part,
+    categorization: payload.categorization,
   };
+
+  console.log('Final payload for generateSchedule:', finalPayload);
 
   const response = await fetch(
     `${API_BASE_URL}/container-rotation?job=${formattedJob}`,
@@ -798,7 +802,7 @@ export function usePendingChanges(job: string, vessel: string) {
   };
 }
 
-// Hook untuk get rotation submissions
+// Hook untuk get rotation submissions (excluding soft-deleted)
 export function useRotationSubmissions(job?: string) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['rotation-submissions', job],
@@ -806,6 +810,29 @@ export function useRotationSubmissions(job?: string) {
       const url = job
         ? `${API_BASE_URL}/rotation-submissions?job=${job.toUpperCase()}`
         : `${API_BASE_URL}/rotation-submissions`;
+      const response = await fetch(url);
+      const result = await response.json();
+      return result.data || [];
+    },
+    staleTime: 1 * 60 * 1000, // Fresh 1 menit
+    gcTime: 10 * 60 * 1000, // Cache 10 menit
+  });
+
+  return {
+    submissions: data || [],
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
+// Hook untuk get ALL rotation submissions (including soft-deleted)
+export function useAllRotationSubmissions(job?: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['all-rotation-submissions', job],
+    queryFn: async () => {
+      const url = job
+        ? `${API_BASE_URL}/all-rotation-submissions?job=${job.toUpperCase()}`
+        : `${API_BASE_URL}/all-rotation-submissions`;
       const response = await fetch(url);
       const result = await response.json();
       return result.data || [];

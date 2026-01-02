@@ -2,7 +2,7 @@
 
 import { Tabs, TabsRef } from 'flowbite-react';
 import { useRef, useState } from 'react';
-import { SearchComponent } from './SearchComponent';
+import { SearchComponent } from '../SearchComponent';
 
 export function SearchOnDuty() {
   const tabsRef = useRef<TabsRef>(null);

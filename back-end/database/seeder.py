@@ -26,6 +26,7 @@ def seed_rotation_junior_data():
         "job_title": "mualimII",
         "vessel": "D",
         "rotation_type": "junior",
+        "categorization": "container",
         "part": "deck",
         "groups": {
             "container_rotation1": [
@@ -101,6 +102,7 @@ def seed_rotation_junior_data():
         "job_title": "mualimIII",
         "vessel": "D",
         "rotation_type": "junior",
+        "categorization": "container",
         "part": "deck",
         "groups": mualimII_data["groups"],
     }
@@ -110,6 +112,7 @@ def seed_rotation_junior_data():
         "job_title": "masinisIII",
         "vessel": "E",
         "rotation_type": "junior",
+        "categorization": "container",
         "part": "engine",
         "groups": {
             "container_rotation1": [
@@ -184,6 +187,7 @@ def seed_rotation_junior_data():
         "job_title": "masinisIV",
         "vessel": "E",
         "rotation_type": "junior",
+        "categorization": "container",
         "part": "engine",
         "groups": masinisIII_data["groups"],
     }
@@ -215,6 +219,7 @@ def seed_rotation_senior_data():
         "job_title": "nakhoda",
         "vessel": "D",
         "rotation_type": "senior",
+        "categorization": "container",
         "part": "deck",
         "groups": {
             "container_rotation1": [
@@ -298,6 +303,7 @@ def seed_rotation_senior_data():
         "job_title": "KKM",
         "vessel": "E",
         "rotation_type": "senior",
+        "categorization": "container",
         "part": "engine",
         "groups": {
             "container_rotation1": [
@@ -378,6 +384,7 @@ def seed_rotation_senior_data():
         "job_title": "mualimI",
         "vessel": "D",
         "rotation_type": "senior",
+        "categorization": "container",
         "part": "deck",
         "groups": nakhoda_data["groups"],
     }
@@ -387,6 +394,7 @@ def seed_rotation_senior_data():
         "job_title": "masinisII",
         "vessel": "E",
         "rotation_type": "senior",
+        "categorization": "container",
         "part": "engine",
         "groups": kkm_data["groups"],
     }
@@ -402,25 +410,27 @@ def seed_rotation_senior_data():
             print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
 
 
-def seed_rotation_manalagi_data():
+def seed_rotation_manalagi_senior_data():
     """
     Seed data untuk rotation manalagi
-    Type: manalagi
+    Type: senior
+    Categorization: manalagi
     Jobs: nakhoda (vessel F), KKM (vessel G)
     """
 
     print("\n" + "=" * 70)
-    print("SEEDING ROTATION MANALAGI DATA (type: manalagi)")
+    print("SEEDING ROTATION MANALAGI DATA (type: senior, categorization: manalagi)")
     print("=" * 70 + "\n")
 
     # ============ NAKHODA (Manalagi) ============
     nakhoda_manalagi_data = {
         "job_title": "nakhoda",
         "vessel": "F",
-        "rotation_type": "manalagi",
+        "rotation_type": "senior",
+        "categorization": "manalagi",
         "part": "deck",
         "groups": {
-            "container_rotation1": [
+            "manalagi_rotation1": [
                 "KM. MANALAGI PRITA",
                 "KM. MANALAGI ASTA",
                 "KM. MANALAGI ASTI",
@@ -429,7 +439,7 @@ def seed_rotation_manalagi_data():
                 "KM. MANALAGI TARA",
                 "KM. MANALAGI WANDA",
             ],
-            "container_rotation2": [
+            "manalagi_rotation2": [
                 "KM. MANALAGI TISYA",
                 "KM. MANALAGI SAMBA",
                 "KM. MANALAGI HITA",
@@ -444,10 +454,11 @@ def seed_rotation_manalagi_data():
     kkm_manalagi_data = {
         "job_title": "KKM",
         "vessel": "G",
-        "rotation_type": "manalagi",
+        "rotation_type": "senior",
+        "categorization": "manalagi",
         "part": "engine",
         "groups": {
-            "manalagi_kkm1": [
+            "manalagi_rotation1": [
                 "KM. MANALAGI ASTA",
                 "KM. MANALAGI ASTI",
                 "KM. MANALAGI SAMBA",
@@ -455,7 +466,7 @@ def seed_rotation_manalagi_data():
                 "KM. XYS SATU",
                 "KM. MANALAGI WANDA",
             ],
-            "manalagi_kkm2": [
+            "manalagi_rotation2": [
                 "KM. MANALAGI TISYA",
                 "KM. MANALAGI PRITA",
                 "KM. MANALAGI DASA",
@@ -469,6 +480,89 @@ def seed_rotation_manalagi_data():
 
     # Insert all manalagi configs
     configs = [nakhoda_manalagi_data, kkm_manalagi_data]
+
+    for config in configs:
+        try:
+            result = connection.create_rotation_config(**config)
+            print(f"[SUCCES] {result['message']} (ID: {result['id']})")
+        except Exception as e:
+            print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
+
+
+def seed_rotation_barge_crane_senior_data():
+    """
+    Seed data untuk rotation barge crane
+    Type: senior
+    Categorization: bc
+    Jobs: nakhoda (vessel F), KKM (vessel G)
+    """
+
+    print("\n" + "=" * 70)
+    print("SEEDING ROTATION BARGE CRANE DATA (type: senior, categorization: bc)")
+    print("=" * 70 + "\n")
+
+    # ============ NAKHODA (Barge Crane) ============
+    nakhoda_bc_data = {
+        "job_title": "nakhoda",
+        "vessel": "F",
+        "rotation_type": "senior",
+        "categorization": "bc",
+        "part": "deck",
+        "groups": {
+            "bc_rotation1": [
+                "BC. ANGSA LAUT",
+                "BC. BALIKPAPAN RAYA",
+                "BC. BANJARMASIN RAYA",
+                "BC. BAYA",
+                "BC. BELAWAN RAYA",
+                "BC. EPSILON",
+                "BC. GAJAH LAUT",
+            ],
+            "bc_rotation2": [
+                "BC. GAJAH MADA",
+                "BC. KAIMANA INDAH",
+                "BC. MURO 5",
+                "BC. SAMARINDA RAYA",
+                "BC. SHORYU BARU",
+                "BC. SURABAYA RAYA",
+                "BC. TARAKAN RAYA",
+                "BC. TENYO MARU",
+            ],
+        },
+    }
+
+    # ============ KKM (Barge Crane) ============
+    kkm_bc_data = {
+        "job_title": "KKM",
+        "vessel": "G",
+        "rotation_type": "senior",
+        "categorization": "bc",
+        "part": "engine",
+        "groups": {
+            "bc_rotation1": [
+                "BC. ANGSA LAUT",
+                "BC. BALIKPAPAN RAYA",
+                "BC. BANJARMASIN RAYA",
+                "BC. BAYA",
+                "BC. BELAWAN RAYA",
+                "BC. EPSILON",
+                "BC. GAJAH LAUT",
+            ],
+            "bc_rotation2": [
+                "BC. GAJAH MADA",
+                "BC. KAIMANA INDAH",
+                "BC. MURO 5",
+                "BC. SAMARINDA RAYA",
+                "BC. SHORYU BARU",
+                "BC. SURABAYA RAYA",
+                "BC. TARAKAN RAYA",
+                "BC. TENYO MARU",
+            ],
+        },
+    }
+
+    # Insert all barge crane configs
+    configs = [nakhoda_bc_data, kkm_bc_data]
 
     for config in configs:
         try:
@@ -519,7 +613,8 @@ if __name__ == "__main__":
     try:
         seed_rotation_junior_data()
         seed_rotation_senior_data()
-        seed_rotation_manalagi_data()
+        seed_rotation_manalagi_senior_data()
+        seed_rotation_barge_crane_senior_data()
 
     except Exception as e:
         print("\n" + "[FAILED]" * 35)

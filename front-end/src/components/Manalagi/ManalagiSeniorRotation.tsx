@@ -2,10 +2,10 @@
 
 import { Button } from 'flowbite-react';
 import { useState, useEffect, useMemo } from 'react';
-import { CardComponent } from './CardComponent';
-import { InputComponent } from './InputComponent';
-import { TableComponent } from './TableComponent';
-import { AlertComponent } from './AlertComponent';
+import { CardComponent } from '../CardComponent';
+import { InputComponent } from '../InputComponent';
+import { TableComponent } from '../TableComponent';
+import { AlertComponent } from '../AlertComponent';
 import { HiUserGroup, HiStar, HiLockClosed, HiLockOpen } from 'react-icons/hi';
 import {
   useLockedRotations,
@@ -15,22 +15,15 @@ import {
   usePotentialPromotion,
   useGenerateSchedule,
   useLockRotation,
-} from '../hooks/useManalagiRotation';
+} from '../../hooks/useManalagiRotation';
 import * as XLSX from 'xlsx';
 import { Spinner } from 'flowbite-react';
-import { LoadingSpinner } from './LoadingComponent';
+import { LoadingSpinner } from '../LoadingComponent';
 
 interface TableJson {
   columns: string[];
   data: Record<string, any>[];
 }
-
-// interface ApiResponse {
-//   schedule?: TableJson;
-//   nahkoda?: TableJson;
-//   darat?: TableJson | null;
-//   error?: string;
-// }
 
 interface ManalagiProps {
   groups: Record<string, string[]>;
@@ -38,26 +31,16 @@ interface ManalagiProps {
   type: string;
   part: string;
   job: string;
+  categorization: string;
 }
 
-// interface LockedRotation {
-//   groupKey: string;
-//   job: string;
-//   scheduleTable: TableJson;
-//   nahkodaTable: TableJson;
-//   daratTable: TableJson | null;
-//   lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
-//   lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
-//   lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
-//   lockedAt: string;
-// }
-
-export function ManalagiRotation({
+export function ManalagiSeniorRotation({
   groups,
   vessel,
   type,
   part,
   job,
+  categorization,
 }: ManalagiProps) {
   // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -354,6 +337,7 @@ export function ManalagiRotation({
         // cadangan2: selectedOptional,
         type: type,
         part: part,
+        categorization: categorization,
       });
 
       if (result.error) {
@@ -501,7 +485,7 @@ export function ManalagiRotation({
               )}
               <CardComponent
                 groupName={`Group ${groupKey.replace(
-                  'container_rotation',
+                  'manalagi_rotation',
                   ''
                 )}`}
                 listShip={ships}

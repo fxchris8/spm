@@ -9,12 +9,13 @@ export interface RotationConfig {
   vessel: string;
   type: string;
   part: string;
+  categorization: string;
   groups: Record<string, string[]>;
   created_at?: string;
   updated_at?: string;
 }
 
-export function useRotationConfigs(type?: string) {
+export function useRotationConfigs(type?: string, categorization?: string) {
   const [configs, setConfigs] = useState<RotationConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +23,12 @@ export function useRotationConfigs(type?: string) {
   const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
-      const url = type
-        ? `${API_BASE_URL}/rotation-configs?type=${type}`
-        : `${API_BASE_URL}/rotation-configs`;
+
+      const params = new URLSearchParams();
+      if (type) params.append('type', type);
+      if (categorization) params.append('categorization', categorization);
+
+      const url = `${API_BASE_URL}/rotation-configs?${params.toString()}`;
 
       // console.log('🔍 Fetching rotation configs from:', url);
 
@@ -44,17 +48,12 @@ export function useRotationConfigs(type?: string) {
       setError(null);
     } catch (err: any) {
       console.error('❌ Error fetching configs:', err);
-      console.error(
-        'URL attempted:',
-        type
-          ? `${API_BASE_URL}/rotation-configs?type=${type}`
-          : `${API_BASE_URL}/rotation-configs`
-      );
+      console.error('URL attempted:', `${API_BASE_URL}/rotation-configs`);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [type]);
+  }, [type, categorization]);
 
   useEffect(() => {
     fetchConfigs();

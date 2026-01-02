@@ -10,7 +10,7 @@ import {
   HiLockOpen,
   HiStar,
 } from 'react-icons/hi';
-import { CardComponent } from './CardComponent';
+import { CardComponent } from '../CardComponent';
 import {
   useLockedRotations,
   useCrewToRelieve,
@@ -18,8 +18,8 @@ import {
   usePromotionCandidates,
   useLockRotation,
   formatJobName,
-} from '../hooks/useJuniorRotation';
-import { LoadingSpinner } from './LoadingComponent';
+} from '../../hooks/useJuniorRotation';
+import { LoadingSpinner } from '../LoadingComponent';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -265,6 +265,7 @@ export function JuniorRotation({
         await unlockRotation({
           selectedGroup: selectedGroup,
           job: formatJobName(job),
+          vessel: _vessel.toUpperCase(),
         });
         await refetchLocked(); // Refresh locked rotations
         alert('SUCCES! Data berhasil di-unlock!');
@@ -302,6 +303,7 @@ export function JuniorRotation({
         const payload = {
           groupKey: selectedGroup,
           job: formatJobName(job),
+          vessel: _vessel.toUpperCase(),
           scheduleTable: JSON.stringify(scheduleTable),
           nahkodaTable: crewToRelieve,
           daratTable: selectedReplacement,
@@ -413,10 +415,10 @@ export function JuniorRotation({
                                       crew.daysElapsed > 365
                                         ? 'bg-red-100 text-red-800'
                                         : crew.daysRemaining < 7
-                                          ? 'bg-red-100 text-red-800'
-                                          : crew.daysRemaining < 30
-                                            ? 'bg-orange-100 text-orange-800'
-                                            : 'bg-green-100 text-green-800'
+                                        ? 'bg-red-100 text-red-800'
+                                        : crew.daysRemaining < 30
+                                        ? 'bg-orange-100 text-orange-800'
+                                        : 'bg-green-100 text-green-800'
                                     }`}
                                   >
                                     {crew.daysElapsed > 365
@@ -629,8 +631,8 @@ export function JuniorRotation({
                                   isSelected
                                     ? 'bg-green-50'
                                     : isLockedElsewhere
-                                      ? 'bg-gray-50 opacity-60'
-                                      : ''
+                                    ? 'bg-gray-50 opacity-60'
+                                    : ''
                                 }`}
                               >
                                 <td className="px-4 py-3 font-medium text-gray-900">

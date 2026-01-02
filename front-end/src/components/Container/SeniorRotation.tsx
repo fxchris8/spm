@@ -2,10 +2,10 @@
 
 import { Button } from 'flowbite-react';
 import { useState, useEffect, useMemo } from 'react';
-import { CardComponent } from './CardComponent';
-import { InputComponent } from './InputComponent';
-import { TableComponent } from './TableComponent';
-import { AlertComponent } from './AlertComponent';
+import { CardComponent } from '../CardComponent';
+import { InputComponent } from '../InputComponent';
+import { TableComponent } from '../TableComponent';
+import { AlertComponent } from '../AlertComponent';
 import {
   HiUserGroup,
   HiStar,
@@ -26,23 +26,16 @@ import {
   useSubmitRotations,
   useJobSubmitted,
   usePendingChanges,
-} from '../hooks/useSeniorRotation';
-import { exportRotationToExcel } from './ExportRotationExcel';
-import { exportRotationToPDF } from './ExportRotationPDF';
+} from '../../hooks/useSeniorRotation';
+import { exportRotationToExcel } from '../ExportRotationExcel';
+import { exportRotationToPDF } from '../ExportRotationPDF';
 import { Spinner } from 'flowbite-react';
-import { LoadingSpinner } from './LoadingComponent';
+import { LoadingSpinner } from '../LoadingComponent';
 
 interface TableJson {
   columns: string[];
   data: Record<string, any>[];
 }
-
-// interface ApiResponse {
-//   schedule?: TableJson;
-//   nahkoda?: TableJson;
-//   darat?: TableJson | null;
-//   error?: string;
-// }
 
 interface SeniorProps {
   groups: Record<string, string[]>;
@@ -50,19 +43,8 @@ interface SeniorProps {
   type: string;
   part: string;
   job: string;
+  categorization: string; // container, manalagi, bc
 }
-
-// interface LockedRotation {
-//   groupKey: string;
-//   job: string;
-//   scheduleTable: TableJson;
-//   nahkodaTable: TableJson;
-//   daratTable: TableJson | null;
-//   lockedSeamanCodes: string[]; // All locked codes (for backward compatibility)
-//   lockedCadanganCodes: string[]; // Only cadangan/nahkoda codes (for filtering EXISTING)
-//   lockedRelieverCodes: string[]; // Only reliever/darat codes (not used for filtering)
-//   lockedAt: string;
-// }
 
 export function SeniorRotation({
   groups,
@@ -70,6 +52,7 @@ export function SeniorRotation({
   type,
   part,
   job,
+  categorization,
 }: SeniorProps) {
   // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -100,6 +83,27 @@ export function SeniorRotation({
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
       .flatMap(lock => lock.lockedCadanganCodes || []);
   }, [lockedRotations, job]);
+
+  // Calculate locked reliever codes (from daratTable) - should NOT be excluded, just marked
+  const lockedRelieverCodes = useMemo(() => {
+    return Object.values(lockedRotations)
+      .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
+      .filter(lock => lock.groupKey !== selectedGroup) // Exclude current group
+      .flatMap(lock => {
+        if (lock.daratTable && lock.daratTable.data) {
+          return lock.daratTable.data.map((row: any) =>
+            String(
+              row.seamancode ||
+                row.SEAMANCODE ||
+                row.Seamancode ||
+                row.SeamanCode ||
+                ''
+            )
+          );
+        }
+        return [];
+      });
+  }, [lockedRotations, job, selectedGroup]);
 
   // Check if all groups are locked for current job
   const areAllGroupsLocked = useMemo(() => {
@@ -316,7 +320,6 @@ export function SeniorRotation({
     const lockedSeamanCodes = [...lockedCadanganCodes, ...lockedRelieverCodes];
 
     try {
-      // ✅ Pakai hook mutation
       await lockRotation({
         groupKey: selectedGroup,
         job: job.toUpperCase(),
@@ -354,7 +357,6 @@ export function SeniorRotation({
     }
 
     try {
-      // ✅ Pakai hook mutation
       await unlockRotation({
         groupKey: selectedGroup,
         job,
@@ -398,6 +400,7 @@ export function SeniorRotation({
         // cadangan2: selectedOptional,
         type: type,
         part: part,
+        categorization: categorization,
       });
 
       if (result.error) {
@@ -457,11 +460,6 @@ export function SeniorRotation({
         !potentialItems.some(p => p.seamancode === pr.seamancode)
     ),
   ];
-
-  // // Filter out locked CADANGAN codes (not reliever) from select fields
-  // const lockedCadanganCodes = Object.values(lockedRotations)
-  //   .filter(lock => lock.job?.toUpperCase() === job.toUpperCase()) // ✅ Case insensitive
-  //   .flatMap(lock => lock.lockedCadanganCodes || []);
 
   const filteredCadanganItems = allCadanganItems.filter(
     item => !lockedCadanganCodes.includes(item.seamancode)
@@ -843,6 +841,7 @@ export function SeniorRotation({
                     value={selectedStandby}
                     onChange={setSelectedStandby}
                     isSingle={true}
+                    lockedRelieverCodes={lockedRelieverCodes}
                   />
                 </div>
 
@@ -855,6 +854,7 @@ export function SeniorRotation({
                     value={selectedOptional}
                     onChange={setSelectedOptional}
                     isSingle={true}
+                    lockedRelieverCodes={lockedRelieverCodes}
                   />
                 </div>
 

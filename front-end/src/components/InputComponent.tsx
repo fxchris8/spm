@@ -1,6 +1,6 @@
 'use client';
 
-import Select, { MultiValue, SingleValue } from 'react-select';
+import Select, { MultiValue, SingleValue, components } from 'react-select';
 
 interface CadanganItem {
   seamancode: string;
@@ -13,6 +13,7 @@ interface InputComponentProps {
   value: string[];
   onChange: (selectedValues: string[]) => void;
   isSingle?: boolean;
+  lockedRelieverCodes?: string[];
 }
 
 export function InputComponent({
@@ -20,15 +21,65 @@ export function InputComponent({
   value,
   onChange,
   isSingle = false,
+  lockedRelieverCodes = [],
 }: InputComponentProps) {
-  // Ubah data cadangan menjadi opsi Select
+  // Ubah data cadangan menjadi opsi Select dengan informasi reliever
   const options = cadanganData.map(item => ({
     value: item.seamancode,
     label: `${item.seamancode} - ${item.name} - ${item.last_location}`,
+    isReliever: lockedRelieverCodes.includes(item.seamancode),
   }));
 
   // Filter data yang dipilih berdasarkan value prop
   const selectedValues = options.filter(option => value.includes(option.value));
+
+  // Custom Option component to show reliever badge
+  const CustomOption = (props: any) => {
+    return (
+      <components.Option {...props}>
+        <div className="flex items-center justify-between w-full">
+          <span>{props.data.label}</span>
+          {props.data.isReliever && (
+            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+              RELIEVER
+            </span>
+          )}
+        </div>
+      </components.Option>
+    );
+  };
+
+  // Custom SingleValue component to show reliever badge in selected value
+  const CustomSingleValue = (props: any) => {
+    return (
+      <components.SingleValue {...props}>
+        <div className="flex items-center gap-2">
+          <span>{props.data.label}</span>
+          {props.data.isReliever && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+              RELIEVER
+            </span>
+          )}
+        </div>
+      </components.SingleValue>
+    );
+  };
+
+  // Custom MultiValue component to show reliever badge in selected values
+  const CustomMultiValueLabel = (props: any) => {
+    return (
+      <components.MultiValueLabel {...props}>
+        <div className="flex items-center gap-1">
+          <span>{props.data.label}</span>
+          {props.data.isReliever && (
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+              R
+            </span>
+          )}
+        </div>
+      </components.MultiValueLabel>
+    );
+  };
 
   return (
     <Select
@@ -49,6 +100,11 @@ export function InputComponent({
           }>;
           onChange(selectedOptions.map(item => item.value));
         }
+      }}
+      components={{
+        Option: CustomOption,
+        SingleValue: CustomSingleValue,
+        MultiValueLabel: CustomMultiValueLabel,
       }}
       placeholder="Pilih atau ketik nama..."
       noOptionsMessage={() => 'Tidak ada pilihan'}

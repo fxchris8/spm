@@ -420,7 +420,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     }
 
     CONTAINER_ENGINE = {
-        "container_kkm1": [
+        "container_rotation1": [
             "KM. ORIENTAL GOLD",
             "KM. ORIENTAL EMERALD",
             "KM. ORIENTAL GALAXY",
@@ -431,7 +431,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. LUZON",
             "KM. ORIENTAL DIAMOND",
         ],
-        "container_kkm2": [
+        "container_rotation2": [
             "KM. SPIL HAPSRI",
             "KM. ARMADA PERMATA",
             "KM. HIJAU SAMUDRA",
@@ -442,7 +442,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. HIJAU SEJUK",
             "KM. HIJAU JELITA",
         ],
-        "container_kkm3": [
+        "container_rotation3": [
             "KM. ORIENTAL PACIFIC",
             "KM. ORIENTAL SAMUDERA",
             "KM. ARMADA SEGARA",
@@ -452,7 +452,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. SPIL RUMI",
             "KM. PULAU NUNUKAN",
         ],
-        "container_kkm4": [
+        "container_rotation4": [
             "KM. PULAU HOKI",
             "KM. TELUK BINTUNI",
             "KM. TELUK FLAMINGGO",
@@ -463,7 +463,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM SPIL RAHAYU",
             "KM. SPIL RETNO",
         ],
-        "container_kkm5": [
+        "container_rotation5": [
             "KM. MINAS BARU",
             "KM. SELILI BARU",
             "KM. VERTIKAL",
@@ -474,7 +474,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. PEKAN SAMPIT",
             "KM. TITANIUM",
         ],
-        "container_kkm6": [
+        "container_rotation6": [
             "KM. PRATIWI RAYA",
             "KM. PRATIWI SATU",
             "KM. BALI AYU",
@@ -482,7 +482,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. BALI SANUR",
             "KM. BALI KUTA",
         ],
-        "container_kkm7": [
+        "container_rotation7": [
             "KM. MAGELLAN",
             "KM. MULIANIM",
             "KM. PAHALA",
@@ -493,7 +493,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     }
 
     MANALAGI_DECK = {
-        "manalagi_rotation": [
+        "manalagi_rotation1": [
             "KM. MANALAGI PRITA",
             "KM. MANALAGI ASTA",
             "KM. MANALAGI ASTI",
@@ -513,7 +513,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     }
 
     MANALAGI_ENGINE = {
-        "manalagi_kkm": [
+        "manalagi_rotation1": [
             "KM. MANALAGI ASTA",
             "KM. MANALAGI ASTI",
             "KM. MANALAGI SAMBA",
@@ -521,7 +521,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
             "KM. XYS SATU",
             "KM. MANALAGI WANDA",
         ],
-        "manalagi_kkm2": [
+        "manalagi_rotation2": [
             "KM. MANALAGI TISYA",
             "KM. MANALAGI PRITA",
             "KM. MANALAGI DASA",

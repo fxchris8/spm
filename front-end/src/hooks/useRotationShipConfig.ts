@@ -7,6 +7,7 @@ export interface RotationConfig {
   vessel: string;
   type: string;
   part: string;
+  categorization: string;
   groups: Record<string, string[]>;
 }
 
@@ -15,6 +16,7 @@ interface CreateConfigData {
   vessel: string;
   type: string;
   part: string;
+  categorization: string;
   groups: Record<string, string[]>;
 }
 
