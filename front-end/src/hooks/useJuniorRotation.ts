@@ -273,14 +273,14 @@ async function fetchPromotionCandidates(
       rank: item.rank || item.last_position || '',
       history: Array.isArray(item.history)
         ? item.history
-          .filter(
-            (h: string) =>
-              h !== 'PENDING GAJI' &&
-              h !== 'PENDING CUTI' &&
-              h !== 'DARAT STAND-BY' &&
-              h !== 'DARAT BIASA'
-          )
-          .join(', ')
+            .filter(
+              (h: string) =>
+                h !== 'PENDING GAJI' &&
+                h !== 'PENDING CUTI' &&
+                h !== 'DARAT STAND-BY' &&
+                h !== 'DARAT BIASA'
+            )
+            .join(', ')
         : '',
       matchCount: item.matchCount || 0,
     }));
@@ -429,11 +429,11 @@ export function useReplacementOptions(
   const nextGroupInfo = groupKey
     ? calculateNextGroupInfo(groupKey, groups, getMappedJob(job))
     : {
-      nextGroupVessels: [],
-      nextGroupKey: '',
-      promotionVessels: [],
-      promotionJob: '',
-    };
+        nextGroupVessels: [],
+        nextGroupKey: '',
+        promotionVessels: [],
+        promotionJob: '',
+      };
 
   return {
     replacementOptions: data || [],

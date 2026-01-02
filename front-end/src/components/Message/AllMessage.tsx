@@ -108,9 +108,7 @@ export function AllMessage() {
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        All Messages
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">All Messages</h1>
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -301,10 +299,10 @@ export function AllMessage() {
                         item.status_data === 'PENDING'
                           ? 'bg-yellow-100 text-yellow-800'
                           : item.status_data === 'ACCEPTED'
-                          ? 'bg-green-100 text-green-800'
-                          : item.status_data === 'CHANGE'
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : item.status_data === 'CHANGE'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {item.status_data}

@@ -15,9 +15,10 @@ import {
   Legend,
   Tooltip,
 } from 'recharts';
-import { useDashboardData } from '../hooks/useDashboardData';
-import { useSimilarSeamen } from '../hooks/useSimilarSeamen';
-import { LoadingComponent, LoadingSpinner } from './LoadingComponent';
+import { useDashboardData } from '../../hooks/useDashboardData';
+import { useSimilarSeamen } from '../../hooks/useSimilarSeamen';
+import { LoadingComponent, LoadingSpinner } from '../LoadingComponent';
+import { RotationSummary } from './RotationSummary';
 
 export function Dashboard() {
   const { seamenData, loading } = useDashboardData();
@@ -271,6 +272,9 @@ export function Dashboard() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Rotation Summary Section */}
+      <RotationSummary />
 
       {/* Search Input */}
       <div className="mb-4">

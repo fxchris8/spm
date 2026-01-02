@@ -484,10 +484,7 @@ export function ManalagiSeniorRotation({
                 </div>
               )}
               <CardComponent
-                groupName={`Group ${groupKey.replace(
-                  'manalagi_rotation',
-                  ''
-                )}`}
+                groupName={`Group ${groupKey.replace('manalagi_rotation', '')}`}
                 listShip={ships}
                 isActive={selectedGroup === groupKey}
                 onClick={() => handleCardClick(groupKey)}

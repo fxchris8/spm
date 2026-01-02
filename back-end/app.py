@@ -1080,10 +1080,11 @@ def get_manual_search():
 
     # Call search_candidate with original_df as the parameter
     filtered_candidates = search_candidate(copy_df, bagian, vessel_name, age_range)
-    print("THIS IS VESSEL GROUP ID", filtered_candidates["VESSEL GROUP ID"])
 
     if filtered_candidates.empty:
         return jsonify([])
+
+    print("THIS IS VESSEL GROUP ID", filtered_candidates["VESSEL GROUP ID"])
     print("DATAFRAME COLUMNS:", copy_df.columns)
 
     recommendations = getRecommendation(

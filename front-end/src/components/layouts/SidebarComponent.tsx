@@ -76,14 +76,11 @@ export function SidebarComponent() {
             Rotation Ship
           </Sidebar.Item>
 
-            <Sidebar.Collapse
+          <Sidebar.Collapse
             icon={() => <HiOutlineCube className="w-6 h-6" />}
             label="Container Rotation"
-            open={isParentActive([
-              '/senior_rotation',
-              '/junior_rotation',
-            ])}
-            >
+            open={isParentActive(['/senior_rotation', '/junior_rotation'])}
+          >
             <Sidebar.Item
               onClick={() => handleNavigation('/senior_rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
@@ -100,16 +97,16 @@ export function SidebarComponent() {
             >
               Junior
             </Sidebar.Item>
-            </Sidebar.Collapse>
+          </Sidebar.Collapse>
 
-            <Sidebar.Collapse
+          <Sidebar.Collapse
             icon={() => <GiShipWheel className="w-6 h-6" />}
             label="Manalagi Rotation"
             open={isParentActive([
               '/manalagi_senior_rotation',
               '/manalagi_junior_rotation',
             ])}
-            >
+          >
             <Sidebar.Item
               onClick={() => handleNavigation('/manalagi_senior_rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
@@ -126,16 +123,16 @@ export function SidebarComponent() {
             >
               Junior
             </Sidebar.Item>
-            </Sidebar.Collapse>
+          </Sidebar.Collapse>
 
-            <Sidebar.Collapse
+          <Sidebar.Collapse
             icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
             label="Barge Crane Rotation"
             open={isParentActive([
               '/barge_crane_senior_rotation',
               '/barge_crane_junior_rotation',
             ])}
-            >
+          >
             <Sidebar.Item
               onClick={() => handleNavigation('/barge_crane_senior_rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
@@ -152,7 +149,7 @@ export function SidebarComponent() {
             >
               Junior
             </Sidebar.Item>
-            </Sidebar.Collapse>
+          </Sidebar.Collapse>
           <Sidebar.Collapse
             icon={() => <HiOutlineEnvelope className="w-6 h-6" />}
             label="Messages"
