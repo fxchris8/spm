@@ -263,6 +263,69 @@ BUILD_TARGET=development
 
 ---
 
+## API Documentation
+
+### Change Schedule Rotation API
+
+API untuk tim IT apabila ada kru yang tidak ready.
+
+**Endpoint:** `POST http://pe.spil.co.id:8048/api/change-schedule-rotation`
+
+#### API V1
+
+Parameter:
+1. `seamencode` - Seaman Code kru yang tidak ready
+2. `tanggalready` - Tanggal kru ready
+3. `statusdata` - Status data dengan value "CHANGE"
+
+**Request Body:**
+```json
+{
+  "seamencode": "20190451",
+  "tanggalready": "25-12-2025",
+  "statusdata": "CHANGE"
+}
+```
+
+#### API V2
+
+Parameter tambahan:
+4. `stage` - Informasi stage dimana kru tidak ready atau gagal ("KONFIRMASI ROB" atau "FAMILIARISASI")
+
+**Request Body:**
+```json
+{
+  "seamencode": "20040116",
+  "tanggalready": "24-02-2026",
+  "statusdata": "CHANGE",
+  "stage": "FAMILIARISASI"
+}
+```
+
+> **Note:** Nilai `stage` yang valid adalah `KONFIRMASI ROB` atau `FAMILIARISASI`
+
+---
+
+## Development Workflow
+
+### Sebelum Commit ke Repository
+
+Sebelum melakukan `git add`, pastikan untuk menjalankan pre-commit hooks untuk memastikan kode sudah sesuai dengan standar:
+
+```bash
+# Jalankan pre-commit pada semua file
+pre-commit run --all-files
+```
+
+Pre-commit akan melakukan pengecekan seperti:
+- Linting dan formatting kode
+- Validasi syntax
+- Pengecekan lainnya sesuai konfigurasi `.pre-commit-config.yaml`
+
+Jika ada error, perbaiki terlebih dahulu sebelum melakukan commit.
+
+---
+
 ## Contributors
 
 - [@hilmifawwazsaad](https://github.com/hilmifawwazsaad)

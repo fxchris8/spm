@@ -47,7 +47,35 @@ from rotation import (
 )
 
 app = Flask(__name__)
-CORS(app=app)
+
+# CORS Configuration - Auto detect environment
+ENV = os.environ.get("FLASK_ENV", "development")
+
+# Allowed origins for production (HTTP & HTTPS)
+ALLOWED_ORIGINS = [
+    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id with any port
+    r"https?://spil\.co\.id(:\d+)?",  # spil.co.id with any port
+]
+
+if ENV == "production":
+    CORS(
+        app=app,
+        resources={
+            r"/api/*": {"origins": ALLOWED_ORIGINS, "supports_credentials": True}
+        },
+    )
+else:
+    # Development - allow all origins
+    CORS(app=app)
+
+
+@app.after_request
+def add_cors_headers(response):
+    # Required for Private Network Access (PNA)
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
+
 app.secret_key = "supersecretkey"
 
 
