@@ -2,19 +2,19 @@
 
 import { NavbarComponent } from './components/layouts/NavbarComponent';
 import { SidebarComponent } from './components/layouts/SidebarComponent';
-import { Dashboard } from './components/Dashboard/Dashboard';
+import { Dashboard } from './components/dashboard/Dashboard';
 import RotationShipConfig from './components/RotationShipConfig';
-import { RotationSenior } from './components/Container/RotationSenior';
-import { RotationJunior } from './components/Container/RotationJunior';
-import { RotationManalagiSenior } from './components/Manalagi/RotationManalagiSenior';
-import { RotationManalagiJunior } from './components/Manalagi/RotationManalagiJunior';
-import { RotationBargeCraneSenior } from './components/BargeCrane/RotationBargeCraneSenior';
-import { RotationBargeCraneJunior } from './components/BargeCrane/RotationBargeCraneJunior';
-import { SearchOnDuty } from './components/Search/SearchOnDuty';
-import { SearchOffDuty } from './components/Search/SearchOffDuty';
-import { AllMessage } from './components/Message/AllMessage';
-import { InMessage } from './components/Message/InMessage';
-import { OutMessage } from './components/Message/OutMessage';
+import { RotationSenior } from './components/container/RotationSenior';
+import { RotationJunior } from './components/container/RotationJunior';
+import { RotationManalagiSenior } from './components/manalagi/RotationManalagiSenior';
+import { RotationManalagiJunior } from './components/manalagi/RotationManalagiJunior';
+import { RotationBargeCraneSenior } from './components/barge-crane/RotationBargeCraneSenior';
+import { RotationBargeCraneJunior } from './components/barge-crane/RotationBargeCraneJunior';
+import { SearchOnDuty } from './components/search/SearchOnDuty';
+import { SearchOffDuty } from './components/search/SearchOffDuty';
+import { AllMessage } from './components/message/AllMessage';
+import { InMessage } from './components/message/InMessage';
+import { OutMessage } from './components/message/OutMessage';
 // import { ComingSoonComponent } from './components/ComingSoonComponent';
 import { Route, Routes } from 'react-router-dom';
 

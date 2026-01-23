@@ -1,4 +1,4 @@
-// src/components/BargeCrane/RotationBargeCraneSenior.tsx
+// src/components/barge-crane/RotationBargeCraneSenior.tsx
 'use client';
 
 import { Tabs } from 'flowbite-react';
