@@ -50,6 +50,7 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
 Docker deployment menyediakan environment yang konsisten dan mudah di-deploy.
 
 #### Prerequisites
+
 - Docker Engine (v20.10+)
 - Docker Compose (v2.0+)
 
@@ -79,7 +80,7 @@ docker-compose logs -f
 
 # 7. Akses aplikasi
 # - Frontend: http://localhost:8047
-# - Backend API: http://localhost:8048
+# - Backend API: http://localhost:18037
 # - PostgreSQL: localhost:5432
 ```
 
@@ -111,9 +112,12 @@ docker exec -it spm-postgres psql -U postgres -d spm
 ```
 
 #### Port Mapping (Docker)
-- **Frontend**: `8047` → internal `5173` (development) atau `80` (production)
-- **Backend**: `8048` → internal `5000`
-- **PostgreSQL**: `5432` → internal `5432`
+
+| Service        | Host Port | Internal Port              |
+| :------------- | :-------- | :------------------------- |
+| **Frontend**   | `8047`    | `5173` (dev) / `80` (prod) |
+| **Backend**    | `18037`   | `5000`                     |
+| **PostgreSQL** | `5432`    | `5432`                     |
 
 ---
 
@@ -124,6 +128,7 @@ Untuk development dengan live reload dan debugging.
 #### 1. Setup Backend (Flask)
 
 ##### a. Install Dependencies
+
 ```bash
 # Masuk ke direktori back-end
 cd back-end
@@ -133,6 +138,7 @@ pip install -r requirements.txt
 ```
 
 ##### b. Setup Environment Variables
+
 ```bash
 # Salin file .env.example menjadi .env
 cp .env.example .env
@@ -142,6 +148,7 @@ cp .env.example .env
 ```
 
 ##### c. Setup Database dan Data Awal
+
 Jalankan script-script berikut secara berurutan:
 
 ```bash
@@ -160,10 +167,11 @@ python database/scheduler.py
 # 4. Jalankan Flask server
 python app.py
 
-# Server akan berjalan di http://localhost:8048
+# Server akan berjalan di http://localhost:18037
 ```
 
 **Catatan:**
+
 - `db_setup.py` - Membuat struktur database dan tabel-tabel yang diperlukan
   - Gunakan `--drop` untuk drop dan recreate semua tabel (hati-hati, data akan hilang!)
 - `seeder.py` - Mengisi data awal untuk testing/development
@@ -176,6 +184,7 @@ python app.py
 ### 2. Setup Frontend (React)
 
 ##### a. Install Dependencies
+
 ```bash
 # Masuk ke direktori front-end (dari root project)
 cd front-end
@@ -185,15 +194,17 @@ npm install
 ```
 
 ##### b. Setup Environment Variables
+
 ```bash
 # Salin file .env.example menjadi .env (jika ada)
 cp .env.example .env
 
 # Edit file .env untuk konfigurasi API endpoint
-# VITE_API_BASE_URL=http://localhost:8048/api
+# VITE_API_BASE_URL=http://localhost:18037/api
 ```
 
 ##### c. Jalankan Development Server
+
 ```bash
 # Jalankan development server
 npm run dev
@@ -202,15 +213,25 @@ npm run dev
 ```
 
 #### Port Mapping (Localhost)
-- **Frontend**: `5173` (Vite default)
-- **Backend**: `8048`
-- **PostgreSQL**: `5432` (tergantung instalasi PostgreSQL lokal Anda)
+
+| Service        | Port   | Keterangan                            |
+| :------------- | :----- | :------------------------------------ |
+| **Frontend**   | `5173` | Default Vite                          |
+| **Backend**    | `5000` | Port default baru (sebelumnya `8048`) |
+| **PostgreSQL** | `5432` | Tergantung instalasi lokal            |
+
+> [!TIP]
+> Jika ingin menjalankan Backend di port lain (misal `18037`) secara lokal, gunakan:
+>
+> - **PowerShell**: `$env:FLASK_RUN_PORT=18037; python app.py`
+> - **CMD**: `set FLASK_RUN_PORT=18037 && python app.py`
 
 ---
 
 ## Environment Variables
 
 ### Backend (.env di back-end/)
+
 ```env
 # Database
 DB_HOST=localhost         # atau 'database' untuk Docker
@@ -230,11 +251,13 @@ API_BASE_URL_IT=https://api-it.example.com
 ```
 
 ### Frontend (.env di front-end/)
+
 ```env
-VITE_API_BASE_URL=http://localhost:8048/api
+VITE_API_BASE_URL=http://localhost:18037/api
 ```
 
 ### Docker (.env di /)
+
 ```env
 # Database
 DB_HOST=database
@@ -256,7 +279,7 @@ API_BASE_URL_IT=https://api-it.example.com
 FLASK_ENV=production
 FLASK_DEBUG=0
 
-VITE_API_BASE_URL=http://localhost:8048/api
+VITE_API_BASE_URL=http://localhost:18037/api
 
 BUILD_TARGET=development
 ```
@@ -269,16 +292,18 @@ BUILD_TARGET=development
 
 API untuk tim IT apabila ada kru yang tidak ready.
 
-**Endpoint:** `POST http://pe.spil.co.id:8048/api/change-schedule-rotation`
+**Endpoint:** `POST http://pe.spil.co.id:18037/api/change-schedule-rotation`
 
 #### API V1
 
 Parameter:
+
 1. `seamencode` - Seaman Code kru yang tidak ready
 2. `tanggalready` - Tanggal kru ready
 3. `statusdata` - Status data dengan value "CHANGE"
 
 **Request Body:**
+
 ```json
 {
   "seamencode": "20190451",
@@ -289,10 +314,10 @@ Parameter:
 
 #### API V2
 
-Parameter tambahan:
-4. `stage` - Informasi stage dimana kru tidak ready atau gagal ("KONFIRMASI ROB" atau "FAMILIARISASI")
+Parameter tambahan: 4. `stage` - Informasi stage dimana kru tidak ready atau gagal ("KONFIRMASI ROB" atau "FAMILIARISASI")
 
 **Request Body:**
+
 ```json
 {
   "seamencode": "20040116",
@@ -318,6 +343,7 @@ pre-commit run --all-files
 ```
 
 Pre-commit akan melakukan pengecekan seperti:
+
 - Linting dan formatting kode
 - Validasi syntax
 - Pengecekan lainnya sesuai konfigurasi `.pre-commit-config.yaml`
