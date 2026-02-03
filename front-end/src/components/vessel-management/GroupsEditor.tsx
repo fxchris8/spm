@@ -155,7 +155,6 @@ export function GroupsEditor({
         </p>
         {isEditMode && (
           <Button onClick={handleAddGroup}>
-            <HiPlus className="mr-2" />
             Buat Group Pertama
           </Button>
         )}
@@ -170,86 +169,86 @@ export function GroupsEditor({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
-        {/* Add Group Button */}
-        {isEditMode && (
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleAddGroup}>
-              Tambah Group
-            </Button>
-          </div>
-        )}
+      {/* Groups Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Object.entries(groups).map(([groupKey, ships]) => (
+          <div
+            key={groupKey}
+            className="relative bg-white border border-gray-200 rounded-lg p-4"
+          >
+            {/* Group Header */}
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-bold text-gray-900 text-lg">
+                {formatGroupName(groupKey)}
+              </h4>
+              {isEditMode && (
+                <Button
+                  size="xs"
+                  color="failure"
+                  onClick={() => handleRemoveGroup(groupKey)}
+                >
+                  Hapus
+                </Button>
+              )}
+            </div>
 
-        {/* Groups Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(groups).map(([groupKey, ships]) => (
-            <div
-              key={groupKey}
-              className="relative bg-white border border-gray-200 rounded-lg p-4"
+            {/* Add Ship Input (Edit Mode Only) */}
+            {isEditMode && (
+              <div className="flex gap-2 mb-3">
+                <TextInput
+                  value={newShipInputs[groupKey] || ''}
+                  onChange={e =>
+                    setNewShipInputs(prev => ({
+                      ...prev,
+                      [groupKey]: e.target.value,
+                    }))
+                  }
+                  onKeyPress={e => handleKeyPress(e, groupKey)}
+                  placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
+                  className="flex-1"
+                  sizing="sm"
+                />
+                <Button size="sm" onClick={() => handleAddShip(groupKey)}>
+                  <HiPlus />
+                </Button>
+              </div>
+            )}
+
+            {/* Ships List */}
+            <SortableContext
+              items={ships.map((_, idx) => `${groupKey}-${idx}`)}
+              strategy={verticalListSortingStrategy}
             >
-              {/* Group Header */}
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="font-bold text-gray-900 text-lg">
-                  {formatGroupName(groupKey)}
-                </h4>
-                {isEditMode && (
-                  <Button
-                    size="xs"
-                    color="failure"
-                    onClick={() => handleRemoveGroup(groupKey)}
-                  >
-                    Hapus
-                  </Button>
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {ships.length === 0 ? (
+                  <EmptyGroupDropZone groupKey={groupKey} />
+                ) : (
+                  ships.map((ship, index) => (
+                    <DraggableShipCard
+                      key={`${groupKey}-${index}`}
+                      shipName={ship}
+                      groupKey={groupKey}
+                      index={index}
+                      onDelete={() => handleRemoveShip(groupKey, index)}
+                      isEditMode={isEditMode}
+                    />
+                  ))
                 )}
               </div>
+            </SortableContext>
+          </div>
+        ))}
 
-              {/* Add Ship Input (Edit Mode Only) */}
-              {isEditMode && (
-                <div className="flex gap-2 mb-3">
-                  <TextInput
-                    value={newShipInputs[groupKey] || ''}
-                    onChange={e =>
-                      setNewShipInputs(prev => ({
-                        ...prev,
-                        [groupKey]: e.target.value,
-                      }))
-                    }
-                    onKeyPress={e => handleKeyPress(e, groupKey)}
-                    placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
-                    className="flex-1"
-                    sizing="sm"
-                  />
-                  <Button size="sm" onClick={() => handleAddShip(groupKey)}>
-                    <HiPlus />
-                  </Button>
-                </div>
-              )}
-
-              {/* Ships List */}
-              <SortableContext
-                items={ships.map((_, idx) => `${groupKey}-${idx}`)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {ships.length === 0 ? (
-                    <EmptyGroupDropZone groupKey={groupKey} />
-                  ) : (
-                    ships.map((ship, index) => (
-                      <DraggableShipCard
-                        key={`${groupKey}-${index}`}
-                        shipName={ship}
-                        groupKey={groupKey}
-                        index={index}
-                        onDelete={() => handleRemoveShip(groupKey, index)}
-                        isEditMode={isEditMode}
-                      />
-                    ))
-                  )}
-                </div>
-              </SortableContext>
-            </div>
-          ))}
-        </div>
+        {/* Add Group Card - appears as last item in grid */}
+        {isEditMode && (
+          <button
+            onClick={handleAddGroup}
+            className="flex flex-col items-center justify-center min-h-[150px] border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+          >
+            <HiPlus className="h-8 w-8 text-gray-400 mb-2" />
+            <span className="text-gray-500 font-medium">Tambah Group</span>
+          </button>
+        )}
       </div>
 
       {/* Drag Overlay */}

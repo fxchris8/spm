@@ -1,25 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Alert, Spinner } from 'flowbite-react';
+import { Button, Spinner } from 'flowbite-react';
+import { toast } from 'sonner';
 import { CategoryPositionSelector } from './CategoryPositionSelector';
 import { GroupsEditor } from './GroupsEditor';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { useVesselManagement } from '../../hooks/useVesselManagement';
-import { LoadingComponent } from '../LoadingComponent';
 import {
   getHiddenFieldsFromSelection,
   formatCategorizationDisplay,
   formatPositionDisplay,
 } from '../../utils/vesselMappingUtils';
 
-type AlertType = 'success' | 'error' | 'warning' | 'info';
-
 export function VesselManagement() {
-  const {
-    vessels,
-    loading,
-    createVessel,
-    updateVessel,
-    deleteVessel,
-  } = useVesselManagement();
+  const { vessels, loading, createVessel, updateVessel, deleteVessel } =
+    useVesselManagement();
 
   // Selection states
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
@@ -33,17 +27,7 @@ export function VesselManagement() {
     {}
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Alert state
-  const [alert, setAlert] = useState<{
-    show: boolean;
-    type: AlertType;
-    message: string;
-  }>({
-    show: false,
-    type: 'info',
-    message: '',
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Find existing vessel configuration based on selection
   const existingVessel = useMemo(() => {
@@ -64,13 +48,6 @@ export function VesselManagement() {
       setEditedGroups({});
     }
   }, [existingVessel]);
-
-  const showAlert = (type: AlertType, message: string) => {
-    setAlert({ show: true, type, message });
-    setTimeout(() => {
-      setAlert({ show: false, type: 'info', message: '' });
-    }, 5000);
-  };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -98,12 +75,12 @@ export function VesselManagement() {
 
   const handleSave = async () => {
     if (!selectedCategory || !selectedPosition) {
-      showAlert('warning', 'Pilih kategori dan position terlebih dahulu!');
+      toast.warning('Pilih kategori dan position terlebih dahulu!');
       return;
     }
 
     if (Object.keys(editedGroups).length === 0) {
-      showAlert('warning', 'Minimal harus ada 1 group!');
+      toast.warning('Minimal harus ada 1 group!');
       return;
     }
 
@@ -112,7 +89,7 @@ export function VesselManagement() {
     );
 
     if (hasEmptyGroup) {
-      showAlert('warning', 'Semua group harus memiliki minimal 1 kapal!');
+      toast.warning('Semua group harus memiliki minimal 1 kapal!');
       return;
     }
 
@@ -123,10 +100,7 @@ export function VesselManagement() {
     );
 
     if (!hiddenFields) {
-      showAlert(
-        'error',
-        'Kombinasi kategori dan position tidak valid! Silakan hubungi administrator.'
-      );
+      toast.error('Kombinasi kategori dan position tidak valid! Silakan hubungi administrator.');
       return;
     }
 
@@ -144,69 +118,56 @@ export function VesselManagement() {
       if (existingVessel) {
         // Update existing
         const result = await updateVessel(existingVessel.id, payload);
-        showAlert(
-          'success',
-          result.message || 'Konfigurasi berhasil diupdate!'
-        );
+        toast.success(result.message || 'Konfigurasi berhasil diupdate!');
       } else {
         // Create new
         const result = await createVessel(payload);
-        showAlert('success', result.message || 'Konfigurasi berhasil dibuat!');
+        toast.success(result.message || 'Konfigurasi berhasil dibuat!');
       }
 
       setIsEditMode(false);
     } catch (error: any) {
       console.error('Error saving vessel:', error);
-      showAlert('error', `Gagal menyimpan: ${error.message}`);
+      toast.error(`Gagal menyimpan: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (!existingVessel) return;
 
-    if (
-      !window.confirm(
-        `Yakin ingin menghapus konfigurasi ${formatPositionDisplay(selectedPosition!)} untuk ${formatCategorizationDisplay(selectedCategory!)}?`
-      )
-    ) {
-      return;
-    }
-
+    setShowDeleteModal(false);
     setIsSubmitting(true);
     try {
       const result = await deleteVessel(existingVessel.id);
-      showAlert('success', result.message || 'Konfigurasi berhasil dihapus!');
+      toast.success(result.message || 'Konfigurasi berhasil dihapus!');
       setSelectedPosition(null);
       setEditedGroups({});
       setIsEditMode(false);
     } catch (error: any) {
       console.error('Error deleting config:', error);
-      showAlert('error', `Gagal menghapus: ${error.message}`);
+      toast.error(`Gagal menghapus: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (loading) {
-    return <LoadingComponent message="Loading rotation vessels..." />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading rotation vessels...</span>
+      </div>
+    );
   }
 
   return (
     <div className="p-6">
-      {/* Alert */}
-      {alert.show && (
-        <div className="mb-4">
-          <Alert
-            color={alert.type}
-            onDismiss={() => setAlert({ ...alert, show: false })}
-          >
-            <span>{alert.message}</span>
-          </Alert>
-        </div>
-      )}
-
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-1">
@@ -215,7 +176,8 @@ export function VesselManagement() {
           </h1>
         </div>
         <p className="text-gray-600">
-          Kelola konfigurasi group kapal berdasarkan kategori kapal dan posisi seamen.
+          Kelola konfigurasi group kapal berdasarkan kategori kapal dan posisi
+          seamen.
         </p>
       </div>
 
@@ -232,75 +194,76 @@ export function VesselManagement() {
 
       {/* Step 3: Groups Display & Edit */}
       {selectedCategory && selectedPosition && (
-        <div className="space-y-4">
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">
-                {formatCategorizationDisplay(selectedCategory)} -{' '}
-                {formatPositionDisplay(selectedPosition)}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {existingVessel
-                  ? `${Object.keys(existingVessel.groups).length} group(s) terkonfigurasi`
-                  : 'Belum ada konfigurasi'}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {!isEditMode ? (
-                <>
+        <div>
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            {/* Header */}
+            <div className="flex justify-between items-center bg-white rounded-lg mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {formatCategorizationDisplay(selectedCategory)} -{' '}
+                  {formatPositionDisplay(selectedPosition)}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {existingVessel
+                    ? `${Object.keys(existingVessel.groups).length} group`
+                    : 'Belum ada group'}
+                </p>
+              </div>
+              {!isEditMode && (
+                <div className="flex gap-2">
                   <Button onClick={handleEditToggle}>
                     {existingVessel
-                      ? 'Edit Configuration'
-                      : 'Create Configuration'}
+                      ? 'Edit'
+                      : 'Buat'}
                   </Button>
                   {existingVessel && (
                     <Button
                       color="failure"
-                      onClick={handleDelete}
+                      onClick={handleDeleteClick}
                       disabled={isSubmitting}
                     >
                       {isSubmitting && <Spinner size="sm" className="mr-2" />}
                       Delete
                     </Button>
                   )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    color="success"
-                    onClick={handleSave}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Spinner size="sm" className="mr-2" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      <>Simpan</>
-                    )}
-                  </Button>
-                  <Button
-                    color="gray"
-                    onClick={handleEditToggle}
-                    disabled={isSubmitting}
-                  >
-                    Batal
-                  </Button>
-                </>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Groups Editor */}
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            {/* Groups Editor */}
             <GroupsEditor
               groups={editedGroups}
               categorization={selectedCategory}
               isEditMode={isEditMode}
               onGroupsChange={setEditedGroups}
             />
+
+            {/* Action Buttons - Bottom Right */}
+            {isEditMode && (
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  color="gray"
+                  onClick={handleEditToggle}
+                  disabled={isSubmitting}
+                >
+                  Batal
+                </Button>
+                <Button
+                  color="success"
+                  onClick={handleSave}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>Simpan</>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -314,6 +277,14 @@ export function VesselManagement() {
           </p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        message={`Yakin ingin menghapus konfigurasi ${formatPositionDisplay(selectedPosition || '')} untuk ${formatCategorizationDisplay(selectedCategory || '')}?`}
+      />
     </div>
   );
 }
