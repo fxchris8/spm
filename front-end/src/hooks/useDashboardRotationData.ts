@@ -1,7 +1,7 @@
-// Hook untuk fetch data rotation configs dan locked rotations untuk dashboard
+// Hook untuk fetch data rotation vessels dan locked rotations untuk dashboard
 import { useQuery } from '@tanstack/react-query';
 
-interface RotationConfig {
+interface RotationVessel {
   id: number;
   job_title: string;
   categorization: string;
@@ -53,13 +53,13 @@ interface DashboardRotationData {
   };
 }
 
-// Fetch rotation configs
-async function fetchRotationConfigs(): Promise<RotationConfig[]> {
+// Fetch rotation vessels
+async function fetchRotationVessels(): Promise<RotationVessel[]> {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/rotation-configs`);
+  const response = await fetch(`${API_BASE_URL}/rotation-vessels`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch rotation configs');
+    throw new Error('Failed to fetch rotation vessels');
   }
 
   return response.json();
@@ -91,20 +91,20 @@ async function fetchLockedRotationsForJob(
   return [];
 }
 
-// Fetch all locked rotations for all configs
+// Fetch all locked rotations for all vessels
 async function fetchAllLockedRotations(
-  configs: RotationConfig[]
+  vessels: RotationVessel[]
 ): Promise<LockedRotation[]> {
   const allLockedRotations: LockedRotation[] = [];
 
   // Create unique job-vessel pairs
   const jobVesselPairs = new Map<string, { job: string; vessel: string }>();
-  configs.forEach(config => {
-    const key = `${config.job_title}-${config.vessel}`;
+  vessels.forEach(v => {
+    const key = `${v.job_title}-${v.vessel}`;
     if (!jobVesselPairs.has(key)) {
       jobVesselPairs.set(key, {
-        job: config.job_title,
-        vessel: config.vessel,
+        job: v.job_title,
+        vessel: v.vessel,
       });
     }
   });
@@ -158,18 +158,18 @@ function sortJobsByOrder(jobs: any[]): any[] {
 
 // Custom hook
 export function useDashboardRotationData() {
-  // Fetch rotation configs
-  const { data: configs = [], isLoading: loadingConfigs } = useQuery({
-    queryKey: ['rotation-configs'],
-    queryFn: fetchRotationConfigs,
+  // Fetch rotation vessels
+  const { data: vessels = [], isLoading: loadingVessels } = useQuery({
+    queryKey: ['rotation-vessels'],
+    queryFn: fetchRotationVessels,
     staleTime: 10 * 60 * 1000,
   });
 
-  // Fetch locked rotations (depends on configs)
+  // Fetch locked rotations (depends on vessels)
   const { data: lockedRotations = [], isLoading: loadingLocked } = useQuery({
-    queryKey: ['dashboard-locked-rotations', configs.length],
-    queryFn: () => fetchAllLockedRotations(configs),
-    enabled: configs.length > 0, // Only fetch when configs are loaded
+    queryKey: ['dashboard-locked-rotations', vessels.length],
+    queryFn: () => fetchAllLockedRotations(vessels),
+    enabled: vessels.length > 0, // Only fetch when vessels are loaded
     staleTime: 5 * 60 * 1000,
   });
 
@@ -180,24 +180,24 @@ export function useDashboardRotationData() {
   const categorizations = ['container', 'manalagi', 'bc'];
 
   categorizations.forEach(cat => {
-    const categoryConfigs = configs.filter(
-      c => c.categorization.toLowerCase() === cat
+    const categoryVessels = vessels.filter(
+      v => v.categorization.toLowerCase() === cat
     );
 
-    if (categoryConfigs.length === 0) return;
+    if (categoryVessels.length === 0) return;
 
     // Process SENIOR
-    const seniorConfigs = categoryConfigs.filter(c => c.type === 'senior');
+    const seniorVessels = categoryVessels.filter(v => v.type === 'senior');
     const seniorJobs: any[] = [];
 
-    seniorConfigs.forEach(config => {
-      const groups = Object.keys(config.groups).map(groupKey => {
+    seniorVessels.forEach(vessel => {
+      const groups = Object.keys(vessel.groups).map(groupKey => {
         // Find locked rotation for this group and job
         const locked = lockedRotations.find(
           lr =>
             lr.group_key === groupKey &&
-            lr.job.toLowerCase() === config.job_title.toLowerCase() &&
-            lr.vessel.toLowerCase() === config.vessel.toLowerCase()
+            lr.job.toLowerCase() === vessel.job_title.toLowerCase() &&
+            lr.vessel.toLowerCase() === vessel.vessel.toLowerCase()
         );
 
         return {
@@ -213,23 +213,23 @@ export function useDashboardRotationData() {
       });
 
       seniorJobs.push({
-        jobTitle: config.job_title,
+        jobTitle: vessel.job_title,
         groups,
       });
     });
 
     // Process JUNIOR
-    const juniorConfigs = categoryConfigs.filter(c => c.type === 'junior');
+    const juniorVessels = categoryVessels.filter(v => v.type === 'junior');
     const juniorJobs: any[] = [];
 
-    juniorConfigs.forEach(config => {
-      const groups = Object.keys(config.groups).map(groupKey => {
+    juniorVessels.forEach(vessel => {
+      const groups = Object.keys(vessel.groups).map(groupKey => {
         // Find locked rotation for this group and job
         const locked = lockedRotations.find(
           lr =>
             lr.group_key === groupKey &&
-            lr.job.toLowerCase() === config.job_title.toLowerCase() &&
-            lr.vessel.toLowerCase() === config.vessel.toLowerCase()
+            lr.job.toLowerCase() === vessel.job_title.toLowerCase() &&
+            lr.vessel.toLowerCase() === vessel.vessel.toLowerCase()
         );
 
         return {
@@ -245,18 +245,18 @@ export function useDashboardRotationData() {
       });
 
       juniorJobs.push({
-        jobTitle: config.job_title,
+        jobTitle: vessel.job_title,
         groups,
       });
     });
 
     // Calculate total groups
-    const seniorTotalGroups = seniorConfigs.reduce(
-      (sum, config) => sum + Object.keys(config.groups).length,
+    const seniorTotalGroups = seniorVessels.reduce(
+      (sum, v) => sum + Object.keys(v.groups).length,
       0
     );
-    const juniorTotalGroups = juniorConfigs.reduce(
-      (sum, config) => sum + Object.keys(config.groups).length,
+    const juniorTotalGroups = juniorVessels.reduce(
+      (sum, v) => sum + Object.keys(v.groups).length,
       0
     );
 
@@ -275,7 +275,7 @@ export function useDashboardRotationData() {
 
   return {
     dashboardData,
-    loading: loadingConfigs || loadingLocked,
+    loading: loadingVessels || loadingLocked,
     error: null,
   };
 }

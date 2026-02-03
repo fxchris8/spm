@@ -207,12 +207,12 @@ CREATE TABLE IF NOT EXISTS vessels_groups (
     group_number INT CHECK (group_number > 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-
+    
     CONSTRAINT fk_vessels_groups_vessel
-        FOREIGN KEY (vessel_id)
-        REFERENCES vessels(id)
+        FOREIGN KEY (vessel_id) 
+        REFERENCES vessels(id) 
         ON DELETE CASCADE,
-
+    
     UNIQUE(vessel_id, group_key)
 );
 
@@ -225,22 +225,22 @@ CREATE_TABLE_VESSELS_SHIPS = """
 -- Table: vessels_ships
 CREATE TABLE IF NOT EXISTS vessels_ships (
     id BIGSERIAL PRIMARY KEY,
-    group_id BIGINT,
+    vessel_id BIGINT,
     ship_name VARCHAR(100),
     order_index INT CHECK (order_index >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-    CONSTRAINT fk_vessels_ships_group
-        FOREIGN KEY (group_id)
-        REFERENCES vessels_groups(id)
+    CONSTRAINT fk_vessels_ships_vessel
+        FOREIGN KEY (vessel_id)
+        REFERENCES vessels(id)
         ON DELETE CASCADE,
 
-    UNIQUE(group_id, ship_name)
+    UNIQUE(vessel_id, ship_name)
 );
 
 -- Index for vessels_ships
-CREATE INDEX IF NOT EXISTS idx_vessels_ships_group ON vessels_ships(group_id);
+CREATE INDEX IF NOT EXISTS idx_vessels_ships_vessel ON vessels_ships(vessel_id);
 """
 
 # Table: rotation_submissions

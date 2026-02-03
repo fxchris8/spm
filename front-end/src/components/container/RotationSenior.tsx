@@ -8,7 +8,7 @@ import { useRotationContainer } from '../../hooks/useRotationContainer';
 import { useMemo } from 'react';
 
 export function RotationSenior() {
-  const { configs, loading, error } = useRotationContainer(
+  const { vessels, loading, error } = useRotationContainer(
     'senior',
     'container'
   );
@@ -17,8 +17,8 @@ export function RotationSenior() {
   const containerOrder = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
 
   // ✅ Optimized: useMemo untuk sorting
-  const sortedConfigs = useMemo(() => {
-    return [...configs].sort((a, b) => {
+  const sortedVessels = useMemo(() => {
+    return [...vessels].sort((a, b) => {
       const indexA = containerOrder.indexOf(a.job_title);
       const indexB = containerOrder.indexOf(b.job_title);
 
@@ -27,7 +27,7 @@ export function RotationSenior() {
 
       return indexA - indexB;
     });
-  }, [configs]);
+  }, [vessels]);
 
   if (loading) {
     return (
@@ -49,7 +49,7 @@ export function RotationSenior() {
     );
   }
 
-  if (configs.length === 0) {
+  if (vessels.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Tidak ada konfigurasi rotasi senior</p>
@@ -60,26 +60,26 @@ export function RotationSenior() {
   return (
     <div>
       <Tabs aria-label="Crew rotation tabs" variant="underline">
-        {sortedConfigs.map((config, index) => (
+        {sortedVessels.map((v, index) => (
           <Tabs.Item
-            key={config.id}
+            key={v.id}
             active={index === 0}
             title={
-              config.job_title === 'KKM'
+              v.job_title === 'KKM'
                 ? 'KKM'
-                : formatJobTitle(config.job_title)
+                : formatJobTitle(v.job_title)
             }
             icon={HiUserCircle}
           >
             {/* ✅ Lazy Loading: Component hanya render saat tab aktif */}
             <div>
               <SeniorRotation
-                categorization={config.categorization}
-                vessel={config.vessel}
-                type={config.type}
-                part={config.part}
-                job={config.job_title}
-                groups={config.groups}
+                categorization={v.categorization}
+                vessel={v.vessel}
+                type={v.type}
+                part={v.part}
+                job={v.job_title}
+                groups={v.groups}
               />
             </div>
           </Tabs.Item>

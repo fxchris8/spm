@@ -19,7 +19,7 @@ import {
 } from 'react-icons/hi';
 import {
   useVesselManagement,
-  RotationConfig,
+  RotationVessel,
 } from '../../hooks/useVesselManagement';
 import { LoadingComponent } from '../LoadingComponent';
 
@@ -27,16 +27,16 @@ type AlertType = 'success' | 'error' | 'warning' | 'info';
 
 export function VesselManagement() {
   const {
-    configs,
+    vessels,
     loading,
-    createConfig,
-    updateConfig,
-    deleteConfig,
+    createVessel,
+    updateVessel,
+    deleteVessel,
     refetch,
   } = useVesselManagement();
 
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
-  const [editingConfig, setEditingConfig] = useState<RotationConfig | null>(
+  const [editingVessel, setEditingVessel] = useState<RotationVessel | null>(
     null
   );
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -78,7 +78,7 @@ export function VesselManagement() {
   };
 
   const handleCreate = () => {
-    setEditingConfig(null);
+    setEditingVessel(null);
     setIsFieldsLocked(false);
     setExpandedRowId(null);
     setFormData({
@@ -92,24 +92,24 @@ export function VesselManagement() {
     setShowCreateForm(true);
   };
 
-  const handleEdit = (config: RotationConfig) => {
+  const handleEdit = (vessel: RotationVessel) => {
     setShowCreateForm(false);
-    setEditingConfig(config);
+    setEditingVessel(vessel);
     setIsFieldsLocked(true);
-    setExpandedRowId(config.id);
+    setExpandedRowId(vessel.id);
     setFormData({
-      job_title: config.job_title,
-      vessel: config.vessel,
-      type: config.type,
-      part: config.part,
-      categorization: config.categorization || 'container',
-      groups: config.groups,
+      job_title: vessel.job_title,
+      vessel: vessel.vessel,
+      type: vessel.type,
+      part: vessel.part,
+      categorization: vessel.categorization || 'container',
+      groups: vessel.groups,
     });
   };
 
   const handleCancelEdit = () => {
     setExpandedRowId(null);
-    setEditingConfig(null);
+    setEditingVessel(null);
     setShowCreateForm(false);
     setIsFieldsLocked(true);
   };
@@ -121,7 +121,7 @@ export function VesselManagement() {
 
     setIsSubmitting(true);
     try {
-      const result = await deleteConfig(id);
+      const result = await deleteVessel(id);
       showAlert('success', result.message || 'Konfigurasi berhasil dihapus!');
       handleCancelEdit();
     } catch (error: any) {
@@ -156,19 +156,19 @@ export function VesselManagement() {
 
     setIsSubmitting(true);
     try {
-      if (editingConfig) {
-        const result = await updateConfig(editingConfig.id, formData);
+      if (editingVessel) {
+        const result = await updateVessel(editingVessel.id, formData);
         showAlert(
           'success',
           result.message || 'Konfigurasi berhasil diupdate!'
         );
       } else {
-        const result = await createConfig(formData);
+        const result = await createVessel(formData);
         showAlert('success', result.message || 'Konfigurasi berhasil dibuat!');
       }
       handleCancelEdit();
     } catch (error: any) {
-      console.error('Error saving config:', error);
+      console.error('Error saving vessel:', error);
       showAlert('error', `Gagal menyimpan: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -252,17 +252,17 @@ export function VesselManagement() {
   ];
   const typeOrder = ['senior', 'junior'];
 
-  const filteredAndSortedConfigs = useMemo(() => {
-    return [...configs]
-      .filter(config => {
+  const filteredAndSortedVessels = useMemo(() => {
+    return [...vessels]
+      .filter(vessel => {
         if (
           filterCategorization !== 'all' &&
-          config.categorization !== filterCategorization
+          vessel.categorization !== filterCategorization
         )
           return false;
-        if (filterType !== 'all' && config.type !== filterType) return false;
-        if (filterPart !== 'all' && config.part !== filterPart) return false;
-        if (filterPosition !== 'all' && config.job_title !== filterPosition)
+        if (filterType !== 'all' && vessel.type !== filterType) return false;
+        if (filterPart !== 'all' && vessel.part !== filterPart) return false;
+        if (filterPosition !== 'all' && vessel.job_title !== filterPosition)
           return false;
         return true;
       })
@@ -290,10 +290,10 @@ export function VesselManagement() {
         if (jobIndexB === -1) return -1;
         return jobIndexA - jobIndexB;
       });
-  }, [configs, filterCategorization, filterType, filterPart, filterPosition]);
+  }, [vessels, filterCategorization, filterType, filterPart, filterPosition]);
 
   if (loading) {
-    return <LoadingComponent message="Loading rotation configurations..." />;
+    return <LoadingComponent message="Loading rotation vessels..." />;
   }
 
   return (
@@ -433,7 +433,7 @@ export function VesselManagement() {
             <Table.HeadCell>Aksi</Table.HeadCell>
           </Table.Head>
           <Table.Body className="divide-y">
-            {filteredAndSortedConfigs.length === 0 ? (
+            {filteredAndSortedVessels.length === 0 ? (
               <Table.Row>
                 <Table.Cell colSpan={7} className="text-center py-8">
                   <p className="text-gray-500">
@@ -442,46 +442,46 @@ export function VesselManagement() {
                 </Table.Cell>
               </Table.Row>
             ) : (
-              filteredAndSortedConfigs.map(config => (
+              filteredAndSortedVessels.map(vessel => (
                 <>
-                  <Table.Row key={config.id} className="bg-white">
+                  <Table.Row key={vessel.id} className="bg-white">
                     <Table.Cell>
                       <Badge
                         color={
-                          config.categorization === 'container'
+                          vessel.categorization === 'container'
                             ? 'indigo'
-                            : config.categorization === 'manalagi'
+                            : vessel.categorization === 'manalagi'
                               ? 'pink'
                               : 'cyan'
                         }
                       >
-                        {config.categorization?.toUpperCase() || 'N/A'}
+                        {vessel.categorization?.toUpperCase() || 'N/A'}
                       </Badge>
                     </Table.Cell>
                     <Table.Cell>
                       <Badge
-                        color={config.type === 'senior' ? 'success' : 'warning'}
+                        color={vessel.type === 'senior' ? 'success' : 'warning'}
                       >
-                        {config.type}
+                        {vessel.type}
                       </Badge>
                     </Table.Cell>
                     <Table.Cell>
-                      <Badge color={config.part === 'deck' ? 'blue' : 'gray'}>
-                        {config.part}
+                      <Badge color={vessel.part === 'deck' ? 'blue' : 'gray'}>
+                        {vessel.part}
                       </Badge>
                     </Table.Cell>
                     <Table.Cell>
-                      <Badge color="info">{config.vessel}</Badge>
+                      <Badge color="info">{vessel.vessel}</Badge>
                     </Table.Cell>
                     <Table.Cell className="font-medium">
-                      {formatJobTitleDisplay(config.job_title)}
+                      {formatJobTitleDisplay(vessel.job_title)}
                     </Table.Cell>
                     <Table.Cell>
                       <div className="flex flex-wrap gap-1">
-                        {Object.keys(config.groups).map(groupKey => (
+                        {Object.keys(vessel.groups).map(groupKey => (
                           <Badge key={groupKey} color="gray" size="sm">
                             {formatGroupName(groupKey)} (
-                            {config.groups[groupKey].length})
+                            {vessel.groups[groupKey].length})
                           </Badge>
                         ))}
                       </div>
@@ -491,13 +491,13 @@ export function VesselManagement() {
                         <Button
                           size="xs"
                           onClick={() =>
-                            expandedRowId === config.id
+                            expandedRowId === vessel.id
                               ? handleCancelEdit()
-                              : handleEdit(config)
+                              : handleEdit(vessel)
                           }
                           disabled={isSubmitting || showCreateForm}
                         >
-                          {expandedRowId === config.id ? (
+                          {expandedRowId === vessel.id ? (
                             <>
                               <HiChevronUp className="mr-1" />
                               Tutup
@@ -513,7 +513,7 @@ export function VesselManagement() {
                           size="xs"
                           color="failure"
                           onClick={() =>
-                            handleDelete(config.id, config.job_title)
+                            handleDelete(vessel.id, vessel.job_title)
                           }
                           disabled={isSubmitting || showCreateForm}
                         >
@@ -523,7 +523,7 @@ export function VesselManagement() {
                     </Table.Cell>
                   </Table.Row>
 
-                  {expandedRowId === config.id && editingConfig && (
+                  {expandedRowId === vessel.id && editingVessel && (
                     <Table.Row>
                       <Table.Cell colSpan={7} className="bg-gray-50 p-0">
                         <Card className="m-4">
@@ -545,7 +545,7 @@ export function VesselManagement() {
                             setFormData={setFormData}
                             isFieldsLocked={isFieldsLocked}
                             setIsFieldsLocked={setIsFieldsLocked}
-                            editingConfig={editingConfig}
+                            editingConfig={editingVessel}
                             isSubmitting={isSubmitting}
                             handleSubmit={handleSubmit}
                             addGroup={addGroup}
@@ -573,7 +573,7 @@ function EditForm({
   setFormData,
   isFieldsLocked,
   setIsFieldsLocked,
-  editingConfig,
+  editingVessel,
   isSubmitting,
   handleSubmit,
   addGroup,
@@ -584,7 +584,7 @@ function EditForm({
 }: any) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {editingConfig && !isFieldsLocked && (
+      {editingVessel && !isFieldsLocked && (
         <Alert color="warning">
           <div className="flex items-start justify-between">
             <span className="text-sm">
@@ -612,8 +612,8 @@ function EditForm({
             onChange={e =>
               setFormData({ ...formData, categorization: e.target.value })
             }
-            disabled={editingConfig ? isFieldsLocked : false}
-            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+            disabled={editingVessel ? isFieldsLocked : false}
+            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
           >
             <option value="container">Container</option>
             <option value="manalagi">Manalagi</option>
@@ -626,8 +626,8 @@ function EditForm({
             id="type"
             value={formData.type}
             onChange={e => setFormData({ ...formData, type: e.target.value })}
-            disabled={editingConfig ? isFieldsLocked : false}
-            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+            disabled={editingVessel ? isFieldsLocked : false}
+            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
           >
             <option value="senior">Senior</option>
             <option value="junior">Junior</option>
@@ -636,7 +636,7 @@ function EditForm({
         <div>
           <Label htmlFor="part">
             Part *
-            {editingConfig && isFieldsLocked && (
+            {editingVessel && isFieldsLocked && (
               <span className="ml-2 text-xs text-amber-600"></span>
             )}
           </Label>
@@ -644,8 +644,8 @@ function EditForm({
             id="part"
             value={formData.part}
             onChange={e => setFormData({ ...formData, part: e.target.value })}
-            disabled={editingConfig ? isFieldsLocked : false}
-            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+            disabled={editingVessel ? isFieldsLocked : false}
+            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
           >
             <option value="deck">Deck</option>
             <option value="engine">Engine</option>
@@ -654,7 +654,7 @@ function EditForm({
         <div>
           <Label htmlFor="vessel">
             Vessel *
-            {editingConfig && isFieldsLocked && (
+            {editingVessel && isFieldsLocked && (
               <span className="ml-2 text-xs text-amber-600"></span>
             )}
           </Label>
@@ -662,8 +662,8 @@ function EditForm({
             id="vessel"
             value={formData.vessel}
             onChange={e => setFormData({ ...formData, vessel: e.target.value })}
-            disabled={editingConfig ? isFieldsLocked : false}
-            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+            disabled={editingVessel ? isFieldsLocked : false}
+            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
           >
             <option value="D">D</option>
             <option value="E">E</option>
@@ -674,7 +674,7 @@ function EditForm({
         <div>
           <Label htmlFor="job_title">
             Position *
-            {editingConfig && isFieldsLocked && (
+            {editingVessel && isFieldsLocked && (
               <span className="ml-2 text-xs text-amber-600"></span>
             )}
           </Label>
@@ -685,8 +685,8 @@ function EditForm({
               setFormData({ ...formData, job_title: e.target.value })
             }
             required
-            disabled={editingConfig ? isFieldsLocked : false}
-            className={editingConfig && isFieldsLocked ? 'bg-gray-100' : ''}
+            disabled={editingVessel ? isFieldsLocked : false}
+            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
           >
             <option value="">Pilih Position</option>
             <option value="nakhoda">Nahkoda</option>
@@ -701,7 +701,7 @@ function EditForm({
         </div>
       </div>
 
-      {editingConfig && isFieldsLocked && (
+      {editingVessel && isFieldsLocked && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm text-blue-800">
             Field kritis di-lock untuk mencegah perubahan tidak sengaja.
@@ -751,9 +751,9 @@ function EditForm({
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {editingConfig ? 'Updating...' : 'Menyimpan...'}
+              {editingVessel ? 'Updating...' : 'Menyimpan...'}
             </>
-          ) : editingConfig ? (
+          ) : editingVessel ? (
             'Update'
           ) : (
             'Simpan'

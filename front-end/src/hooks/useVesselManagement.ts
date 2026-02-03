@@ -1,7 +1,7 @@
 // Kebutuhan: fetch rotation ship config, create, update, delete
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-export interface RotationConfig {
+export interface RotationVessel {
   id: number;
   job_title: string;
   vessel: string;
@@ -11,7 +11,7 @@ export interface RotationConfig {
   groups: Record<string, string[]>;
 }
 
-interface CreateConfigData {
+interface CreateVesselData {
   job_title: string;
   vessel: string;
   type: string;
@@ -29,11 +29,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ============= FETCH FUNCTIONS =============
 
-// Fetch all rotation configs or filter by type
-async function fetchRotationConfigs(type?: string): Promise<RotationConfig[]> {
+// Fetch all rotation Vessels or filter by type
+async function fetchRotationVessels(type?: string): Promise<RotationVessel[]> {
   const url = type
-    ? `${API_BASE_URL}/rotation-configs?type=${type}`
-    : `${API_BASE_URL}/rotation-configs`;
+    ? `${API_BASE_URL}/rotation-vessels?type=${type}`
+    : `${API_BASE_URL}/rotation-vessels`;
 
   const response = await fetch(url);
 
@@ -45,10 +45,10 @@ async function fetchRotationConfigs(type?: string): Promise<RotationConfig[]> {
 }
 
 // Create new config
-async function createRotationConfig(
-  data: CreateConfigData
+async function createRotationVessel(
+  data: CreateVesselData
 ): Promise<ApiResponse> {
-  const response = await fetch(`${API_BASE_URL}/rotation-configs`, {
+  const response = await fetch(`${API_BASE_URL}/rotation-vessels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -63,11 +63,11 @@ async function createRotationConfig(
 }
 
 // Update existing config
-async function updateRotationConfig(
+async function updateRotationVessel(
   id: number,
-  data: Partial<CreateConfigData>
+  data: Partial<CreateVesselData>
 ): Promise<ApiResponse> {
-  const response = await fetch(`${API_BASE_URL}/rotation-configs/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/rotation-vessels/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -75,21 +75,21 @@ async function updateRotationConfig(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to update config');
+    throw new Error(error.message || 'Failed to update vessel');
   }
 
   return response.json();
 }
 
 // Delete config
-async function deleteRotationConfig(id: number): Promise<ApiResponse> {
-  const response = await fetch(`${API_BASE_URL}/rotation-configs/${id}`, {
+async function deleteRotationVessel(id: number): Promise<ApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/rotation-vessels/${id}`, {
     method: 'DELETE',
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to delete config');
+    throw new Error(error.message || 'Failed to delete vessel');
   }
 
   return response.json();
@@ -99,22 +99,22 @@ async function deleteRotationConfig(id: number): Promise<ApiResponse> {
 
 export function useVesselManagement(type?: string) {
   const queryClient = useQueryClient();
-  const queryKey = type ? ['rotation-configs', type] : ['rotation-configs'];
+  const queryKey = type ? ['rotation-vessels', type] : ['rotation-vessels'];
 
   // ✅ Query untuk fetch data
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
-    queryFn: () => fetchRotationConfigs(type),
+    queryFn: () => fetchRotationVessels(type),
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
   });
 
   // ✅ Mutation untuk CREATE
   const createMutation = useMutation({
-    mutationFn: createRotationConfig,
+    mutationFn: createRotationVessel,
     onSuccess: () => {
-      // Invalidate semua rotation-configs queries
-      queryClient.invalidateQueries({ queryKey: ['rotation-configs'] });
+      // Invalidate semua rotation-vessels queries
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
     },
   });
 
@@ -125,42 +125,42 @@ export function useVesselManagement(type?: string) {
       data,
     }: {
       id: number;
-      data: Partial<CreateConfigData>;
-    }) => updateRotationConfig(id, data),
+      data: Partial<CreateVesselData>;
+    }) => updateRotationVessel(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rotation-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
     },
   });
 
   // ✅ Mutation untuk DELETE
   const deleteMutation = useMutation({
-    mutationFn: deleteRotationConfig,
+    mutationFn: deleteRotationVessel,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rotation-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
     },
   });
 
   // ============= WRAPPER FUNCTIONS =============
 
-  const createConfig = async (data: CreateConfigData) => {
+  const createVessel = async (data: CreateVesselData) => {
     return createMutation.mutateAsync(data);
   };
 
-  const updateConfig = async (id: number, data: Partial<CreateConfigData>) => {
+  const updateVessel = async (id: number, data: Partial<CreateVesselData>) => {
     return updateMutation.mutateAsync({ id, data });
   };
 
-  const deleteConfig = async (id: number) => {
+  const deleteVessel = async (id: number) => {
     return deleteMutation.mutateAsync(id);
   };
 
   return {
-    configs: data || [],
+    vessels: data || [],
     loading: isLoading,
     error: error?.message || null,
-    createConfig,
-    updateConfig,
-    deleteConfig,
+    createVessel,
+    updateVessel,
+    deleteVessel,
     refetch,
     // Status untuk loading state saat mutation
     isCreating: createMutation.isPending,

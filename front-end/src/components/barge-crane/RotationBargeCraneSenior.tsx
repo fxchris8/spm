@@ -4,15 +4,15 @@
 import { Tabs } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
-import { useRotationConfigs } from '../../hooks/useRotationConfigs';
+import { useRotationVessels } from '../../hooks/useRotationVessels';
 
 export function RotationBargeCraneSenior() {
-  const { configs, loading, error } = useRotationConfigs('senior', 'bc');
+  const { vessels, loading, error } = useRotationVessels('senior', 'bc');
 
   // Urutan tabs untuk barge crane
   const bargeCraneOrder = ['nakhoda', 'KKM'];
 
-  const sortedConfigs = [...configs].sort((a, b) => {
+  const sortedVessels = [...vessels].sort((a, b) => {
     const indexA = bargeCraneOrder.indexOf(a.job_title);
     const indexB = bargeCraneOrder.indexOf(b.job_title);
 
@@ -43,7 +43,7 @@ export function RotationBargeCraneSenior() {
     );
   }
 
-  if (configs.length === 0) {
+  if (vessels.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">
@@ -56,23 +56,23 @@ export function RotationBargeCraneSenior() {
   return (
     <div className="flex flex-col gap-3 mb-0">
       <Tabs aria-label="Default tabs" variant="default">
-        {sortedConfigs.map((config, index) => (
+        {sortedVessels.map((v, index) => (
           <Tabs.Item
-            key={config.id}
+            key={v.id}
             active={index === 0}
             title={
-              config.job_title === 'KKM'
+              v.job_title === 'KKM'
                 ? 'KKM'
-                : formatJobTitle(config.job_title)
+                : formatJobTitle(v.job_title)
             }
             icon={HiUserCircle}
           >
             <BargeCraneSeniorRotation
-              vessel={config.vessel}
-              type={config.type}
-              part={config.part}
-              job={config.job_title}
-              groups={config.groups}
+              vessel={v.vessel}
+              type={v.type}
+              part={v.part}
+              job={v.job_title}
+              groups={v.groups}
             />
           </Tabs.Item>
         ))}
