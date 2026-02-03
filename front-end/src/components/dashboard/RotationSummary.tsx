@@ -2,14 +2,16 @@
 'use client';
 
 import { useDashboardRotationData } from '../../hooks/useDashboardRotationData';
+import { useVesselStats } from '../../hooks/useVesselStats';
 import { Spinner, Tabs, Accordion, Badge } from 'flowbite-react';
 import { HiLockClosed } from 'react-icons/hi';
 import { FaShip } from 'react-icons/fa';
 
 export function RotationSummary() {
   const { dashboardData, loading } = useDashboardRotationData();
+  const { vesselStats, loading: loadingVesselStats } = useVesselStats();
 
-  if (loading) {
+  if (loading || loadingVesselStats) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <Spinner size="xl" color="failure" />
@@ -79,8 +81,71 @@ export function RotationSummary() {
           </h1>
         </div>
         <p className="text-gray-600">
-          Ringkasan data rotasi kapal di PT Salam Pacific Indonesia Lines.
+          Ringkasan data rotasi dan kapal di PT Salam Pacific Indonesia Lines.
         </p>
+      </div>
+
+      {/* Vessel Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {/* Container */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Container
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.container > 0 ? vesselStats.container : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* Manalagi */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Manalagi
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.manalagi > 0 ? vesselStats.manalagi : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* Barge Crane */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Barge Crane
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.bc > 0 ? vesselStats.bc : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* MT */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total MT</p>
+            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3> 
+          </div>
+        </div>
+
+        {/* TB */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total TB</p>
+            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3>
+          </div>
+        </div>
+
+        {/* TK */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total TK</p>
+            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3>
+          </div>
+        </div>
       </div>
 
       {dashboardData.length === 0 ? (

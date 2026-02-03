@@ -503,6 +503,51 @@ def manual_sync():
         }), 500
 
 
+# Route to get vessel statistics by category
+@app.route("/api/vessel-stats")
+def get_vessel_stats():
+    """
+    Returns the count of unique vessels for each category.
+    Categories: container, manalagi, bc
+    """
+    try:
+        # Get rotation vessels from database
+        rotation_vessels = get_rotation_vessels()
+        
+        # Count unique ships per category
+        container_ships = set()
+        manalagi_ships = set()
+        bc_ships = set()
+        
+        for vessel in rotation_vessels:
+            categorization = vessel.get('categorization', '').lower()
+            groups = vessel.get('groups', {})
+            
+            # Collect all ships from all groups in this vessel
+            for group_ships in groups.values():
+                if categorization == 'container':
+                    container_ships.update(group_ships)
+                elif categorization == 'manalagi':
+                    manalagi_ships.update(group_ships)
+                elif categorization == 'bc':
+                    bc_ships.update(group_ships)
+        
+        stats = {
+            "container": len(container_ships),
+            "manalagi": len(manalagi_ships),
+            "bc": len(bc_ships),
+        }
+        
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        print(f"[VESSEL STATS ERROR] {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to get vessel stats: {str(e)}"
+        }), 500
+
+
 # ============================================================================
 # BAGIAN 3: SIMILARITY & RECOMMENDATION ENGINE
 # ============================================================================
