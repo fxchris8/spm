@@ -1,7 +1,7 @@
 // src/components/RotationSchedule.tsx
 'use client';
 
-import { Tabs } from 'flowbite-react';
+import { Tabs, Spinner } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { JuniorRotation } from './JuniorRotation';
 import { useRotationVessels } from '../../hooks/useRotationVessels';
@@ -25,11 +25,9 @@ export function RotationJunior() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading junior rotations...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading junior rotations...</span>
       </div>
     );
   }
@@ -37,7 +35,7 @@ export function RotationJunior() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="text-red-600 mb-2">⚠️ Error loading data</div>
+        <div className="text-red-600 mb-2">Error loading data</div>
         <p className="text-gray-600">{error}</p>
       </div>
     );
