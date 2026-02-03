@@ -1,27 +1,15 @@
-import { useState, useMemo } from 'react';
-import {
-  Button,
-  Table,
-  TextInput,
-  Label,
-  Select,
-  Badge,
-  Alert,
-  Card,
-} from 'flowbite-react';
-import {
-  HiPlus,
-  HiTrash,
-  HiRefresh,
-  HiChevronUp,
-  HiPencil,
-  HiX,
-} from 'react-icons/hi';
-import {
-  useVesselManagement,
-  RotationVessel,
-} from '../../hooks/useVesselManagement';
+import { useState, useEffect, useMemo } from 'react';
+import { Button, Alert, Spinner } from 'flowbite-react';
+import { HiRefresh } from 'react-icons/hi';
+import { CategoryPositionSelector } from './CategoryPositionSelector';
+import { GroupsEditor } from './GroupsEditor';
+import { useVesselManagement } from '../../hooks/useVesselManagement';
 import { LoadingComponent } from '../LoadingComponent';
+import {
+  getHiddenFieldsFromSelection,
+  formatCategorizationDisplay,
+  formatPositionDisplay,
+} from '../../utils/vesselMappingUtils';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -35,29 +23,18 @@ export function VesselManagement() {
     refetch,
   } = useVesselManagement();
 
-  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
-  const [editingVessel, setEditingVessel] = useState<RotationVessel | null>(
-    null
+  // Selection states
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    'container'
   );
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    job_title: '',
-    vessel: 'D',
-    type: 'senior',
-    part: 'deck',
-    categorization: 'container',
-    groups: {} as Record<string, string[]>,
-  });
+  // Edit states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedGroups, setEditedGroups] = useState<Record<string, string[]>>(
+    {}
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFieldsLocked, setIsFieldsLocked] = useState(true);
-
-  // Filter states
-  const [filterCategorization, setFilterCategorization] =
-    useState<string>('all');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterPart, setFilterPart] = useState<string>('all');
-  const [filterPosition, setFilterPosition] = useState<string>('all');
 
   // Alert state
   const [alert, setAlert] = useState<{
@@ -70,6 +47,26 @@ export function VesselManagement() {
     message: '',
   });
 
+  // Find existing vessel configuration based on selection
+  const existingVessel = useMemo(() => {
+    if (!selectedCategory || !selectedPosition) return null;
+
+    return vessels.find(
+      v =>
+        v.categorization === selectedCategory &&
+        v.job_title === selectedPosition
+    );
+  }, [vessels, selectedCategory, selectedPosition]);
+
+  // Update edited groups when existing vessel changes
+  useEffect(() => {
+    if (existingVessel) {
+      setEditedGroups(existingVessel.groups);
+    } else {
+      setEditedGroups({});
+    }
+  }, [existingVessel]);
+
   const showAlert = (type: AlertType, message: string) => {
     setAlert({ show: true, type, message });
     setTimeout(() => {
@@ -77,75 +74,42 @@ export function VesselManagement() {
     }, 5000);
   };
 
-  const handleCreate = () => {
-    setEditingVessel(null);
-    setIsFieldsLocked(false);
-    setExpandedRowId(null);
-    setFormData({
-      job_title: '',
-      vessel: 'D',
-      type: 'senior',
-      part: 'deck',
-      categorization: 'container',
-      groups: {},
-    });
-    setShowCreateForm(true);
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedPosition(null);
+    setIsEditMode(false);
+    setEditedGroups({});
   };
 
-  const handleEdit = (vessel: RotationVessel) => {
-    setShowCreateForm(false);
-    setEditingVessel(vessel);
-    setIsFieldsLocked(true);
-    setExpandedRowId(vessel.id);
-    setFormData({
-      job_title: vessel.job_title,
-      vessel: vessel.vessel,
-      type: vessel.type,
-      part: vessel.part,
-      categorization: vessel.categorization || 'container',
-      groups: vessel.groups,
-    });
+  const handlePositionChange = (position: string) => {
+    setSelectedPosition(position);
+    setIsEditMode(false);
   };
 
-  const handleCancelEdit = () => {
-    setExpandedRowId(null);
-    setEditingVessel(null);
-    setShowCreateForm(false);
-    setIsFieldsLocked(true);
+  const handleEditToggle = () => {
+    if (isEditMode) {
+      // Cancel edit - revert to original
+      if (existingVessel) {
+        setEditedGroups(existingVessel.groups);
+      } else {
+        setEditedGroups({});
+      }
+    }
+    setIsEditMode(!isEditMode);
   };
 
-  const handleDelete = async (id: number, jobTitle: string) => {
-    if (!window.confirm(`Yakin ingin menghapus konfigurasi ${jobTitle}?`)) {
+  const handleSave = async () => {
+    if (!selectedCategory || !selectedPosition) {
+      showAlert('warning', 'Pilih kategori dan position terlebih dahulu!');
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const result = await deleteVessel(id);
-      showAlert('success', result.message || 'Konfigurasi berhasil dihapus!');
-      handleCancelEdit();
-    } catch (error: any) {
-      console.error('Error deleting config:', error);
-      showAlert('error', `Gagal menghapus: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.job_title.trim()) {
-      showAlert('warning', 'Position harus diisi!');
-      return;
-    }
-
-    if (Object.keys(formData.groups).length === 0) {
+    if (Object.keys(editedGroups).length === 0) {
       showAlert('warning', 'Minimal harus ada 1 group!');
       return;
     }
 
-    const hasEmptyGroup = Object.entries(formData.groups).some(
+    const hasEmptyGroup = Object.entries(editedGroups).some(
       ([, ships]) => ships.length === 0
     );
 
@@ -154,19 +118,45 @@ export function VesselManagement() {
       return;
     }
 
+    // Get hidden fields from mapping
+    const hiddenFields = getHiddenFieldsFromSelection(
+      selectedCategory,
+      selectedPosition
+    );
+
+    if (!hiddenFields) {
+      showAlert(
+        'error',
+        'Kombinasi kategori dan position tidak valid! Silakan hubungi administrator.'
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (editingVessel) {
-        const result = await updateVessel(editingVessel.id, formData);
+      const payload = {
+        job_title: selectedPosition,
+        vessel: hiddenFields.vessel,
+        type: hiddenFields.type,
+        part: hiddenFields.part,
+        categorization: selectedCategory,
+        groups: editedGroups,
+      };
+
+      if (existingVessel) {
+        // Update existing
+        const result = await updateVessel(existingVessel.id, payload);
         showAlert(
           'success',
           result.message || 'Konfigurasi berhasil diupdate!'
         );
       } else {
-        const result = await createVessel(formData);
+        // Create new
+        const result = await createVessel(payload);
         showAlert('success', result.message || 'Konfigurasi berhasil dibuat!');
       }
-      handleCancelEdit();
+
+      setIsEditMode(false);
     } catch (error: any) {
       console.error('Error saving vessel:', error);
       showAlert('error', `Gagal menyimpan: ${error.message}`);
@@ -175,122 +165,31 @@ export function VesselManagement() {
     }
   };
 
-  const addGroup = () => {
-    const groupNumber = Object.keys(formData.groups).length + 1;
-    const groupKey = `${formData.categorization}_rotation${groupNumber}`;
-    setFormData({
-      ...formData,
-      groups: {
-        ...formData.groups,
-        [groupKey]: [],
-      },
-    });
-  };
+  const handleDelete = async () => {
+    if (!existingVessel) return;
 
-  const removeGroup = (groupKey: string) => {
-    const newGroups = { ...formData.groups };
-    delete newGroups[groupKey];
-    setFormData({ ...formData, groups: newGroups });
-  };
-
-  const addShipToGroup = (groupKey: string, shipName: string) => {
-    if (!shipName.trim()) {
-      showAlert('warning', 'Nama kapal tidak boleh kosong!');
+    if (
+      !window.confirm(
+        `Yakin ingin menghapus konfigurasi ${formatPositionDisplay(selectedPosition!)} untuk ${formatCategorizationDisplay(selectedCategory!)}?`
+      )
+    ) {
       return;
     }
 
-    setFormData({
-      ...formData,
-      groups: {
-        ...formData.groups,
-        [groupKey]: [...(formData.groups[groupKey] || []), shipName.trim()],
-      },
-    });
+    setIsSubmitting(true);
+    try {
+      const result = await deleteVessel(existingVessel.id);
+      showAlert('success', result.message || 'Konfigurasi berhasil dihapus!');
+      setSelectedPosition(null);
+      setEditedGroups({});
+      setIsEditMode(false);
+    } catch (error: any) {
+      console.error('Error deleting config:', error);
+      showAlert('error', `Gagal menghapus: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const removeShipFromGroup = (groupKey: string, index: number) => {
-    const ships = [...formData.groups[groupKey]];
-    ships.splice(index, 1);
-    setFormData({
-      ...formData,
-      groups: {
-        ...formData.groups,
-        [groupKey]: ships,
-      },
-    });
-  };
-
-  const formatJobTitleDisplay = (jobTitle: string): string => {
-    const formatMap: Record<string, string> = {
-      nakhoda: 'Nahkoda',
-      KKM: 'KKM',
-      mualimI: 'Mualim I',
-      mualimII: 'Mualim II',
-      mualimIII: 'Mualim III',
-      masinisII: 'Masinis II',
-      masinisIII: 'Masinis III',
-      masinisIV: 'Masinis IV',
-    };
-    return formatMap[jobTitle] || jobTitle;
-  };
-
-  const formatGroupName = (groupKey: string): string => {
-    const match = groupKey.match(/rotation(\d+)$/);
-    return match ? `Group ${match[1]}` : groupKey;
-  };
-
-  const categorizationOrder = ['container', 'manalagi', 'bc'];
-  const jobTitleOrder = [
-    'nakhoda',
-    'KKM',
-    'mualimI',
-    'masinisII',
-    'mualimII',
-    'masinisIII',
-    'mualimIII',
-    'masinisIV',
-  ];
-  const typeOrder = ['senior', 'junior'];
-
-  const filteredAndSortedVessels = useMemo(() => {
-    return [...vessels]
-      .filter(vessel => {
-        if (
-          filterCategorization !== 'all' &&
-          vessel.categorization !== filterCategorization
-        )
-          return false;
-        if (filterType !== 'all' && vessel.type !== filterType) return false;
-        if (filterPart !== 'all' && vessel.part !== filterPart) return false;
-        if (filterPosition !== 'all' && vessel.job_title !== filterPosition)
-          return false;
-        return true;
-      })
-      .sort((a, b) => {
-        // 1. Sort by categorization first (container, manalagi, bc)
-        const categorizationIndexA = categorizationOrder.indexOf(
-          a.categorization
-        );
-        const categorizationIndexB = categorizationOrder.indexOf(
-          b.categorization
-        );
-        if (categorizationIndexA !== categorizationIndexB) {
-          return categorizationIndexA - categorizationIndexB;
-        }
-
-        // 2. Then sort by type (senior, junior)
-        const typeIndexA = typeOrder.indexOf(a.type);
-        const typeIndexB = typeOrder.indexOf(b.type);
-        if (typeIndexA !== typeIndexB) return typeIndexA - typeIndexB;
-
-        // 3. Finally sort by job title
-        const jobIndexA = jobTitleOrder.indexOf(a.job_title);
-        const jobIndexB = jobTitleOrder.indexOf(b.job_title);
-        if (jobIndexA === -1) return 1;
-        if (jobIndexB === -1) return -1;
-        return jobIndexA - jobIndexB;
-      });
-  }, [vessels, filterCategorization, filterType, filterPart, filterPosition]);
 
   if (loading) {
     return <LoadingComponent message="Loading rotation vessels..." />;
@@ -298,6 +197,7 @@ export function VesselManagement() {
 
   return (
     <div className="p-6">
+      {/* Alert */}
       {alert.show && (
         <div className="mb-4">
           <Alert
@@ -309,541 +209,124 @@ export function VesselManagement() {
         </div>
       )}
 
+      {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold text-gray-800">
             Rotation Ship Configuration
           </h1>
-          <div className="flex gap-2">
-            <Button color="gray" onClick={() => refetch()} className="hidden">
-              <HiRefresh className="mr-2" />
-              Refresh
-            </Button>
-            <Button onClick={handleCreate}>
-              <HiPlus className="mr-2" />
-              Tambah Konfigurasi
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
-          <div>
-            <Label htmlFor="filter-categorization" className="mb-2 block">
-              Filter by Categorization
-            </Label>
-            <Select
-              id="filter-categorization"
-              value={filterCategorization}
-              onChange={e => setFilterCategorization(e.target.value)}
-            >
-              <option value="all">All Categorization</option>
-              <option value="container">Container</option>
-              <option value="manalagi">Manalagi</option>
-              <option value="bc">BC (Barge Crane)</option>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="filter-type" className="mb-2 block">
-              Filter by Type
-            </Label>
-            <Select
-              id="filter-type"
-              value={filterType}
-              onChange={e => setFilterType(e.target.value)}
-            >
-              <option value="all">Semua Type</option>
-              <option value="senior">Senior</option>
-              <option value="junior">Junior</option>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="filter-part" className="mb-2 block">
-              Filter by Part
-            </Label>
-            <Select
-              id="filter-part"
-              value={filterPart}
-              onChange={e => setFilterPart(e.target.value)}
-            >
-              <option value="all">Semua Part</option>
-              <option value="deck">Deck</option>
-              <option value="engine">Engine</option>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="filter-position" className="mb-2 block">
-              Filter by Position
-            </Label>
-            <Select
-              id="filter-position"
-              value={filterPosition}
-              onChange={e => setFilterPosition(e.target.value)}
-            >
-              <option value="all">Semua Position</option>
-              <option value="nakhoda">Nahkoda</option>
-              <option value="KKM">KKM</option>
-              <option value="mualimI">Mualim I</option>
-              <option value="mualimII">Mualim II</option>
-              <option value="mualimIII">Mualim III</option>
-              <option value="masinisII">Masinis II</option>
-              <option value="masinisIII">Masinis III</option>
-              <option value="masinisIV">Masinis IV</option>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {showCreateForm && (
-        <Card className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              Tambah Konfigurasi Baru
-            </h2>
-            <Button size="sm" color="gray" onClick={handleCancelEdit}>
-              <HiX className="mr-2" />
-              Batal
-            </Button>
-          </div>
-          <EditForm
-            formData={formData}
-            setFormData={setFormData}
-            isFieldsLocked={false}
-            setIsFieldsLocked={setIsFieldsLocked}
-            editingConfig={null}
-            isSubmitting={isSubmitting}
-            handleSubmit={handleSubmit}
-            addGroup={addGroup}
-            removeGroup={removeGroup}
-            addShipToGroup={addShipToGroup}
-            removeShipFromGroup={removeShipFromGroup}
-            formatGroupName={formatGroupName}
-          />
-        </Card>
-      )}
-
-      <div className="overflow-x-auto rounded-xl shadow-md">
-        <Table striped>
-          <Table.Head>
-            <Table.HeadCell>Categorization</Table.HeadCell>
-            <Table.HeadCell>Type</Table.HeadCell>
-            <Table.HeadCell>Part</Table.HeadCell>
-            <Table.HeadCell>Vessel</Table.HeadCell>
-            <Table.HeadCell>Position</Table.HeadCell>
-            <Table.HeadCell>Groups</Table.HeadCell>
-            <Table.HeadCell>Aksi</Table.HeadCell>
-          </Table.Head>
-          <Table.Body className="divide-y">
-            {filteredAndSortedVessels.length === 0 ? (
-              <Table.Row>
-                <Table.Cell colSpan={7} className="text-center py-8">
-                  <p className="text-gray-500">
-                    Tidak ada konfigurasi yang sesuai dengan filter
-                  </p>
-                </Table.Cell>
-              </Table.Row>
-            ) : (
-              filteredAndSortedVessels.map(vessel => (
-                <>
-                  <Table.Row key={vessel.id} className="bg-white">
-                    <Table.Cell>
-                      <Badge
-                        color={
-                          vessel.categorization === 'container'
-                            ? 'indigo'
-                            : vessel.categorization === 'manalagi'
-                              ? 'pink'
-                              : 'cyan'
-                        }
-                      >
-                        {vessel.categorization?.toUpperCase() || 'N/A'}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge
-                        color={vessel.type === 'senior' ? 'success' : 'warning'}
-                      >
-                        {vessel.type}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge color={vessel.part === 'deck' ? 'blue' : 'gray'}>
-                        {vessel.part}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge color="info">{vessel.vessel}</Badge>
-                    </Table.Cell>
-                    <Table.Cell className="font-medium">
-                      {formatJobTitleDisplay(vessel.job_title)}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.keys(vessel.groups).map(groupKey => (
-                          <Badge key={groupKey} color="gray" size="sm">
-                            {formatGroupName(groupKey)} (
-                            {vessel.groups[groupKey].length})
-                          </Badge>
-                        ))}
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="xs"
-                          onClick={() =>
-                            expandedRowId === vessel.id
-                              ? handleCancelEdit()
-                              : handleEdit(vessel)
-                          }
-                          disabled={isSubmitting || showCreateForm}
-                        >
-                          {expandedRowId === vessel.id ? (
-                            <>
-                              <HiChevronUp className="mr-1" />
-                              Tutup
-                            </>
-                          ) : (
-                            <>
-                              <HiPencil className="mr-1" />
-                              Edit
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          size="xs"
-                          color="failure"
-                          onClick={() =>
-                            handleDelete(vessel.id, vessel.job_title)
-                          }
-                          disabled={isSubmitting || showCreateForm}
-                        >
-                          <HiTrash />
-                        </Button>
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-
-                  {expandedRowId === vessel.id && editingVessel && (
-                    <Table.Row>
-                      <Table.Cell colSpan={7} className="bg-gray-50 p-0">
-                        <Card className="m-4">
-                          <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-800">
-                              Edit Konfigurasi
-                            </h2>
-                            <Button
-                              size="sm"
-                              color="gray"
-                              onClick={handleCancelEdit}
-                            >
-                              <HiX className="mr-2" />
-                              Batal
-                            </Button>
-                          </div>
-                          <EditForm
-                            formData={formData}
-                            setFormData={setFormData}
-                            isFieldsLocked={isFieldsLocked}
-                            setIsFieldsLocked={setIsFieldsLocked}
-                            editingConfig={editingVessel}
-                            isSubmitting={isSubmitting}
-                            handleSubmit={handleSubmit}
-                            addGroup={addGroup}
-                            removeGroup={removeGroup}
-                            addShipToGroup={addShipToGroup}
-                            removeShipFromGroup={removeShipFromGroup}
-                            formatGroupName={formatGroupName}
-                          />
-                        </Card>
-                      </Table.Cell>
-                    </Table.Row>
-                  )}
-                </>
-              ))
-            )}
-          </Table.Body>
-        </Table>
-      </div>
-    </div>
-  );
-}
-
-function EditForm({
-  formData,
-  setFormData,
-  isFieldsLocked,
-  setIsFieldsLocked,
-  editingVessel,
-  isSubmitting,
-  handleSubmit,
-  addGroup,
-  removeGroup,
-  addShipToGroup,
-  removeShipFromGroup,
-  formatGroupName,
-}: any) {
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {editingVessel && !isFieldsLocked && (
-        <Alert color="warning">
-          <div className="flex items-start justify-between">
-            <span className="text-sm">
-              ⚠️ Anda sedang mengubah field kritis! Pastikan perubahan sudah
-              benar!
-            </span>
-            <Button
-              size="xs"
-              color="gray"
-              onClick={() => setIsFieldsLocked(true)}
-              className="shrink-0 ml-4"
-            >
-              Lock Kembali
-            </Button>
-          </div>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
-          <Label htmlFor="categorization">Categorization *</Label>
-          <Select
-            id="categorization"
-            value={formData.categorization}
-            onChange={e =>
-              setFormData({ ...formData, categorization: e.target.value })
-            }
-            disabled={editingVessel ? isFieldsLocked : false}
-            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
+          <Button
+            color="gray"
+            onClick={() => refetch()}
+            size="sm"
+            className="hidden"
           >
-            <option value="container">Container</option>
-            <option value="manalagi">Manalagi</option>
-            <option value="bc">BC (Barge Crane)</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="type">Type *</Label>
-          <Select
-            id="type"
-            value={formData.type}
-            onChange={e => setFormData({ ...formData, type: e.target.value })}
-            disabled={editingVessel ? isFieldsLocked : false}
-            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
-          >
-            <option value="senior">Senior</option>
-            <option value="junior">Junior</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="part">
-            Part *
-            {editingVessel && isFieldsLocked && (
-              <span className="ml-2 text-xs text-amber-600"></span>
-            )}
-          </Label>
-          <Select
-            id="part"
-            value={formData.part}
-            onChange={e => setFormData({ ...formData, part: e.target.value })}
-            disabled={editingVessel ? isFieldsLocked : false}
-            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
-          >
-            <option value="deck">Deck</option>
-            <option value="engine">Engine</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="vessel">
-            Vessel *
-            {editingVessel && isFieldsLocked && (
-              <span className="ml-2 text-xs text-amber-600"></span>
-            )}
-          </Label>
-          <Select
-            id="vessel"
-            value={formData.vessel}
-            onChange={e => setFormData({ ...formData, vessel: e.target.value })}
-            disabled={editingVessel ? isFieldsLocked : false}
-            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
-          >
-            <option value="D">D</option>
-            <option value="E">E</option>
-            <option value="F">F</option>
-            <option value="G">G</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="job_title">
-            Position *
-            {editingVessel && isFieldsLocked && (
-              <span className="ml-2 text-xs text-amber-600"></span>
-            )}
-          </Label>
-          <Select
-            id="job_title"
-            value={formData.job_title}
-            onChange={e =>
-              setFormData({ ...formData, job_title: e.target.value })
-            }
-            required
-            disabled={editingVessel ? isFieldsLocked : false}
-            className={editingVessel && isFieldsLocked ? 'bg-gray-100' : ''}
-          >
-            <option value="">Pilih Position</option>
-            <option value="nakhoda">Nahkoda</option>
-            <option value="KKM">KKM</option>
-            <option value="mualimI">Mualim I</option>
-            <option value="mualimII">Mualim II</option>
-            <option value="mualimIII">Mualim III</option>
-            <option value="masinisII">Masinis II</option>
-            <option value="masinisIII">Masinis III</option>
-            <option value="masinisIV">Masinis IV</option>
-          </Select>
-        </div>
-      </div>
-
-      {editingVessel && isFieldsLocked && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            Field kritis di-lock untuk mencegah perubahan tidak sengaja.
-            <button
-              type="button"
-              onClick={() => setIsFieldsLocked(false)}
-              className="ml-2 text-blue-600 hover:text-blue-800 underline font-medium"
-            >
-              Klik di sini untuk unlock
-            </button>
-          </p>
-        </div>
-      )}
-
-      <div className="border-t pt-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Groups & Kapal</h3>
-          <Button type="button" size="sm" onClick={addGroup}>
-            <HiPlus className="mr-2" />
-            Tambah Group
+            <HiRefresh className="mr-2" />
+            Refresh
           </Button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(formData.groups).map(([groupKey, ships]) => (
-            <GroupEditor
-              key={groupKey}
-              groupKey={groupKey}
-              ships={ships as string[]}
-              onAddShip={shipName => addShipToGroup(groupKey, shipName)}
-              onRemoveShip={index => removeShipFromGroup(groupKey, index)}
-              onRemoveGroup={() => removeGroup(groupKey)}
-              formatGroupName={formatGroupName}
-            />
-          ))}
-
-          {Object.keys(formData.groups).length === 0 && (
-            <div className="col-span-2 text-center py-8 text-gray-500">
-              Belum ada group. Klik "Tambah Group" untuk membuat group pertama.
-            </div>
-          )}
-        </div>
+        <p className="text-gray-600">
+          Kelola konfigurasi rotasi kapal berdasarkan kategori dan position.
+        </p>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {editingVessel ? 'Updating...' : 'Menyimpan...'}
-            </>
-          ) : editingVessel ? (
-            'Update'
-          ) : (
-            'Simpan'
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function GroupEditor({
-  groupKey,
-  ships,
-  onAddShip,
-  onRemoveShip,
-  onRemoveGroup,
-  formatGroupName,
-}: {
-  groupKey: string;
-  ships: string[];
-  onAddShip: (shipName: string) => void;
-  onRemoveShip: (index: number) => void;
-  onRemoveGroup: () => void;
-  formatGroupName: (key: string) => string;
-}) {
-  const [newShip, setNewShip] = useState('');
-
-  const handleAdd = () => {
-    if (newShip.trim()) {
-      onAddShip(newShip);
-      setNewShip('');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAdd();
-    }
-  };
-
-  return (
-    <div className="p-4 border-2 border-gray-200 rounded-lg bg-white">
-      <div className="flex justify-between items-center mb-3">
-        <h4 className="font-bold text-gray-900 text-lg">
-          {formatGroupName(groupKey)}
-        </h4>
-        <Button size="xs" color="failure" onClick={onRemoveGroup}>
-          <HiTrash className="mr-1" />
-          Hapus
-        </Button>
-      </div>
-
-      <div className="flex gap-2 mb-3">
-        <TextInput
-          value={newShip}
-          onChange={e => setNewShip(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Nama Kapal (contoh: KM. ORIENTAL EMERALD)"
-          className="flex-1"
-          sizing="sm"
+      {/* Step 1 & 2: Category and Position Selection */}
+      <div className="mb-6">
+        <CategoryPositionSelector
+          selectedCategory={selectedCategory}
+          selectedPosition={selectedPosition}
+          onCategoryChange={handleCategoryChange}
+          onPositionChange={handlePositionChange}
+          disabled={isEditMode}
         />
-        <Button size="sm" onClick={handleAdd}>
-          <HiPlus />
-        </Button>
       </div>
 
-      <div className="space-y-1 max-h-40 overflow-y-auto">
-        {ships.length === 0 ? (
-          <p className="text-sm text-gray-500 italic py-2 text-center">
-            Belum ada kapal
-          </p>
-        ) : (
-          ships.map((ship, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200"
-            >
-              <span className="text-sm font-medium">{ship}</span>
-              <Button
-                size="xs"
-                color="failure"
-                onClick={() => onRemoveShip(index)}
-              >
-                <HiTrash />
-              </Button>
+      {/* Step 3: Groups Display & Edit */}
+      {selectedCategory && selectedPosition && (
+        <div className="space-y-4">
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">
+                {formatCategorizationDisplay(selectedCategory)} -{' '}
+                {formatPositionDisplay(selectedPosition)}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {existingVessel
+                  ? `${Object.keys(existingVessel.groups).length} group(s) terkonfigurasi`
+                  : 'Belum ada konfigurasi'}
+              </p>
             </div>
-          ))
-        )}
-      </div>
+            <div className="flex gap-2">
+              {!isEditMode ? (
+                <>
+                  <Button onClick={handleEditToggle}>
+                    {existingVessel
+                      ? 'Edit Configuration'
+                      : 'Create Configuration'}
+                  </Button>
+                  {existingVessel && (
+                    <Button
+                      color="failure"
+                      onClick={handleDelete}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && <Spinner size="sm" className="mr-2" />}
+                      Delete
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Button
+                    color="success"
+                    onClick={handleSave}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Spinner size="sm" className="mr-2" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        Simpan
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    color="gray"
+                    onClick={handleEditToggle}
+                    disabled={isSubmitting}
+                  >
+                    Batal
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Groups Editor */}
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <GroupsEditor
+              groups={editedGroups}
+              categorization={selectedCategory}
+              isEditMode={isEditMode}
+              onGroupsChange={setEditedGroups}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!selectedCategory && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <p className="text-gray-500 text-lg">
+            Pilih kategori dan position untuk melihat atau mengelola konfigurasi
+            rotasi kapal.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
