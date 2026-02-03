@@ -68,12 +68,12 @@ export function SidebarComponent() {
           </Sidebar.Collapse>
 
           <Sidebar.Item
-            onClick={() => handleNavigation('/rotation_ship')}
+            onClick={() => handleNavigation('/vessel_management')}
             icon={() => <HiOutlineShieldCheck className="w-6 h-6" />}
-            active={isActive('/rotation_ship')}
+            active={isActive('/vessel_management')}
             className="cursor-pointer"
           >
-            Rotation Ship
+            Vessel Management
           </Sidebar.Item>
 
           <Sidebar.Collapse

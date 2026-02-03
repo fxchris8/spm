@@ -18,14 +18,14 @@ import {
   HiX,
 } from 'react-icons/hi';
 import {
-  useRotationShipConfig,
+  useVesselManagement,
   RotationConfig,
-} from '../hooks/useRotationShipConfig';
-import { LoadingComponent } from './LoadingComponent';
+} from '../../hooks/useVesselManagement';
+import { LoadingComponent } from '../LoadingComponent';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
-export default function RotationShipConfig() {
+export function VesselManagement() {
   const {
     configs,
     loading,
@@ -33,7 +33,7 @@ export default function RotationShipConfig() {
     updateConfig,
     deleteConfig,
     refetch,
-  } = useRotationShipConfig();
+  } = useVesselManagement();
 
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
   const [editingConfig, setEditingConfig] = useState<RotationConfig | null>(

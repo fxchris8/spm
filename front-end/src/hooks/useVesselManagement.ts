@@ -97,7 +97,7 @@ async function deleteRotationConfig(id: number): Promise<ApiResponse> {
 
 // ============= CUSTOM HOOK =============
 
-export function useRotationShipConfig(type?: string) {
+export function useVesselManagement(type?: string) {
   const queryClient = useQueryClient();
   const queryKey = type ? ['rotation-configs', type] : ['rotation-configs'];
 

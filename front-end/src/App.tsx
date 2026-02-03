@@ -3,7 +3,7 @@
 import { NavbarComponent } from './components/layouts/NavbarComponent';
 import { SidebarComponent } from './components/layouts/SidebarComponent';
 import { Dashboard } from './components/dashboard/Dashboard';
-import RotationShipConfig from './components/RotationShipConfig';
+import { VesselManagement } from './components/vessel-management/VesselManagement';
 import { RotationSenior } from './components/container/RotationSenior';
 import { RotationJunior } from './components/container/RotationJunior';
 import { RotationManalagiSenior } from './components/manalagi/RotationManalagiSenior';
@@ -54,7 +54,7 @@ export function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/search_on_duty" element={<SearchOnDuty />} />
             <Route path="/search_off_duty" element={<SearchOffDuty />} />
-            <Route path="/rotation_ship" element={<RotationShipConfig />} />
+            <Route path="/vessel_management" element={<VesselManagement />} />
             <Route path="/senior_rotation" element={<RotationSenior />} />
             <Route path="/junior_rotation" element={<RotationJunior />} />
             <Route

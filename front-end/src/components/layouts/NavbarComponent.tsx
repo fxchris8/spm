@@ -13,7 +13,7 @@ export function NavbarComponent() {
   return (
     <Navbar
       fluid
-      className="bg-gradient-to-r from-red-700 to-red-900 shadow-lg border-red-950"
+      className="bg-red-800 shadow-lg border-red-950"
     >
       <Navbar.Brand href="/" className="hover:opacity-90 transition-opacity">
         <img
