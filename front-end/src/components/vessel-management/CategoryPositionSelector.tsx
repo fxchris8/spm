@@ -51,7 +51,7 @@ export function CategoryPositionSelector({
                 htmlFor="position-select"
                 className="mb-2 block font-semibold"
               >
-                Pilih Position / Job Title
+                Pilih Posisi / Job
               </Label>
               <Select
                 id="position-select"
@@ -61,7 +61,7 @@ export function CategoryPositionSelector({
                 required
                 className="max-w-md"
               >
-                <option value="">-- Pilih Position --</option>
+                <option value="">-- Pilih Posisi --</option>
                 {positions.map(pos => (
                   <option key={pos} value={pos}>
                     {formatPositionDisplay(pos)}

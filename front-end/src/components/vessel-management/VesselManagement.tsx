@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Alert, Spinner } from 'flowbite-react';
-import { HiRefresh } from 'react-icons/hi';
 import { CategoryPositionSelector } from './CategoryPositionSelector';
 import { GroupsEditor } from './GroupsEditor';
 import { useVesselManagement } from '../../hooks/useVesselManagement';
@@ -211,22 +210,13 @@ export function VesselManagement() {
 
       {/* Header */}
       <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-1">
           <h1 className="text-3xl font-bold text-gray-800">
-            Rotation Ship Configuration
+            Manajemen Vessel / Kapal
           </h1>
-          <Button
-            color="gray"
-            onClick={() => refetch()}
-            size="sm"
-            className="hidden"
-          >
-            <HiRefresh className="mr-2" />
-            Refresh
-          </Button>
         </div>
         <p className="text-gray-600">
-          Kelola konfigurasi rotasi kapal berdasarkan kategori dan position.
+          Kelola konfigurasi group kapal berdasarkan kategori kapal dan posisi seamen.
         </p>
       </div>
 
@@ -289,9 +279,7 @@ export function VesselManagement() {
                         Menyimpan...
                       </>
                     ) : (
-                      <>
-                        Simpan
-                      </>
+                      <>Simpan</>
                     )}
                   </Button>
                   <Button
