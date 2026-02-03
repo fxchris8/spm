@@ -19,7 +19,6 @@ export function VesselManagement() {
     createVessel,
     updateVessel,
     deleteVessel,
-    refetch,
   } = useVesselManagement();
 
   // Selection states
