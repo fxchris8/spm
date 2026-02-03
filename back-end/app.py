@@ -470,6 +470,39 @@ def get_dashboard_data():
     return data.to_json(orient="records")
 
 
+# Route to manually trigger data sync from central API
+@app.route("/api/manual-sync", methods=["POST"])
+def manual_sync():
+    try:
+        print(f"[MANUAL SYNC] Started at {datetime.now()}")
+        
+        # Import sync functions from scheduler
+        from database.scheduler import scheduled_sync_seamen, scheduled_sync_mutations
+        
+        # Execute sync for seamen
+        print("[MANUAL SYNC] Syncing seamen data...")
+        scheduled_sync_seamen()
+        
+        # Execute sync for mutations
+        print("[MANUAL SYNC] Syncing mutations data...")
+        scheduled_sync_mutations()
+        
+        print(f"[MANUAL SYNC] Completed at {datetime.now()}")
+        
+        return jsonify({
+            "status": "success",
+            "message": "Data berhasil di-sync dari API pusat",
+            "timestamp": datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        print(f"[MANUAL SYNC ERROR] {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Gagal melakukan sync: {str(e)}"
+        }), 500
+
+
 # ============================================================================
 # BAGIAN 3: SIMILARITY & RECOMMENDATION ENGINE
 # ============================================================================

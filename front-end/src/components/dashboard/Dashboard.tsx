@@ -1,11 +1,13 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, TextInput, Table, Select, Modal, Spinner } from 'flowbite-react';
 import {
-  faMagnifyingGlass,
   faUsers,
   faShip,
   faHouse,
+  faChevronLeft,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   PieChart,
@@ -15,13 +17,15 @@ import {
   Legend,
   Tooltip,
 } from 'recharts';
+import { toast } from 'sonner';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useSimilarSeamen } from '../../hooks/useSimilarSeamen';
-import { LoadingComponent, LoadingSpinner } from '../LoadingComponent';
+import { useManualSync } from '../../hooks/useManualSync';
 import { RotationSummary } from './RotationSummary';
 
 export function Dashboard() {
-  const { seamenData, loading } = useDashboardData();
+  const { seamenData, loading, refetch } = useDashboardData();
+  const { triggerSync, loading: syncLoading } = useManualSync();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSeamanCode, setSelectedSeamanCode] = useState<string | null>(
     null
@@ -38,6 +42,7 @@ export function Dashboard() {
     'DARAT BIASA',
     'DARAT STAND-BY',
     'PENDING GAJI',
+    'DARAT',
   ];
 
   const filteredData = useMemo(() => {
@@ -89,6 +94,21 @@ export function Dashboard() {
     setSelectedSeamanCode(null); // Reset, stop query
   };
 
+  const handleManualSync = async () => {
+    const result = await triggerSync();
+
+    if (result.success) {
+      toast.success(result.message);
+
+      // Refresh dashboard data after successful sync
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
   // Hitung seaman onboard & offboard
   const onboardSeamen = seamenData.filter(
     s => !excludedStatus.includes(s.VESSEL?.toUpperCase())
@@ -120,18 +140,33 @@ export function Dashboard() {
   }, [offboardSeamen]);
 
   if (loading) {
-    return <LoadingComponent message="Loading dashboard data..." />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading dashboard data...</span>
+      </div>
+    );
   }
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        Ship Personnel Management
-      </h1>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-1">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Ship Personnel Management
+          </h1>
+          <Button onClick={handleManualSync} disabled={syncLoading}>
+            {syncLoading ? 'Syncing...' : 'Sinkronisasi Data - CITRIX'}
+          </Button>
+        </div>
+        <p className="text-gray-600">
+          Ikhtisar dan manajemen status serta distribusi seamen di Armada PT
+          Salam Pacific Indonesia Lines.
+        </p>
+      </div>
 
       {/* === Dashboard with Pie Charts === */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Statistics Cards */}
         <div className="grid grid-cols-1 gap-4">
           {/* Total Seamen */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
@@ -187,7 +222,7 @@ export function Dashboard() {
         {/* Pie Chart 1 - Seamen Distribution */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Seamen Distribution
+            Distribusi Seamen
           </h3>
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
@@ -236,7 +271,7 @@ export function Dashboard() {
         {/* Pie Chart 2 - Offboard Distribution */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Offboard Distribution
+            Distribusi Offboard
           </h3>
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
@@ -273,74 +308,75 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Rotation Summary Section */}
-      <RotationSummary />
-
       {/* Search Input */}
-      <div className="mb-4">
-        <input
+      <div className="mb-6">
+        <TextInput
+          id="search"
           type="text"
-          placeholder="Search..."
-          className="w-full p-2 border rounded-lg shadow-sm"
+          placeholder="Cari data seamen..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl shadow-md">
-        <table className="min-w-full border border-gray-200">
-          <thead className="bg-gray-800 text-white">
-            <tr>
-              {[
-                'SEAMAN CODE',
-                'SEAFARER CODE',
-                'SEAMAN NAME',
-                'RANK',
-                'VESSEL',
-                'UMUR',
-                'CERTIFICATE',
-                'DAY REMAINS',
-                'ACTION',
-              ].map(header => (
-                <th key={header} className="p-3 border text-sm font-semibold">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {currentItems.map((item, idx) => (
-              <tr key={idx} className="hover:bg-gray-100 transition">
-                {Object.values(item).map((value, i) => (
-                  <td key={i} className="p-2 border text-center">
-                    {value}
-                  </td>
-                ))}
-                <td className="p-2 border text-center">
-                  <button
-                    onClick={() => showSimilar(item['SEAMAN CODE'])}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
-                </td>
-              </tr>
+      <div className="overflow-x-auto">
+        <Table hoverable>
+          <Table.Head>
+            {[
+              'NO',
+              'SEAMAN CODE',
+              'SEAFARER CODE',
+              'SEAMAN NAME',
+              'RANK',
+              'VESSEL',
+              'AGE',
+              'CERTIFICATE',
+              'DAY REMAINS',
+              'SIMILARITY',
+            ].map(header => (
+              <Table.HeadCell key={header} className="bg-gray-800 text-white">
+                {header}
+              </Table.HeadCell>
             ))}
-          </tbody>
-        </table>
+          </Table.Head>
+          <Table.Body className="divide-y">
+            {currentItems.map((item, idx) => (
+              <Table.Row key={idx} className="bg-white">
+                <Table.Cell className="text-left text-gray-800">
+                  {idx + 1}
+                </Table.Cell>
+                {Object.values(item).map((value, i) => (
+                  <Table.Cell key={i} className="text-left text-gray-800">
+                    {value}
+                  </Table.Cell>
+                ))}
+                <Table.Cell>
+                  <Button
+                    size="xs"
+                    onClick={() => showSimilar(item['SEAMAN CODE'])}
+                    className="!bg-blue-600 hover:!bg-blue-700 text-white"
+                  >
+                    CHECK
+                  </Button>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       </div>
 
       {/* Pagination */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="sm"
+            className="text-gray-500 !bg-transparent"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50"
           >
-            Previous
-          </button>
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </Button>
 
           {generatePageNumbers().map((page, index) =>
             page === '...' ? (
@@ -348,115 +384,111 @@ export function Dashboard() {
                 ...
               </span>
             ) : (
-              <button
+              <Button
                 key={index}
+                size="sm"
+                className={
+                  currentPage === page
+                    ? '!bg-gray-500 text-white border border-gray-200'
+                    : '!bg-white text-gray-500 hover:!bg-gray-100 border border-gray-200'
+                }
                 onClick={() => setCurrentPage(page as number)}
-                className={`px-3 py-1 border rounded-lg shadow-sm ${
-                  currentPage === page ? 'bg-blue-500 text-white' : ''
-                }`}
               >
                 {page}
-              </button>
+              </Button>
             )
           )}
 
-          <button
+          <Button
+            size="sm"
+            className="text-gray-500 !bg-transparent"
             onClick={() =>
               setCurrentPage(prev => Math.min(totalPages, prev + 1))
             }
             disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50"
           >
-            Next
-          </button>
+            <FontAwesomeIcon icon={faChevronRight} />
+          </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span>Items per page:</span>
-          <select
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>Item per halaman:</span>
+          <Select
+            sizing="sm"
             value={itemsPerPage}
-            onChange={e => {
+            onChange={(e) => {
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="p-1 border rounded-lg shadow-sm"
           >
-            {[10, 20, 50].map(num => (
+            {[10, 20, 50, 100].map((num) => (
               <option key={num} value={num}>
                 {num}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-3xl relative">
-            <button
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-2xl"
-              onClick={closeModal}
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-semibold mb-4">Top 5 Similar Seamen</h2>
+      <div className="mt-12 pt-8 border-t border-gray-200">
+        <RotationSummary />
+      </div>
 
-            {loadingSimilar ? (
-              <div className="py-8">
-                <LoadingSpinner size="md" message="Loading similar seamen..." />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-300 rounded-md">
-                  <thead className="bg-gray-200">
-                    <tr>
-                      {[
-                        'SEAMAN CODE',
-                        'SEAFARER CODE',
-                        'SEAMAN NAME',
-                        'LAST POSITION',
-                        'LAST LOCATION',
-                        'AGE',
-                        'CERTIFICATE',
-                        'DAY REMAINS DIFF',
-                      ].map(header => (
-                        <th key={header} className="p-2 border text-sm">
-                          {header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {similarSeamen.length > 0 ? (
-                      similarSeamen.map((seaman, idx) => (
-                        <tr key={idx} className="hover:bg-gray-100 transition">
-                          <td className="p-2 border">{seaman.seamancode}</td>
-                          <td className="p-2 border">{seaman.seafarercode}</td>
-                          <td className="p-2 border">{seaman.name}</td>
-                          <td className="p-2 border">{seaman.last_position}</td>
-                          <td className="p-2 border">{seaman.last_location}</td>
-                          <td className="p-2 border">{seaman.age}</td>
-                          <td className="p-2 border">{seaman.certificate}</td>
-                          <td className="p-2 border">
-                            {seaman['DAY REMAINS DIFF']}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="p-2 border text-center">
-                          No similar seamen found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Modal */}
+      <Modal show={modalOpen} onClose={closeModal} size="5xl">
+        <Modal.Header>Top 5 Seamen yang Serupa</Modal.Header>
+        <Modal.Body>
+          {loadingSimilar ? (
+            <div className="py-8 flex flex-col items-center justify-center gap-4">
+              <Spinner size="lg" color="failure" />
+              <span className="text-gray-600">Loading similar seamen...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table hoverable>
+                <Table.Head>
+                  {[
+                    'SEAMAN CODE',
+                    'SEAFARER CODE',
+                    'SEAMAN NAME',
+                    'LAST POSITION',
+                    'LAST LOCATION',
+                    'AGE',
+                    'CERTIFICATE',
+                    'DAY REMAINS DIFF',
+                  ].map(header => (
+                    <Table.HeadCell key={header} className="bg-gray-800 text-white">
+                      {header}
+                    </Table.HeadCell>
+                  ))}
+                </Table.Head>
+                <Table.Body className="divide-y">
+                  {similarSeamen.length > 0 ? (
+                    similarSeamen.map((seaman, idx) => (
+                      <Table.Row key={idx} className="bg-white">
+                        <Table.Cell className="text-left text-gray-800">{seaman.seamancode}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.seafarercode}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.name}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.last_position}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.last_location}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.age}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman.certificate}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">{seaman['DAY REMAINS DIFF']}</Table.Cell>
+                      </Table.Row>
+                    ))
+                  ) : (
+                    <Table.Row>
+                      <Table.Cell colSpan={8} className="text-center text-gray-800">
+                        Tidak ada data seamen serupa ditemukan.
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                </Table.Body>
+              </Table>
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
     </section>
   );
 }

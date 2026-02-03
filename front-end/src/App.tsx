@@ -17,6 +17,7 @@ import { InMessage } from './components/message/InMessage';
 import { OutMessage } from './components/message/OutMessage';
 // import { ComingSoonComponent } from './components/ComingSoonComponent';
 import { Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
 
 export function App() {
   const NAVBAR_HEIGHT = '4rem';
@@ -79,6 +80,7 @@ export function App() {
           </Routes>
         </main>
       </div>
+      <Toaster position="top-right" richColors />
     </div>
   );
 }
