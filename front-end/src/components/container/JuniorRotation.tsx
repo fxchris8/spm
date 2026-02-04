@@ -19,7 +19,6 @@ import {
   useLockRotation,
   formatJobName,
 } from '../../hooks/useJuniorRotation';
-import { LoadingSpinner } from '../LoadingComponent';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -74,7 +73,10 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
     return (
       <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm">
         <div className="py-8">
-          <LoadingSpinner size="md" message="Loading promotion data..." />
+          <div className="flex flex-col items-center justify-center gap-4">
+            <Spinner size="md" color="failure" />
+            <span className="text-gray-600">Loading promotion data...</span>
+          </div>
         </div>
       </div>
     );
@@ -361,7 +363,10 @@ export function JuniorRotation({
         <>
           {isLoadingAnyData ? (
             <div className="py-12">
-              <LoadingSpinner size="lg" message="Loading data..." />
+              <div className="flex flex-col items-center justify-center gap-4">
+                <Spinner size="lg" color="failure" />
+                <span className="text-gray-600">Loading data...</span>
+              </div>
             </div>
           ) : (
             <>

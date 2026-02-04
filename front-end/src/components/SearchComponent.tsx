@@ -9,10 +9,10 @@ import {
   Button,
   Table,
   Pagination,
+  Spinner,
 } from 'flowbite-react';
 
 import { CallComponent } from './CallComponent';
-import { LoadingSpinner } from './LoadingComponent';
 
 interface SearchProps {
   type: string;
@@ -173,7 +173,10 @@ export function SearchComponent({ type, part }: SearchProps) {
         <h3 className="text-xl font-bold">Search for Crew Candidate</h3>
         {loadingOptions ? (
           <div className="py-8">
-            <LoadingSpinner size="md" message="Loading options..." />
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Spinner size="lg" color="failure" />
+              <span className="text-gray-600">Loading options...</span>
+            </div>
           </div>
         ) : (
           <form
@@ -301,7 +304,10 @@ export function SearchComponent({ type, part }: SearchProps) {
         <h3 className="text-xl font-bold">Results Candidate</h3>
         {loadingSearch ? (
           <div className="py-12">
-            <LoadingSpinner size="lg" message="Searching candidates..." />
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Spinner size="lg" color="failure" />
+              <span className="text-gray-600">Searching candidates...</span>
+            </div>
           </div>
         ) : (
           <div className="mt-4">
