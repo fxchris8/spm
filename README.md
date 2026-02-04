@@ -130,8 +130,8 @@ Untuk development dengan live reload dan debugging.
 ##### a. Install Dependencies
 
 ```bash
-# Masuk ke direktori back-end
-cd back-end
+# Masuk ke direktori backend
+cd backend
 
 # Install dependencies Python
 pip install -r requirements.txt
@@ -186,8 +186,8 @@ python app.py
 ##### a. Install Dependencies
 
 ```bash
-# Masuk ke direktori front-end (dari root project)
-cd front-end
+# Masuk ke direktori frontend (dari root project)
+cd frontend
 
 # Install dependencies Node.js
 npm install
@@ -230,7 +230,7 @@ npm run dev
 
 ## Environment Variables
 
-### Backend (.env di back-end/)
+### Backend (.env di backend/)
 
 ```env
 # Database
@@ -250,7 +250,7 @@ API_BASE_URL_PUSAT=https://api-pusat.example.com
 API_BASE_URL_IT=https://api-it.example.com
 ```
 
-### Frontend (.env di front-end/)
+### Frontend (.env di frontend/)
 
 ```env
 VITE_API_BASE_URL=http://localhost:18037/api
