@@ -51,12 +51,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
+            row.SEAMANCODE ||
+            row.Seamancode ||
+            row.SeamanCode ||
+            row.seaman_code ||
+            row.SEAMAN_CODE ||
+            ''
           ).trim();
           return code;
         })
@@ -66,12 +66,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
+            row.SEAMANCODE ||
+            row.Seamancode ||
+            row.SeamanCode ||
+            row.seaman_code ||
+            row.SEAMAN_CODE ||
+            ''
           ).trim();
           return code;
         })
@@ -108,9 +108,8 @@ async function fetchCadanganData(
     params.append('locked_codes', lockedCadanganCodes.join(','));
   }
 
-  const url = `${API_BASE_URL}/cadangan-${job}${
-    params.toString() ? `?${params.toString()}` : ''
-  }`;
+  const url = `${API_BASE_URL}/cadangan-${job}${params.toString() ? `?${params.toString()}` : ''
+    }`;
   // console.log('🔍 Fetching cadangan data:', url);
 
   const response = await fetch(url, {
@@ -144,9 +143,8 @@ async function fetchPromotionCandidates(
     job = job.toLowerCase(); // sekarang job === "kkm"
   }
 
-  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
-    params.toString() ? `?${params.toString()}` : ''
-  }`;
+  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${params.toString() ? `?${params.toString()}` : ''
+    }`;
   // console.log('🔍 Fetching promotion candidates:', url);
 
   const response = await fetch(url, {
@@ -668,6 +666,10 @@ export function useLockRotation() {
       queryClient.invalidateQueries({
         queryKey: ['manalagi', 'mutasi-data', variables.job],
       });
+      // Invalidate job submitted since lock changes state
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
+      });
     },
   });
 
@@ -720,6 +722,10 @@ export function useLockRotation() {
       queryClient.invalidateQueries({
         queryKey: ['manalagi', 'potential-promotion', variables.job],
       });
+      // Invalidate job submitted
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
+      });
     },
   });
 
@@ -729,5 +735,101 @@ export function useLockRotation() {
     lockLoading: lockMutation.isPending,
     unlockLoading: unlockMutation.isPending,
     error: lockMutation.error?.message || unlockMutation.error?.message || null,
+  };
+}
+
+// Hook untuk submit all rotations (mutation)
+export function useSubmitRotations() {
+  const queryClient = useQueryClient();
+
+  const submitMutation = useMutation({
+    mutationFn: async ({
+      job,
+      categorization,
+    }: {
+      job: string;
+      categorization: string;
+    }) => {
+      const response = await fetch(`${API_BASE_URL}/submit-rotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job: job.toUpperCase(),
+          categorization: categorization,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit rotations');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate ALL queries related to this job (for all vessels)
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'locked-rotations', variables.job],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted', variables.job],
+      });
+    },
+  });
+
+  return {
+    submitRotations: submitMutation.mutateAsync,
+    loading: submitMutation.isPending,
+    error: submitMutation.error?.message || null,
+  };
+}
+
+// Hook untuk check submitted status
+export function useJobSubmitted(job: string, vessel: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['manalagi', 'job-submitted', job, vessel],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-job-submitted?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
+      );
+      const result = await response.json();
+      return result.is_submitted || false;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return {
+    isSubmitted: data || false,
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
+// Hook untuk check pending changes
+export function usePendingChanges(job: string, vessel: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['manalagi', 'pending-changes', job, vessel],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-pending-changes?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
+      );
+      const result = await response.json();
+      return {
+        hasChanges: result.has_changes || false,
+        count: result.count || 0,
+        affectedGroups: result.affected_groups || [],
+      };
+    },
+    staleTime: 1 * 60 * 1000, // Check tiap menit atau invalidasi manual
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return {
+    hasChanges: data?.hasChanges || false,
+    count: data?.count || 0,
+    affectedGroups: data?.affectedGroups || [],
+    loading: isLoading,
+    error: error?.message || null,
   };
 }
