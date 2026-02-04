@@ -1586,7 +1586,7 @@ def get_promotion_candidates_mualimII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1600,6 +1600,7 @@ def get_promotion_candidates_mualimII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1705,7 +1706,7 @@ def get_promotion_candidates_masinisIII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1719,6 +1720,7 @@ def get_promotion_candidates_masinisIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1778,7 +1780,7 @@ def get_promotion_candidates_mualimIII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1792,6 +1794,7 @@ def get_promotion_candidates_mualimIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1897,7 +1900,7 @@ def get_promotion_candidates_masinisIV():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1911,6 +1914,7 @@ def get_promotion_candidates_masinisIV():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
