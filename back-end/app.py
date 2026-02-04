@@ -2089,6 +2089,7 @@ def api_save_locked_rotation():
         group_key = data["groupKey"]
         job = data["job"].upper()
         vessel = data["vessel"].upper()
+        categorization = data.get("categorization", "").lower() if data.get("categorization") else None
         schedule_table = data["scheduleTable"]
         nahkoda_table = data["nahkodaTable"]
         darat_table = data.get("daratTable")
@@ -2114,6 +2115,7 @@ def api_save_locked_rotation():
             reliever_data=darat_table,
             locked_seaman_codes=locked_seaman_codes,
             locked_by=locked_by,
+            categorization=categorization,
         )
 
         return jsonify(
@@ -2163,6 +2165,7 @@ def api_submit_all_rotations():
     try:
         data = request.get_json()
         job = data.get("job", "").upper()
+        categorization = data.get("categorization")
 
         if not job:
             return (
@@ -2171,7 +2174,7 @@ def api_submit_all_rotations():
             )
 
         # Submit rotations menggunakan fungsi di database.py
-        result = submit_all_rotations(job=job)
+        result = submit_all_rotations(job=job, categorization=categorization)
 
         if result["success"]:
             return jsonify(

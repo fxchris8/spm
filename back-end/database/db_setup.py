@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
     group_key VARCHAR(255),
     job VARCHAR(50),
     vessel VARCHAR(50),
+    categorization VARCHAR(100),
     schedule_data TEXT,
     crew_data TEXT,
     reliever_data TEXT,
@@ -137,14 +138,16 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
 );
 
 -- Indexes for locked_rotation_schedules
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_locked_seaman_code 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_locked_seaman_code
     ON locked_rotation_schedules USING GIN(locked_seaman_codes);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_is_active 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_is_active
     ON locked_rotation_schedules(is_active);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_job 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_job
     ON locked_rotation_schedules(job);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_group_key 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_group_key
     ON locked_rotation_schedules(group_key);
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_categorization
+    ON locked_rotation_schedules(categorization);
 """
 
 # Table: sync_logs
@@ -249,6 +252,7 @@ CREATE_TABLE_ROTATION_SUBMISSIONS = """
 CREATE TABLE IF NOT EXISTS rotation_submissions (
     id SERIAL PRIMARY KEY,
     job VARCHAR(50),
+    categorization VARCHAR(50),
     group_key VARCHAR(100),
     seamancode VARCHAR(100),
     nama VARCHAR(255),
@@ -273,6 +277,7 @@ CREATE TABLE IF NOT EXISTS rotation_submissions (
 
 -- Indexes for rotation_submissions
 CREATE INDEX IF NOT EXISTS idx_rotation_job ON rotation_submissions (job);
+CREATE INDEX IF NOT EXISTS idx_rotation_categorization ON rotation_submissions (categorization);
 CREATE INDEX IF NOT EXISTS idx_rotation_group_key ON rotation_submissions (group_key);
 CREATE INDEX IF NOT EXISTS idx_rotation_seamancode ON rotation_submissions (seamancode);
 CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_data);

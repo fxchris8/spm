@@ -165,41 +165,34 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
 # ============================================================================
 
 
-def get_locked_rotations(job=None, vessel=None):
+def get_locked_rotations(job=None, vessel=None, categorization=None):
     try:
-        if job and vessel:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE job = :job AND vessel = :vessel AND is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query), {"job": job, "vessel": vessel})
-                rows = result.fetchall()
-        elif job:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE job = :job AND is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query), {"job": job})
-                rows = result.fetchall()
-        else:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query))
-                rows = result.fetchall()
+        params = {}
+        conditions = ["is_active = TRUE"]
+
+        if job:
+            conditions.append("job = :job")
+            params["job"] = job
+
+        if vessel:
+            conditions.append("vessel = :vessel")
+            params["vessel"] = vessel
+
+        if categorization:
+            conditions.append("categorization = :categorization")
+            params["categorization"] = categorization
+
+        query = f"""
+            SELECT id, group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
+                   locked_seaman_codes, locked_at, locked_by, is_active
+            FROM locked_rotation_schedules
+            WHERE {' AND '.join(conditions)}
+            ORDER BY locked_at DESC
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), params)
+            rows = result.fetchall()
 
         # Convert to list of dicts
         # Parse JSON strings dari TEXT columns
@@ -211,19 +204,20 @@ def get_locked_rotations(job=None, vessel=None):
                     "group_key": row[1],
                     "job": row[2],
                     "vessel": row[3],
+                    "categorization": row[4],
                     "schedule_data": (
-                        json.loads(row[4]) if row[4] else None
-                    ),  # Parse JSON string
-                    "crew_data": (
                         json.loads(row[5]) if row[5] else None
                     ),  # Parse JSON string
-                    "reliever_data": (
+                    "crew_data": (
                         json.loads(row[6]) if row[6] else None
                     ),  # Parse JSON string
-                    "locked_seaman_codes": row[7],
-                    "locked_at": row[8].isoformat() if row[8] else None,
-                    "locked_by": row[9],
-                    "is_active": row[10],
+                    "reliever_data": (
+                        json.loads(row[7]) if row[7] else None
+                    ),  # Parse JSON string
+                    "locked_seaman_codes": row[8],
+                    "locked_at": row[9].isoformat() if row[9] else None,
+                    "locked_by": row[10],
+                    "is_active": row[11],
                 }
             )
 
@@ -244,6 +238,7 @@ def save_locked_rotation(
     reliever_data,
     locked_seaman_codes,
     locked_by=None,
+    categorization=None,
 ):
     try:
         # Convert dict to JSON string (untuk TEXT column)
@@ -261,9 +256,9 @@ def save_locked_rotation(
         # Then insert new lock
         insert_query = """
             INSERT INTO locked_rotation_schedules
-            (group_key, job, vessel, schedule_data, crew_data, reliever_data,
+            (group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
              locked_seaman_codes, locked_by, is_active, locked_at)
-            VALUES (:group_key, :job, :vessel, :schedule_data, :crew_data, :reliever_data,
+            VALUES (:group_key, :job, :vessel, :categorization, :schedule_data, :crew_data, :reliever_data,
                     :locked_seaman_codes, :locked_by, TRUE, NOW())
             RETURNING id
         """
@@ -282,6 +277,7 @@ def save_locked_rotation(
                     "group_key": group_key,
                     "job": job,
                     "vessel": vessel,
+                    "categorization": categorization,
                     "schedule_data": schedule_json,  # JSON string
                     "crew_data": crew_json,  # JSON string
                     "reliever_data": reliever_json,  # JSON string or None
@@ -294,7 +290,7 @@ def save_locked_rotation(
             new_id = result.fetchone()[0]
 
         print(
-            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}) with ID {new_id}"
+            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}, cat {categorization}) with ID {new_id}"
         )
         return {
             "success": True,
@@ -624,7 +620,7 @@ def sync_mutations_to_database(df):
 # ============================================================================
 
 
-def submit_all_rotations(job):
+def submit_all_rotations(job, categorization):
     """
     Submit all locked rotations untuk job tertentu ke rotation_submissions
     dan kirim notifikasi ke API pusat Apollo
@@ -651,8 +647,8 @@ def submit_all_rotations(job):
 
         import requests
 
-        # Get all locked rotations for this job
-        locked_rotations = get_locked_rotations(job=job)
+        # Get all locked rotations for this job (filtered by categorization if provided)
+        locked_rotations = get_locked_rotations(job=job, categorization=categorization)
 
         if not locked_rotations:
             return {
@@ -870,10 +866,10 @@ def submit_all_rotations(job):
                         INSERT INTO rotation_submissions
                         (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
                          start_date, end_date, first_rotation_date, tanggal, tanggal_ready,
-                         auto_accept_at, status_data, version, is_active)
+                         auto_accept_at, status_data, version, is_active, categorization)
                         VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from,
                                 :mutation_to, :start_date, :end_date, :first_rotation_date, :tanggal,
-                                :tanggal_ready, :auto_accept_at, :status_data, :version, :is_active)
+                                :tanggal_ready, :auto_accept_at, :status_data, :version, :is_active, :categorization)
                         RETURNING id
                     """
 
@@ -896,6 +892,7 @@ def submit_all_rotations(job):
                             "status_data": "PENDING",
                             "version": new_version,
                             "is_active": True,
+                            "categorization": categorization,
                         },
                     )
 
@@ -1029,7 +1026,7 @@ def get_rotation_submissions(job=None):
     try:
         if job:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1042,7 +1039,7 @@ def get_rotation_submissions(job=None):
                 rows = result.fetchall()
         else:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1061,22 +1058,23 @@ def get_rotation_submissions(job=None):
                 {
                     "id": row[0],
                     "job": row[1],
-                    "group_key": row[2],
-                    "seamancode": row[3],
-                    "nama": row[4],
-                    "last_location": row[5],
-                    "mutation_from": row[6],
-                    "mutation_to": row[7],
-                    "start_date": row[8].isoformat() if row[8] else None,
-                    "end_date": row[9].isoformat() if row[9] else None,
-                    "first_rotation_date": row[10].isoformat() if row[10] else None,
-                    "tanggal": row[11].isoformat() if row[11] else None,
-                    "tanggal_ready": row[12].isoformat() if row[12] else None,
-                    "auto_accept_at": row[13].isoformat() if row[13] else None,
-                    "status_data": row[14],
-                    "created_at": row[15].isoformat() if row[15] else None,
-                    "updated_at": row[16].isoformat() if row[16] else None,
-                    "stage": row[17],
+                    "categorization": row[2],
+                    "group_key": row[3],
+                    "seamancode": row[4],
+                    "nama": row[5],
+                    "last_location": row[6],
+                    "mutation_from": row[7],
+                    "mutation_to": row[8],
+                    "start_date": row[9].isoformat() if row[9] else None,
+                    "end_date": row[10].isoformat() if row[10] else None,
+                    "first_rotation_date": row[11].isoformat() if row[11] else None,
+                    "tanggal": row[12].isoformat() if row[12] else None,
+                    "tanggal_ready": row[13].isoformat() if row[13] else None,
+                    "auto_accept_at": row[14].isoformat() if row[14] else None,
+                    "status_data": row[15],
+                    "created_at": row[16].isoformat() if row[16] else None,
+                    "updated_at": row[17].isoformat() if row[17] else None,
+                    "stage": row[18],
                 }
             )
 
@@ -1101,7 +1099,7 @@ def get_all_rotation_submissions(job=None):
     try:
         if job:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1114,7 +1112,7 @@ def get_all_rotation_submissions(job=None):
                 rows = result.fetchall()
         else:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1132,22 +1130,23 @@ def get_all_rotation_submissions(job=None):
                 {
                     "id": row[0],
                     "job": row[1],
-                    "group_key": row[2],
-                    "seamancode": row[3],
-                    "nama": row[4],
-                    "last_location": row[5],
-                    "mutation_from": row[6],
-                    "mutation_to": row[7],
-                    "start_date": row[8].isoformat() if row[8] else None,
-                    "end_date": row[9].isoformat() if row[9] else None,
-                    "first_rotation_date": row[10].isoformat() if row[10] else None,
-                    "tanggal": row[11].isoformat() if row[11] else None,
-                    "tanggal_ready": row[12].isoformat() if row[12] else None,
-                    "auto_accept_at": row[13].isoformat() if row[13] else None,
-                    "status_data": row[14],
-                    "created_at": row[15].isoformat() if row[15] else None,
-                    "updated_at": row[16].isoformat() if row[16] else None,
-                    "stage": row[17],
+                    "categorization": row[2],
+                    "group_key": row[3],
+                    "seamancode": row[4],
+                    "nama": row[5],
+                    "last_location": row[6],
+                    "mutation_from": row[7],
+                    "mutation_to": row[8],
+                    "start_date": row[9].isoformat() if row[9] else None,
+                    "end_date": row[10].isoformat() if row[10] else None,
+                    "first_rotation_date": row[11].isoformat() if row[11] else None,
+                    "tanggal": row[12].isoformat() if row[12] else None,
+                    "tanggal_ready": row[13].isoformat() if row[13] else None,
+                    "auto_accept_at": row[14].isoformat() if row[14] else None,
+                    "status_data": row[15],
+                    "created_at": row[16].isoformat() if row[16] else None,
+                    "updated_at": row[17].isoformat() if row[17] else None,
+                    "stage": row[18],
                 }
             )
 
