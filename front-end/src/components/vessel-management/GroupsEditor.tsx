@@ -154,9 +154,7 @@ export function GroupsEditor({
           Belum ada konfigurasi untuk kategori dan position ini.
         </p>
         {isEditMode && (
-          <Button onClick={handleAddGroup}>
-            Buat Group Pertama
-          </Button>
+          <Button onClick={handleAddGroup}>Buat Group Pertama</Button>
         )}
       </div>
     );

@@ -964,7 +964,9 @@ export function SeniorRotation({
         show={showUnlockModal}
         onClose={() => setShowUnlockModal(false)}
         onConfirm={confirmUnlockRotation}
-        message={`Apakah Anda yakin ingin unlock rotasi untuk ${getGroupDisplayName(selectedGroup)}?`}
+        message={`Apakah Anda yakin ingin unlock rotasi untuk ${getGroupDisplayName(
+          selectedGroup
+        )}?`}
         confirmText="Ya, Unlock"
         confirmColor="warning"
       />
@@ -973,7 +975,9 @@ export function SeniorRotation({
         show={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
         onConfirm={confirmSubmitAllRotations}
-        message={`Submit semua rotasi ${getJobDisplayName(job)} ke database dan kirim notifikasi ke Apollo?`}
+        message={`Submit semua rotasi ${getJobDisplayName(
+          job
+        )} ke database dan kirim notifikasi ke Apollo?`}
         confirmText="Ya, Submit"
         confirmColor="success"
       />

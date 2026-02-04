@@ -20,16 +20,16 @@ from database.connection import (
     get_all_rotation_submissions,
     get_locked_rotations,
     get_mutations_as_data,
+    get_rotation_submissions,
     get_rotation_vessel_by_id,
     get_rotation_vessels,
-    get_rotation_submissions,
     get_seamen_as_data,
     get_submitted_seamancodes,
     save_locked_rotation,
     submit_all_rotations,
     unlock_rotation,
-    update_rotation_vessel,
     update_rotation_status_change,
+    update_rotation_vessel,
 )
 from models.model import (
     filter_in_vessel,
@@ -475,32 +475,37 @@ def get_dashboard_data():
 def manual_sync():
     try:
         print(f"[MANUAL SYNC] Started at {datetime.now()}")
-        
+
         # Import sync functions from scheduler
-        from database.scheduler import scheduled_sync_seamen, scheduled_sync_mutations
-        
+        from database.scheduler import scheduled_sync_mutations, scheduled_sync_seamen
+
         # Execute sync for seamen
         print("[MANUAL SYNC] Syncing seamen data...")
         scheduled_sync_seamen()
-        
+
         # Execute sync for mutations
         print("[MANUAL SYNC] Syncing mutations data...")
         scheduled_sync_mutations()
-        
+
         print(f"[MANUAL SYNC] Completed at {datetime.now()}")
-        
-        return jsonify({
-            "status": "success",
-            "message": "Data berhasil di-sync dari API pusat",
-            "timestamp": datetime.now().isoformat()
-        }), 200
-        
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Data berhasil di-sync dari API pusat",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            200,
+        )
+
     except Exception as e:
         print(f"[MANUAL SYNC ERROR] {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Gagal melakukan sync: {str(e)}"
-        }), 500
+        return (
+            jsonify({"status": "error", "message": f"Gagal melakukan sync: {str(e)}"}),
+            500,
+        )
 
 
 # Route to get vessel statistics by category
@@ -513,39 +518,41 @@ def get_vessel_stats():
     try:
         # Get rotation vessels from database
         rotation_vessels = get_rotation_vessels()
-        
+
         # Count unique ships per category
         container_ships = set()
         manalagi_ships = set()
         bc_ships = set()
-        
+
         for vessel in rotation_vessels:
-            categorization = vessel.get('categorization', '').lower()
-            groups = vessel.get('groups', {})
-            
+            categorization = vessel.get("categorization", "").lower()
+            groups = vessel.get("groups", {})
+
             # Collect all ships from all groups in this vessel
             for group_ships in groups.values():
-                if categorization == 'container':
+                if categorization == "container":
                     container_ships.update(group_ships)
-                elif categorization == 'manalagi':
+                elif categorization == "manalagi":
                     manalagi_ships.update(group_ships)
-                elif categorization == 'bc':
+                elif categorization == "bc":
                     bc_ships.update(group_ships)
-        
+
         stats = {
             "container": len(container_ships),
             "manalagi": len(manalagi_ships),
             "bc": len(bc_ships),
         }
-        
+
         return jsonify(stats), 200
-        
+
     except Exception as e:
         print(f"[VESSEL STATS ERROR] {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to get vessel stats: {str(e)}"
-        }), 500
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
+            ),
+            500,
+        )
 
 
 # ============================================================================
@@ -1569,9 +1576,9 @@ def get_promotion_candidates_mualimII():
         ]["seamancode"].unique()
 
         # Tambahkan seamen dengan is_talent di posisi MUALIM III
-        seamancode_talent = df_seamen[
-            (df_seamen["last_position"] == "MUALIM III")
-        ]["seamancode"].unique()
+        seamancode_talent = df_seamen[(df_seamen["last_position"] == "MUALIM III")][
+            "seamancode"
+        ].unique()
 
         # Gabungkan kedua kriteria (experience + talent)
         seamancode_qualified = list(
@@ -2093,7 +2100,11 @@ def api_save_locked_rotation():
         group_key = data["groupKey"]
         job = data["job"].upper()
         vessel = data["vessel"].upper()
-        categorization = data.get("categorization", "").lower() if data.get("categorization") else None
+        categorization = (
+            data.get("categorization", "").lower()
+            if data.get("categorization")
+            else None
+        )
         schedule_table = data["scheduleTable"]
         nahkoda_table = data["nahkodaTable"]
         darat_table = data.get("daratTable")
@@ -2247,7 +2258,11 @@ def api_check_job_submitted():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
-        categorization = request.args.get("categorization", "").lower() if request.args.get("categorization") else None
+        categorization = (
+            request.args.get("categorization", "").lower()
+            if request.args.get("categorization")
+            else None
+        )
 
         if not job:
             return (
@@ -2258,11 +2273,18 @@ def api_check_job_submitted():
         # Allow either vessel or categorization (for Junior rotation)
         if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel or categorization parameter required"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Vessel or categorization parameter required",
+                    }
+                ),
                 400,
             )
 
-        is_submitted = check_job_submitted(job=job, vessel=vessel if vessel else None, categorization=categorization)
+        is_submitted = check_job_submitted(
+            job=job, vessel=vessel if vessel else None, categorization=categorization
+        )
 
         return jsonify({"status": "success", "is_submitted": is_submitted})
 
@@ -2280,7 +2302,11 @@ def api_check_pending_changes():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
-        categorization = request.args.get("categorization", "").lower() if request.args.get("categorization") else None
+        categorization = (
+            request.args.get("categorization", "").lower()
+            if request.args.get("categorization")
+            else None
+        )
 
         if not job:
             return (
@@ -2291,11 +2317,18 @@ def api_check_pending_changes():
         # Allow either vessel or categorization (for Junior rotation)
         if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel or categorization parameter required"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Vessel or categorization parameter required",
+                    }
+                ),
                 400,
             )
 
-        result = check_has_pending_changes(job=job, vessel=vessel if vessel else None, categorization=categorization)
+        result = check_has_pending_changes(
+            job=job, vessel=vessel if vessel else None, categorization=categorization
+        )
 
         return jsonify(
             {

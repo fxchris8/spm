@@ -52,12 +52,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-            row.SEAMANCODE ||
-            row.Seamancode ||
-            row.SeamanCode ||
-            row.seaman_code ||
-            row.SEAMAN_CODE ||
-            ''
+              row.SEAMANCODE ||
+              row.Seamancode ||
+              row.SeamanCode ||
+              row.seaman_code ||
+              row.SEAMAN_CODE ||
+              ''
           ).trim();
           return code;
         })
@@ -67,12 +67,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-            row.SEAMANCODE ||
-            row.Seamancode ||
-            row.SeamanCode ||
-            row.seaman_code ||
-            row.SEAMAN_CODE ||
-            ''
+              row.SEAMANCODE ||
+              row.Seamancode ||
+              row.SeamanCode ||
+              row.seaman_code ||
+              row.SEAMAN_CODE ||
+              ''
           ).trim();
           return code;
         })
@@ -109,8 +109,9 @@ async function fetchCadanganData(
     params.append('locked_codes', lockedCadanganCodes.join(','));
   }
 
-  const url = `${API_BASE_URL}/cadangan-${job}${params.toString() ? `?${params.toString()}` : ''
-    }`;
+  const url = `${API_BASE_URL}/cadangan-${job}${
+    params.toString() ? `?${params.toString()}` : ''
+  }`;
   // console.log('🔍 Fetching cadangan data:', url);
 
   const response = await fetch(url, {
@@ -144,8 +145,9 @@ async function fetchPromotionCandidates(
     job = job.toLowerCase(); // sekarang job === "kkm"
   }
 
-  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${params.toString() ? `?${params.toString()}` : ''
-    }`;
+  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
+    params.toString() ? `?${params.toString()}` : ''
+  }`;
   // console.log('🔍 Fetching promotion candidates:', url);
 
   const response = await fetch(url, {

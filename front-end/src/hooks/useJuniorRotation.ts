@@ -275,14 +275,14 @@ async function fetchPromotionCandidates(
       rank: item.rank || item.last_position || '',
       history: Array.isArray(item.history)
         ? item.history
-          .filter(
-            (h: string) =>
-              h !== 'PENDING GAJI' &&
-              h !== 'PENDING CUTI' &&
-              h !== 'DARAT STAND-BY' &&
-              h !== 'DARAT BIASA'
-          )
-          .join(', ')
+            .filter(
+              (h: string) =>
+                h !== 'PENDING GAJI' &&
+                h !== 'PENDING CUTI' &&
+                h !== 'DARAT STAND-BY' &&
+                h !== 'DARAT BIASA'
+            )
+            .join(', ')
         : '',
       matchCount: item.matchCount || 0,
     }));
@@ -431,11 +431,11 @@ export function useReplacementOptions(
   const nextGroupInfo = groupKey
     ? calculateNextGroupInfo(groupKey, groups, getMappedJob(job))
     : {
-      nextGroupVessels: [],
-      nextGroupKey: '',
-      promotionVessels: [],
-      promotionJob: '',
-    };
+        nextGroupVessels: [],
+        nextGroupKey: '',
+        promotionVessels: [],
+        promotionJob: '',
+      };
 
   return {
     replacementOptions: data || [],
@@ -581,7 +581,9 @@ export function useJobSubmitted(job: string, categorization: string) {
     queryKey: ['job-submitted', job, categorization],
     queryFn: async () => {
       const response = await fetch(
-        `${API_BASE_URL}/check-job-submitted?job=${formatJobName(job)}&categorization=${categorization.toLowerCase()}`
+        `${API_BASE_URL}/check-job-submitted?job=${formatJobName(
+          job
+        )}&categorization=${categorization.toLowerCase()}`
       );
       const result = await response.json();
       return result.is_submitted || false;
@@ -603,7 +605,9 @@ export function usePendingChanges(job: string, categorization: string) {
     queryKey: ['pending-changes', job, categorization],
     queryFn: async () => {
       const response = await fetch(
-        `${API_BASE_URL}/check-pending-changes?job=${formatJobName(job)}&categorization=${categorization.toLowerCase()}`
+        `${API_BASE_URL}/check-pending-changes?job=${formatJobName(
+          job
+        )}&categorization=${categorization.toLowerCase()}`
       );
       const result = await response.json();
       return {

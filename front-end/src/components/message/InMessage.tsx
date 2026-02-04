@@ -132,7 +132,10 @@ export function InMessage() {
             In Messages (Pesan Masuk)
           </h1>
         </div>
-        <p className="text-gray-600">Riwayat pesan masuk dari tim IT untuk keperluan melakukan rotation plan kembali.</p>
+        <p className="text-gray-600">
+          Riwayat pesan masuk dari tim IT untuk keperluan melakukan rotation
+          plan kembali.
+        </p>
       </div>
 
       {/* Dashboard Cards */}

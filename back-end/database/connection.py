@@ -672,9 +672,7 @@ def submit_all_rotations(job, categorization):
                     reliever_data = rotation.get("reliever_data")
 
                     if not crew_data:
-                        print(
-                            f"WARNING - Skipping {group_key}: missing crew data"
-                        )
+                        print(f"WARNING - Skipping {group_key}: missing crew data")
                         continue
 
                     # =========================================================
@@ -685,20 +683,28 @@ def submit_all_rotations(job, categorization):
                     is_junior = isinstance(crew_data, list)
 
                     if is_junior:
-                        print(f"INFO - Processing JUNIOR rotation for group {group_key}")
+                        print(
+                            f"INFO - Processing JUNIOR rotation for group {group_key}"
+                        )
 
                         # Junior uses reliever_data: {seamancode_currentCrew: replacement_info}
                         if not reliever_data:
-                            print(f"WARNING - Skipping {group_key}: no reliever_data for Junior")
+                            print(
+                                f"WARNING - Skipping {group_key}: no reliever_data for Junior"
+                            )
                             continue
 
                         for current_crew in crew_data:
                             current_seamancode = current_crew.get("seamancode")
                             # Try both string and int keys for reliever_data lookup
-                            replacement = reliever_data.get(str(current_seamancode)) or reliever_data.get(current_seamancode)
+                            replacement = reliever_data.get(
+                                str(current_seamancode)
+                            ) or reliever_data.get(current_seamancode)
 
                             if not replacement:
-                                print(f"INFO - No replacement found for seamancode {current_seamancode}, reliever_data keys: {list(reliever_data.keys())}")
+                                print(
+                                    f"INFO - No replacement found for seamancode {current_seamancode}, reliever_data keys: {list(reliever_data.keys())}"
+                                )
                                 continue
 
                             # Extract replacement data - try multiple key variations
@@ -706,16 +712,18 @@ def submit_all_rotations(job, categorization):
                             nama = str(replacement.get("name") or "")
                             # Try lastVessel, last_vessel, lastLocation, last_location
                             last_location = str(
-                                replacement.get("lastVessel") or
-                                replacement.get("last_vessel") or
-                                replacement.get("lastLocation") or
-                                replacement.get("last_location") or
-                                ""
+                                replacement.get("lastVessel")
+                                or replacement.get("last_vessel")
+                                or replacement.get("lastLocation")
+                                or replacement.get("last_location")
+                                or ""
                             )
                             mutation_to = str(current_crew.get("currentVessel") or "")
                             start_date = current_crew.get("endDate")
 
-                            print(f"DEBUG - Processing: seamancode={seamancode}, nama={nama}, last_location={last_location}, mutation_to={mutation_to}")
+                            print(
+                                f"DEBUG - Processing: seamancode={seamancode}, nama={nama}, last_location={last_location}, mutation_to={mutation_to}"
+                            )
 
                             # Check existing submission
                             ck_q = """
@@ -725,14 +733,23 @@ def submit_all_rotations(job, categorization):
                                 AND (is_deleted = FALSE OR is_deleted IS NULL)
                                 ORDER BY version DESC LIMIT 1
                             """
-                            r = conn.execute(text(ck_q), {"job": job, "group_key": group_key, "seamancode": seamancode}).fetchone()
+                            r = conn.execute(
+                                text(ck_q),
+                                {
+                                    "job": job,
+                                    "group_key": group_key,
+                                    "seamancode": seamancode,
+                                },
+                            ).fetchone()
 
                             ver = 1
                             if r:
                                 if r[2] == "CHANGE" and not r[3]:
                                     ver = r[1] + 1
                                 elif r[3]:
-                                    print(f"INFO - Skipping {seamancode}: already active")
+                                    print(
+                                        f"INFO - Skipping {seamancode}: already active"
+                                    )
                                     continue  # Already active
 
                             # Parse start_date
@@ -741,11 +758,16 @@ def submit_all_rotations(job, categorization):
                                 try:
                                     # Format: "Wed, 04 Mar 2026 17:00:00 GMT"
                                     from email.utils import parsedate_to_datetime
+
                                     sd = parsedate_to_datetime(sd)
-                                except:
+                                except (ValueError, TypeError):
                                     try:
-                                        sd = datetime.strptime(sd, '%d-%m-%Y') if '-' in sd else datetime.strptime(sd, '%d/%m/%Y')
-                                    except:
+                                        sd = (
+                                            datetime.strptime(sd, "%d-%m-%Y")
+                                            if "-" in sd
+                                            else datetime.strptime(sd, "%d/%m/%Y")
+                                        )
+                                    except (ValueError, TypeError):
                                         sd = None
 
                             # Calculate dates (same as Senior: H+6 dari sekarang)
@@ -764,21 +786,32 @@ def submit_all_rotations(job, categorization):
                                  :version, 'PENDING', TRUE, :categorization, NOW())
                                 RETURNING id
                             """
-                            conn.execute(text(ins_q), {
-                                "job": job, "group_key": group_key, "seamancode": seamancode,
-                                "nama": nama, "last_location": last_location,
-                                "mutation_from": last_location,  # mutation_from = last_location (where replacement comes from)
-                                "mutation_to": mutation_to, "start_date": sd,
-                                "tanggal": tanggal, "tanggal_ready": tanggal_ready,
-                                "auto_accept_at": auto_accept_at,
-                                "version": ver, "categorization": categorization
-                            })
-                            apollo_notifications.append({
-                                "seamancode": seamancode,
-                                "tanggal": tanggal.strftime("%d-%m-%Y"),
-                                "mutationfrom": last_location,
-                                "mutationto": mutation_to
-                            })
+                            conn.execute(
+                                text(ins_q),
+                                {
+                                    "job": job,
+                                    "group_key": group_key,
+                                    "seamancode": seamancode,
+                                    "nama": nama,
+                                    "last_location": last_location,
+                                    "mutation_from": last_location,  # mutation_from = last_location (where replacement comes from)
+                                    "mutation_to": mutation_to,
+                                    "start_date": sd,
+                                    "tanggal": tanggal,
+                                    "tanggal_ready": tanggal_ready,
+                                    "auto_accept_at": auto_accept_at,
+                                    "version": ver,
+                                    "categorization": categorization,
+                                },
+                            )
+                            apollo_notifications.append(
+                                {
+                                    "seamancode": seamancode,
+                                    "tanggal": tanggal.strftime("%d-%m-%Y"),
+                                    "mutationfrom": last_location,
+                                    "mutationto": mutation_to,
+                                }
+                            )
                             submissions.append({"seamancode": seamancode})
 
                         continue  # Skip Senior Logic for this rotation
@@ -1293,7 +1326,9 @@ def check_job_submitted(job, vessel=None, categorization=None):
     """
     try:
         # Get all locked rotations for this job and vessel/categorization
-        locked_rotations = get_locked_rotations(job=job, vessel=vessel, categorization=categorization)
+        locked_rotations = get_locked_rotations(
+            job=job, vessel=vessel, categorization=categorization
+        )
 
         if not locked_rotations or len(locked_rotations) == 0:
             # Tidak ada rotations yang di-lock, anggap belum submitted
@@ -1368,7 +1403,9 @@ def check_has_pending_changes(job, vessel=None, categorization=None):
     try:
         with engine.connect() as conn:
             # Get all locked group_keys for this job and vessel/categorization
-            locked_rotations = get_locked_rotations(job=job, vessel=vessel, categorization=categorization)
+            locked_rotations = get_locked_rotations(
+                job=job, vessel=vessel, categorization=categorization
+            )
             if not locked_rotations:
                 return {"has_changes": False, "count": 0, "affected_groups": []}
 

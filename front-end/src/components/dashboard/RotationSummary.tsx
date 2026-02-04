@@ -94,7 +94,8 @@ export function RotationSummary() {
               Total Container
             </p>
             <h3 className="text-2xl font-bold text-gray-900">
-              {vesselStats.container > 0 ? vesselStats.container : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+              {vesselStats.container > 0 ? vesselStats.container : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
             </h3>
           </div>
         </div>
@@ -106,7 +107,8 @@ export function RotationSummary() {
               Total Manalagi
             </p>
             <h3 className="text-2xl font-bold text-gray-900">
-              {vesselStats.manalagi > 0 ? vesselStats.manalagi : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+              {vesselStats.manalagi > 0 ? vesselStats.manalagi : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
             </h3>
           </div>
         </div>
@@ -118,7 +120,8 @@ export function RotationSummary() {
               Total Barge Crane
             </p>
             <h3 className="text-2xl font-bold text-gray-900">
-              {vesselStats.bc > 0 ? vesselStats.bc : '-'} <span className='text-xs font-normal text-gray-600'>vessels</span>
+              {vesselStats.bc > 0 ? vesselStats.bc : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
             </h3>
           </div>
         </div>
@@ -127,7 +130,10 @@ export function RotationSummary() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
           <div className="flex flex-col">
             <p className="text-sm text-gray-600 font-medium mb-1">Total MT</p>
-            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3> 
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
           </div>
         </div>
 
@@ -135,7 +141,10 @@ export function RotationSummary() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
           <div className="flex flex-col">
             <p className="text-sm text-gray-600 font-medium mb-1">Total TB</p>
-            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3>
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
           </div>
         </div>
 
@@ -143,7 +152,10 @@ export function RotationSummary() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
           <div className="flex flex-col">
             <p className="text-sm text-gray-600 font-medium mb-1">Total TK</p>
-            <h3 className="text-2xl font-bold text-gray-900">- <span className='text-xs font-normal text-gray-600'>vessels</span></h3>
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
           </div>
         </div>
       </div>

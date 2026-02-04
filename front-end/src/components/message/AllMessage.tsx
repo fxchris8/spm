@@ -117,12 +117,11 @@ export function AllMessage() {
     <section className="p-6 flex-1 overflow-y-auto">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-1">
-          <h1 className="text-3xl font-bold text-gray-800">
-            All Messages
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-800">All Messages</h1>
         </div>
         <p className="text-gray-600">
-          Riwayat SPM secara lengkap. Seluruh informasi masuk dan keluar tersimpan dalam satu arsip terpadu.
+          Riwayat SPM secara lengkap. Seluruh informasi masuk dan keluar
+          tersimpan dalam satu arsip terpadu.
         </p>
       </div>
 

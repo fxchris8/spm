@@ -303,9 +303,15 @@ export function ManalagiSeniorRotation({
       toast.success(`Rotasi untuk ${selectedGroup} berhasil di-lock!`);
 
       // Invalidate queries to refetch locked rotations data
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'locked-rotations'] });
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'job-submitted'] });
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'pending-changes'] });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'locked-rotations'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'pending-changes'],
+      });
     } catch (error: any) {
       console.error('Error locking rotation:', error);
       toast.error(error.message || 'Gagal lock rotasi');
@@ -342,9 +348,15 @@ export function ManalagiSeniorRotation({
       setDaratTable(null);
 
       // Invalidate queries to refetch locked rotations data
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'locked-rotations'] });
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'job-submitted'] });
-      queryClient.invalidateQueries({ queryKey: ['manalagi', 'pending-changes'] });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'locked-rotations'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'pending-changes'],
+      });
     } catch (error: any) {
       console.error('Error unlocking rotation:', error);
       toast.error(error.message || 'Gagal unlock rotasi');
@@ -509,9 +521,15 @@ export function ManalagiSeniorRotation({
           `Berhasil mengirim ${result.submitted_count} rotasi! Notifikasi Apollo: ${result.apollo_success} berhasil, ${result.apollo_failed} gagal.`
         );
         // Invalidate queries to update UI without reload
-        queryClient.invalidateQueries({ queryKey: ['manalagi', 'job-submitted'] });
-        queryClient.invalidateQueries({ queryKey: ['manalagi', 'pending-changes'] });
-        queryClient.invalidateQueries({ queryKey: ['manalagi', 'locked-rotations'] });
+        queryClient.invalidateQueries({
+          queryKey: ['manalagi', 'job-submitted'],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['manalagi', 'pending-changes'],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['manalagi', 'locked-rotations'],
+        });
       } else {
         toast.error(result.message || 'Gagal mengirim rotasi');
       }
@@ -938,7 +956,9 @@ export function ManalagiSeniorRotation({
         show={showUnlockModal}
         onClose={() => setShowUnlockModal(false)}
         onConfirm={confirmUnlockRotation}
-        message={`Apakah Anda yakin ingin unlock rotasi untuk ${getGroupDisplayName(selectedGroup)}?`}
+        message={`Apakah Anda yakin ingin unlock rotasi untuk ${getGroupDisplayName(
+          selectedGroup
+        )}?`}
         confirmText="Ya, Unlock"
         confirmColor="warning"
       />
@@ -947,7 +967,9 @@ export function ManalagiSeniorRotation({
         show={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
         onConfirm={confirmSubmitAllRotations}
-        message={`Submit semua rotasi ${getJobDisplayName(job)} ke database dan kirim notifikasi ke Apollo?`}
+        message={`Submit semua rotasi ${getJobDisplayName(
+          job
+        )} ke database dan kirim notifikasi ke Apollo?`}
         confirmText="Ya, Submit"
         confirmColor="success"
       />

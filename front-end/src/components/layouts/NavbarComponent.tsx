@@ -11,10 +11,7 @@ export function NavbarComponent() {
   };
 
   return (
-    <Navbar
-      fluid
-      className="bg-red-800 shadow-lg border-red-950"
-    >
+    <Navbar fluid className="bg-red-800 shadow-lg border-red-950">
       <Navbar.Brand href="/" className="hover:opacity-90 transition-opacity">
         <img
           src="/logo.ico"

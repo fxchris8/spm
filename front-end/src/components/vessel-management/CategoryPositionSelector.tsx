@@ -30,7 +30,10 @@ export function CategoryPositionSelector({
   const positions = getAllPositions();
 
   // Check if a position should be disabled based on category
-  const isPositionDisabled = (category: string | null, position: string): boolean => {
+  const isPositionDisabled = (
+    category: string | null,
+    position: string
+  ): boolean => {
     if (!category) return false;
     if (!LIMITED_CATEGORIES.includes(category.toLowerCase())) return false;
     return !ALLOWED_POSITIONS_FOR_LIMITED.includes(position.toLowerCase());

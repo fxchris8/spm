@@ -100,7 +100,9 @@ export function VesselManagement() {
     );
 
     if (!hiddenFields) {
-      toast.error('Kombinasi kategori dan position tidak valid! Silakan hubungi administrator.');
+      toast.error(
+        'Kombinasi kategori dan position tidak valid! Silakan hubungi administrator.'
+      );
       return;
     }
 
@@ -212,9 +214,7 @@ export function VesselManagement() {
               {!isEditMode && (
                 <div className="flex gap-2">
                   <Button onClick={handleEditToggle}>
-                    {existingVessel
-                      ? 'Edit'
-                      : 'Buat'}
+                    {existingVessel ? 'Edit' : 'Buat'}
                   </Button>
                   {existingVessel && (
                     <Button
@@ -283,7 +283,9 @@ export function VesselManagement() {
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        message={`Yakin ingin menghapus konfigurasi ${formatPositionDisplay(selectedPosition || '')} untuk ${formatCategorizationDisplay(selectedCategory || '')}?`}
+        message={`Yakin ingin menghapus konfigurasi ${formatPositionDisplay(
+          selectedPosition || ''
+        )} untuk ${formatCategorizationDisplay(selectedCategory || '')}?`}
       />
     </div>
   );
