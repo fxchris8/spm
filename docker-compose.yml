@@ -26,13 +26,13 @@ services:
   # Backend API (Flask)
   backend:
     build:
-      context: ./back-end
-      dockerfile: DockerFile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: spm-backend
     ports:
       - "18037:5000"
     volumes:
-      - ./back-end:/app
+      - ./backend:/app
       - ./data:/data
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
@@ -51,7 +51,7 @@ services:
       - API_BASE_URL_PUSAT=${API_BASE_URL_PUSAT}
       - API_BASE_URL_IT=${API_BASE_URL_IT}
     env_file:
-      - ./back-end/.env
+      - ./backend/.env
     command: python app.py
     restart: unless-stopped
     networks:
@@ -69,11 +69,11 @@ services:
   # Scheduler (Background Task for Data Sync)
   scheduler:
     build:
-      context: ./back-end
-      dockerfile: DockerFile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: spm-scheduler
     volumes:
-      - ./back-end:/app
+      - ./backend:/app
       - ./data:/data
     environment:
       - DB_HOST=database
@@ -90,7 +90,7 @@ services:
       - API_BASE_URL_PUSAT=${API_BASE_URL_PUSAT}
       - API_BASE_URL_IT=${API_BASE_URL_IT}
     env_file:
-      - ./back-end/.env
+      - ./backend/.env
     command: python database/scheduler.py
     restart: unless-stopped
     networks:
@@ -107,7 +107,7 @@ services:
   # Frontend (React + Vite)
   frontend:
     build:
-      context: ./front-end
+      context: ./frontend
       dockerfile: Dockerfile
       target: ${BUILD_TARGET:-development}
     container_name: spm-frontend
@@ -115,7 +115,7 @@ services:
       - "8047:5173" # Development mode
       # - "8047:80"   # Production mode (uncomment if using production target)
     volumes:
-      - ./front-end:/app
+      - ./frontend:/app
       - /app/node_modules
     environment:
       - VITE_API_BASE_URL=http://localhost:18037/api

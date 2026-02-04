@@ -81,7 +81,7 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
         return True
 
     try:
-        # Create reports directory if not exists (outside back-end folder)
+        # Create reports directory if not exists (outside backend folder)
         reports_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..", "data", "reports")
         )
