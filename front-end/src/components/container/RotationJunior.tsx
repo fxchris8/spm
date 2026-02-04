@@ -65,6 +65,7 @@ export function RotationJunior() {
               part={v.part}
               job={v.job_title}
               groups={v.groups}
+              categorization="container"
             />
           </Tabs.Item>
         ))}

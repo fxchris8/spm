@@ -27,6 +27,7 @@ interface JuniorProps {
   type: string;
   part: string;
   job: string;
+  categorization: string;
 }
 
 interface ReplacementOption {
@@ -137,6 +138,7 @@ export function JuniorRotation({
   type: _type,
   part: _part,
   job,
+  categorization,
 }: JuniorProps) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedReplacement, setSelectedReplacement] = useState<
@@ -304,6 +306,7 @@ export function JuniorRotation({
           groupKey: selectedGroup,
           job: formatJobName(job),
           vessel: _vessel.toUpperCase(),
+          categorization: categorization,
           scheduleTable: JSON.stringify(scheduleTable),
           nahkodaTable: crewToRelieve,
           daratTable: selectedReplacement,
