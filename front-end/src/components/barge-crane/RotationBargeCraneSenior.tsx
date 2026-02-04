@@ -1,7 +1,7 @@
 // src/components/barge-crane/RotationBargeCraneSenior.tsx
 'use client';
 
-import { Tabs } from 'flowbite-react';
+import { Tabs, Spinner } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
 import { useRotationVessels } from '../../hooks/useRotationVessels';
@@ -25,11 +25,9 @@ export function RotationBargeCraneSenior() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading barge crane rotations...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading barge crane rotations...</span>
       </div>
     );
   }
@@ -37,7 +35,7 @@ export function RotationBargeCraneSenior() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="text-red-600 mb-2">⚠️ Error loading data</div>
+        <div className="text-red-600 mb-2">Error loading data</div>
         <p className="text-gray-600">{error}</p>
       </div>
     );
@@ -60,11 +58,7 @@ export function RotationBargeCraneSenior() {
           <Tabs.Item
             key={v.id}
             active={index === 0}
-            title={
-              v.job_title === 'KKM'
-                ? 'KKM'
-                : formatJobTitle(v.job_title)
-            }
+            title={v.job_title === 'KKM' ? 'KKM' : formatJobTitle(v.job_title)}
             icon={HiUserCircle}
           >
             <BargeCraneSeniorRotation

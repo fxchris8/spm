@@ -51,12 +51,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
+            row.SEAMANCODE ||
+            row.Seamancode ||
+            row.SeamanCode ||
+            row.seaman_code ||
+            row.SEAMAN_CODE ||
+            ''
           ).trim();
           return code;
         })
@@ -66,12 +66,12 @@ async function fetchLockedRotations(
         .map((row: any) => {
           const code = String(
             row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
+            row.SEAMANCODE ||
+            row.Seamancode ||
+            row.SeamanCode ||
+            row.seaman_code ||
+            row.SEAMAN_CODE ||
+            ''
           ).trim();
           return code;
         })
@@ -108,9 +108,8 @@ async function fetchCadanganData(
     params.append('locked_codes', lockedCadanganCodes.join(','));
   }
 
-  const url = `${API_BASE_URL}/cadangan-${job}${
-    params.toString() ? `?${params.toString()}` : ''
-  }`;
+  const url = `${API_BASE_URL}/cadangan-${job}${params.toString() ? `?${params.toString()}` : ''
+    }`;
   /* The above code is a comment written in TypeScript. It is logging a message "🔍 Fetching cadangan
   data:" along with the value of the variable `url`. However, the actual value of `url` is not
   provided in the code snippet. */
@@ -147,9 +146,8 @@ async function fetchPromotionCandidates(
     job = job.toLowerCase(); // sekarang job === "kkm"
   }
 
-  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${
-    params.toString() ? `?${params.toString()}` : ''
-  }`;
+  const url = `${API_BASE_URL}/seamen/promotion-candidates-${job}${params.toString() ? `?${params.toString()}` : ''
+    }`;
   // console.log('🔍 Fetching promotion candidates:', url);
 
   const response = await fetch(url, {
@@ -717,11 +715,20 @@ export function useSubmitRotations() {
   const queryClient = useQueryClient();
 
   const submitMutation = useMutation({
-    mutationFn: async (job: string) => {
+    mutationFn: async ({
+      job,
+      categorization,
+    }: {
+      job: string;
+      categorization: string;
+    }) => {
       const response = await fetch(`${API_BASE_URL}/submit-rotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job: job.toUpperCase() }),
+        body: JSON.stringify({
+          job: job.toUpperCase(),
+          categorization: categorization,
+        }),
       });
 
       if (!response.ok) {
@@ -731,16 +738,16 @@ export function useSubmitRotations() {
 
       return response.json();
     },
-    onSuccess: (_, job) => {
-      // Invalidate ALL queries related to this job (for all vessels)
+    onSuccess: (_, variables) => {
+      // Invalidate queries for this job and vessel category
       queryClient.invalidateQueries({
-        queryKey: ['locked-rotations', job],
+        queryKey: ['locked-rotations', variables.job, variables.categorization],
       });
       queryClient.invalidateQueries({
-        queryKey: ['job-submitted', job],
+        queryKey: ['job-submitted', variables.job, variables.categorization],
       });
       queryClient.invalidateQueries({
-        queryKey: ['pending-changes', job],
+        queryKey: ['pending-changes', variables.job, variables.categorization],
       });
     },
   });

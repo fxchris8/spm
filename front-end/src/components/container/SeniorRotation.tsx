@@ -519,7 +519,10 @@ export function SeniorRotation({
     setShowSubmitModal(false);
 
     try {
-      const result = await submitRotations(job);
+      const result = await submitRotations({
+        job,
+        categorization,
+      });
 
       if (result.status === 'success') {
         toast.success(
