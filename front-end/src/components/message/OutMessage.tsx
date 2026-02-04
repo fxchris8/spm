@@ -1,16 +1,9 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { useRotationSubmissions } from '../../hooks/useSeniorRotation';
-import {
-  Button,
-  TextInput,
-  Table,
-  Select,
-  Spinner,
-  Modal,
-} from 'flowbite-react';
+import { Button, TextInput, Table, Select, Spinner } from 'flowbite-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { HiOutlineExclamationCircle } from 'react-icons/hi';
+import { ConfirmModal } from '../container/ConfirmModal';
 import {
   faPaperPlane,
   faClock,
@@ -459,35 +452,24 @@ export function OutMessage() {
           </div>
         </div>
       )}
-      <Modal
+      <ConfirmModal
         show={showResetModal}
-        size="md"
         onClose={() => setShowResetModal(false)}
-        popup
-      >
-        <Modal.Header />
-        <Modal.Body>
-          <div className="text-center">
-            <HiOutlineExclamationCircle className="mx-auto mb-4 h-14 w-14 text-gray-400" />
-            <h3 className="mb-5 text-lg font-normal text-gray-500">
-              Are you sure you want to RESET ALL rotations?
-              <br />
-              <span className="text-sm">
-                This will delete all submissions and reset locked schedules.
-                This action cannot be undone.
-              </span>
-            </h3>
-            <div className="flex justify-center gap-4">
-              <Button color="failure" onClick={confirmReset}>
-                Yes, Reset All
-              </Button>
-              <Button color="gray" onClick={() => setShowResetModal(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
-      </Modal>
+        onConfirm={confirmReset}
+        confirmColor="failure"
+        message={
+          <>
+            Are you sure you want to RESET ALL rotations?
+            <br />
+            <span className="text-sm">
+              This will delete all submissions and reset locked schedules. This
+              action cannot be undone.
+            </span>
+          </>
+        }
+        confirmText="Yes, Reset All"
+        cancelText="Cancel"
+      />
     </section>
   );
 }

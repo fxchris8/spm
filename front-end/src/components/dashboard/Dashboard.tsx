@@ -1,11 +1,18 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, TextInput, Table, Select, Modal, Spinner } from 'flowbite-react';
+import {
+  Button,
+  TextInput,
+  Table,
+  Select,
+  Modal,
+  Spinner,
+} from 'flowbite-react';
 import {
   faUsers,
   faShip,
-  faHouse,
+  faAnchor,
   faChevronLeft,
   faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
@@ -17,6 +24,7 @@ import {
   Legend,
   Tooltip,
 } from 'recharts';
+import { ConfirmModal } from '../container/ConfirmModal';
 import { toast } from 'sonner';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useSimilarSeamen } from '../../hooks/useSimilarSeamen';
@@ -33,6 +41,7 @@ export function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   const { similarSeamen, loading: loadingSimilar } =
     useSimilarSeamen(selectedSeamanCode);
@@ -94,7 +103,12 @@ export function Dashboard() {
     setSelectedSeamanCode(null); // Reset, stop query
   };
 
-  const handleManualSync = async () => {
+  const handleManualSync = () => {
+    setShowSyncModal(true);
+  };
+
+  const confirmSync = async () => {
+    setShowSyncModal(false);
     const result = await triggerSync();
 
     if (result.success) {
@@ -156,7 +170,7 @@ export function Dashboard() {
             Ship Personnel Management
           </h1>
           <Button onClick={handleManualSync} disabled={syncLoading}>
-            {syncLoading ? 'Syncing...' : 'Sinkronisasi Data - CITRIX'}
+            {syncLoading ? 'Syncing...' : 'Sinkronisasi - CITRIX'}
           </Button>
         </div>
         <p className="text-gray-600">
@@ -204,7 +218,7 @@ export function Dashboard() {
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
             <div className="p-4 bg-blue-100 rounded-xl mr-4">
               <FontAwesomeIcon
-                icon={faHouse}
+                icon={faAnchor}
                 className="text-3xl text-blue-600"
               />
             </div>
@@ -416,12 +430,12 @@ export function Dashboard() {
           <Select
             sizing="sm"
             value={itemsPerPage}
-            onChange={(e) => {
+            onChange={e => {
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
           >
-            {[10, 20, 50, 100].map((num) => (
+            {[10, 20, 50, 100].map(num => (
               <option key={num} value={num}>
                 {num}
               </option>
@@ -457,7 +471,10 @@ export function Dashboard() {
                     'CERTIFICATE',
                     'DAY REMAINS DIFF',
                   ].map(header => (
-                    <Table.HeadCell key={header} className="bg-gray-800 text-white">
+                    <Table.HeadCell
+                      key={header}
+                      className="bg-gray-800 text-white"
+                    >
                       {header}
                     </Table.HeadCell>
                   ))}
@@ -466,19 +483,38 @@ export function Dashboard() {
                   {similarSeamen.length > 0 ? (
                     similarSeamen.map((seaman, idx) => (
                       <Table.Row key={idx} className="bg-white">
-                        <Table.Cell className="text-left text-gray-800">{seaman.seamancode}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.seafarercode}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.name}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.last_position}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.last_location}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.age}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman.certificate}</Table.Cell>
-                        <Table.Cell className="text-left text-gray-800">{seaman['DAY REMAINS DIFF']}</Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.seamancode}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.seafarercode}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.name}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.last_position}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.last_location}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.age}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman.certificate}
+                        </Table.Cell>
+                        <Table.Cell className="text-left text-gray-800">
+                          {seaman['DAY REMAINS DIFF']}
+                        </Table.Cell>
                       </Table.Row>
                     ))
                   ) : (
                     <Table.Row>
-                      <Table.Cell colSpan={8} className="text-center text-gray-800">
+                      <Table.Cell
+                        colSpan={8}
+                        className="text-center text-gray-800"
+                      >
                         Tidak ada data seamen serupa ditemukan.
                       </Table.Cell>
                     </Table.Row>
@@ -489,6 +525,25 @@ export function Dashboard() {
           )}
         </Modal.Body>
       </Modal>
+
+      <ConfirmModal
+        show={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
+        onConfirm={confirmSync}
+        confirmColor="failure"
+        message={
+          <>
+            Apakah anda yakin ingin melakukan Sinkronisasi Data?
+            <br />
+            <span className="text-sm">
+              Tindakan ini akan menggantikan data seaman dan mutasi saat ini
+              dengan data terbaru dari CITRIX.
+            </span>
+          </>
+        }
+        confirmText="Ya, Sinkronisasi"
+        cancelText="Batal"
+      />
     </section>
   );
 }
