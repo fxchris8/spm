@@ -271,6 +271,7 @@ export function OutMessage() {
           <thead className="bg-gray-800 text-white">
             <tr>
               {[
+                'Categorization',
                 'Job',
                 'Group',
                 'Seaman Code',
@@ -306,6 +307,9 @@ export function OutMessage() {
             ) : (
               currentItems.map((item: any, idx: number) => (
                 <tr key={idx} className="hover:bg-gray-50 transition">
+                  <td className="px-4 py-3 text-sm border-b">
+                    {item.categorization}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.job}
                   </td>
