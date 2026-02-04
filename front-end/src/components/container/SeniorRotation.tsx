@@ -265,6 +265,9 @@ export function SeniorRotation({
     setScheduleTable(null);
     setNahkodaTable(null);
     setDaratTable(null);
+    // Reset selections when changing group
+    setSelectedStandby([]);
+    setSelectedOptional([]);
   };
 
   // Handle Lock Rotation - Save to Database
