@@ -315,11 +315,10 @@ export function OutMessage() {
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
                     {item.group_key?.startsWith('container_rotation')
-                      ? `Group ${item.group_key.replace(
-                          'container_rotation',
-                          ''
-                        )}`
-                      : item.group_key}
+                      ? `Group ${item.group_key.replace('container_rotation', '')}`
+                      : item.group_key?.startsWith('manalagi_rotation')
+                        ? `Group ${item.group_key.replace('manalagi_rotation', '')}`
+                        : item.group_key}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.seamancode}

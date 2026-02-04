@@ -247,6 +247,7 @@ export function InMessage() {
           <thead className="bg-blue-800 text-white">
             <tr>
               {[
+                'Categorization',
                 'Job',
                 'Group',
                 'Seaman Code',
@@ -277,16 +278,18 @@ export function InMessage() {
             ) : (
               currentItems.map((item: any, idx: number) => (
                 <tr key={idx} className="hover:bg-blue-50 transition">
+                  <td className="px-4 py-3 text-sm border-b">
+                    {item.categorization}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.job}
                   </td>
                   <td className="px-4 py-3 text-sm border-b">
                     {item.group_key?.startsWith('container_rotation')
-                      ? `Group ${item.group_key.replace(
-                          'container_rotation',
-                          ''
-                        )}`
-                      : item.group_key}
+                      ? `Group ${item.group_key.replace('container_rotation', '')}`
+                      : item.group_key?.startsWith('manalagi_container')
+                        ? `Group ${item.group_key.replace('manalagi_container', '')}`
+                        : item.group_key}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium border-b">
                     {item.seamancode}
