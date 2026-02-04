@@ -308,6 +308,7 @@ export function SeniorRotation({
         groupKey: selectedGroup,
         job: job.toUpperCase(),
         vessel: vessel.toUpperCase(),
+        categorization: categorization,
         scheduleTable,
         nahkodaTable,
         daratTable,
