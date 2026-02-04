@@ -105,7 +105,8 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
             <tr>
               <th className="px-4 py-3">Seaman Code</th>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Rank Saat Ini</th>
+              <th className="px-4 py-3">Rank</th>
+              <th className="px-4 py-3">Vessel</th>
               <th className="px-4 py-3">History</th>
               <th className="px-4 py-3">Match Count</th>
             </tr>
@@ -118,6 +119,7 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
                 </td>
                 <td className="px-4 py-3">{candidate.name}</td>
                 <td className="px-4 py-3">{candidate.rank}</td>
+                <td className="px-4 py-3">{candidate.vessel}</td>
                 <td className="px-4 py-3 text-xs text-gray-600">
                   {candidate.history || 'Tidak ada riwayat'}
                 </td>

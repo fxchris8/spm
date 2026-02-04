@@ -35,6 +35,7 @@ interface PromotionCandidate {
   seamancode: string | number;
   name: string;
   rank: string;
+  vessel: string;
   history: string;
   matchCount: number;
 }
@@ -270,6 +271,7 @@ async function fetchPromotionCandidates(
     return result.data.map((item: any) => ({
       seamancode: item.code || item.seamancode || 0,
       name: item.name || '',
+      vessel: item.vessel || item.last_location || '',
       rank: item.rank || item.last_position || '',
       history: Array.isArray(item.history)
         ? item.history
