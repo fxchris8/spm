@@ -1,5 +1,5 @@
-// src/hooks/useSeniorRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CONTAINER_VESSELS, MANALAGI_VESSELS } from '../constants/vessels';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -283,82 +283,6 @@ export function useMutasiData(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
-  // ✅ DEFINISI KAPAL GROUPS
-  const CONTAINER_VESSELS = new Set([
-    'KM. ORIENTAL EMERALD',
-    'KM. ORIENTAL RUBY',
-    'KM. ORIENTAL SILVER',
-    'KM. ORIENTAL GOLD',
-    'KM. ORIENTAL JADE',
-    'KM. ARMADA SEJATI',
-    'KM. ORIENTAL DIAMOND',
-    'KM. LUZON',
-    'KM. BALI AYU',
-    'KM. VERIZON',
-    'KM. ORIENTAL GALAXY',
-    'KM. HIJAU SAMUDRA',
-    'KM. ARMADA PERMATA',
-    'KM. ORIENTAL SAMUDERA',
-    'KM. ORIENTAL PACIFIC',
-    'KM. PULAU NUNUKAN',
-    'KM. TELUK FLAMINGGO',
-    'KM. TELUK BERAU',
-    'KM. TELUK BINTUNI',
-    'KM. PULAU LAYANG',
-    'KM. PULAU WETAR',
-    'KM. PULAU HOKI',
-    'KM. SPIL HANA',
-    'KM. SPIL HASYA',
-    'KM. SPIL HAPSRI',
-    'KM. SPIL HAYU',
-    'KM. HIJAU JELITA',
-    'KM. HIJAU SEJUK',
-    'KM. ARMADA SERASI',
-    'KM. ARMADA SEGARA',
-    'KM. ARMADA SENADA',
-    'KM. HIJAU SEGAR',
-    'KM. TITANIUM',
-    'KM. VERTIKAL',
-    'KM. SPIL RENATA',
-    'KM. SPIL RATNA',
-    'KM. SPIL RUMI',
-    'KM. PEKAN BERAU',
-    'KM. SPIL RAHAYU',
-    'KM. SPIL RETNO',
-    'KM. MINAS BARU',
-    'KM. PEKAN SAMPIT',
-    'KM. SELILI BARU',
-    'KM. DERAJAT',
-    'KM. MULIANIM',
-    'KM. PRATIWI RAYA',
-    'KM. MAGELLAN',
-    'KM. PAHALA',
-    'KM. PEKAN RIAU',
-    'KM. PEKAN FAJAR',
-    'KM. FORTUNE',
-    'KM. PRATIWI SATU',
-    'KM. BALI GIANYAR',
-    'KM. BALI KUTA',
-    'KM. BALI SANUR',
-    'KM. AKASHIA',
-    'KM. KAPPA',
-  ]);
-
-  const MANALAGI_VESSELS = new Set([
-    'KM. MANALAGI ASTA',
-    'KM. MANALAGI ASTI',
-    'KM. MANALAGI DASA',
-    'KM. MANALAGI ENZI',
-    'KM. MANALAGI HITA',
-    'KM. MANALAGI SAMBA',
-    'KM. MANALAGI TARA',
-    'KM. MANALAGI TISYA',
-    'KM. MANALAGI VIRA',
-    'KM. MANALAGI WANDA',
-    'KM. MANALAGI YASA',
-    'KM. XYS SATU',
-  ]);
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['mutasi-data', job, type, groupKey, lockedCadanganCodes],
     queryFn: async () => {
