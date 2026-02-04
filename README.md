@@ -6,7 +6,7 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
 
 ## Deskripsi Repository
 
-### Back-end
+### Backend
 
 - **Framework**: Flask (Python)
 - **Fungsi**:
@@ -30,7 +30,7 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
   - `seeder.py` - Mengisi data awal untuk development/testing
   - `scheduler.py` - Background task untuk sinkronisasi data
 
-### Front-end
+### Frontend
 
 - **Framework**: React 19 + TypeScript
 - **UI Library**: Flowbite React + Tailwind CSS
