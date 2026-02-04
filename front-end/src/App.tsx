@@ -53,30 +53,30 @@ export function App() {
         >
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/search_on_duty" element={<SearchOnDuty />} />
-            <Route path="/search_off_duty" element={<SearchOffDuty />} />
-            <Route path="/vessel_management" element={<VesselManagement />} />
-            <Route path="/senior_rotation" element={<RotationSenior />} />
-            <Route path="/junior_rotation" element={<RotationJunior />} />
+            <Route path="/search-onduty" element={<SearchOnDuty />} />
+            <Route path="/search-offduty" element={<SearchOffDuty />} />
+            <Route path="/vessel-management" element={<VesselManagement />} />
+            <Route path="/senior-rotation" element={<RotationSenior />} />
+            <Route path="/junior-rotation" element={<RotationJunior />} />
             <Route
-              path="/manalagi_senior_rotation"
+              path="/manalagi-senior-rotation"
               element={<RotationManalagiSenior />}
             />
             <Route
-              path="/manalagi_junior_rotation"
+              path="/manalagi-junior-rotation"
               element={<RotationManalagiJunior />}
             />
             <Route
-              path="/barge_crane_senior_rotation"
+              path="/bc-senior-rotation"
               element={<RotationBargeCraneSenior />}
             />
             <Route
-              path="/barge_crane_junior_rotation"
+              path="/bc-junior-rotation"
               element={<RotationBargeCraneJunior />}
             />
-            <Route path="/all_message" element={<AllMessage />} />
-            <Route path="/in_message" element={<InMessage />} />
-            <Route path="/out_message" element={<OutMessage />} />
+            <Route path="/all-message" element={<AllMessage />} />
+            <Route path="/in-message" element={<InMessage />} />
+            <Route path="/out-message" element={<OutMessage />} />
           </Routes>
         </main>
       </div>
