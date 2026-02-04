@@ -9,17 +9,22 @@ import {
   HiLockClosed,
   HiLockOpen,
   HiStar,
+  HiExclamationCircle,
 } from 'react-icons/hi';
+import { toast } from 'sonner';
 import { CardComponent } from '../CardComponent';
+import { ConfirmModal } from './ConfirmModal';
 import {
   useLockedRotations,
   useCrewToRelieve,
   useReplacementOptions,
   usePromotionCandidates,
   useLockRotation,
+  useSubmitRotations,
+  useJobSubmitted,
+  usePendingChanges,
   formatJobName,
 } from '../../hooks/useJuniorRotation';
-import { LoadingSpinner } from '../LoadingComponent';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -27,6 +32,7 @@ interface JuniorProps {
   type: string;
   part: string;
   job: string;
+  categorization: string;
 }
 
 interface ReplacementOption {
@@ -73,7 +79,10 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
     return (
       <div className="mt-4 p-6 border border-gray-200 rounded-xl bg-white shadow-sm">
         <div className="py-8">
-          <LoadingSpinner size="md" message="Loading promotion data..." />
+          <div className="flex flex-col items-center justify-center gap-4">
+            <Spinner size="md" color="failure" />
+            <span className="text-gray-600">Loading promotion data...</span>
+          </div>
         </div>
       </div>
     );
@@ -102,7 +111,8 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
             <tr>
               <th className="px-4 py-3">Seaman Code</th>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Rank Saat Ini</th>
+              <th className="px-4 py-3">Rank</th>
+              <th className="px-4 py-3">Vessel</th>
               <th className="px-4 py-3">History</th>
               <th className="px-4 py-3">Match Count</th>
             </tr>
@@ -115,6 +125,7 @@ function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
                 </td>
                 <td className="px-4 py-3">{candidate.name}</td>
                 <td className="px-4 py-3">{candidate.rank}</td>
+                <td className="px-4 py-3">{candidate.vessel}</td>
                 <td className="px-4 py-3 text-xs text-gray-600">
                   {candidate.history || 'Tidak ada riwayat'}
                 </td>
@@ -137,12 +148,15 @@ export function JuniorRotation({
   type: _type,
   part: _part,
   job,
+  categorization,
 }: JuniorProps) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedReplacement, setSelectedReplacement] = useState<
     Record<string, ReplacementOption | null>
   >({});
   const [submitting, setSubmitting] = useState(false);
+  // const [showUnlockModal, setShowUnlockModal] = useState(false); // Removed as per request
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   // ============= TANSTACK QUERY HOOKS =============
 
@@ -154,6 +168,20 @@ export function JuniorRotation({
     getLockedData,
     refetch: refetchLocked,
   } = useLockedRotations(job);
+
+  // Check pending changes and submission status (use categorization for Junior)
+  const { isSubmitted } = useJobSubmitted(job, categorization);
+  const {
+    hasChanges,
+    count: changesCount,
+    affectedGroups,
+  } = usePendingChanges(job, categorization);
+  const { submitRotations, loading: loadingSubmit } = useSubmitRotations();
+
+  // Check if AT LEAST ONE group is locked (Requirement for Junior Submit)
+  const isAtLeastOneLocked = useMemo(() => {
+    return allLockedRotations.some(lock => lock.is_active);
+  }, [allLockedRotations]);
 
   // Get locked data for current group
   const lockedData = useMemo(
@@ -254,71 +282,112 @@ export function JuniorRotation({
     });
   };
 
+  // Handle Lock Toggle (Logic Split)
   const handleLockToggle = async () => {
     if (!selectedGroup) return;
 
-    setSubmitting(true);
-
-    try {
-      if (isCurrentGroupLocked && lockedData) {
-        // Unlock
+    // If locked, request unlock confirmation
+    if (isCurrentGroupLocked) {
+      // Direct unlock without modal
+      setSubmitting(true);
+      try {
         await unlockRotation({
           selectedGroup: selectedGroup,
           job: formatJobName(job),
           vessel: _vessel.toUpperCase(),
         });
-        await refetchLocked(); // Refresh locked rotations
-        alert('SUCCES! Data berhasil di-unlock!');
-      } else {
-        // Lock
-        const scheduleTable = crewToRelieve.map(crew => {
-          const replacement = selectedReplacement[crew.seamancode];
-          return {
-            currentCrew: {
-              seamancode: crew.seamancode,
-              name: crew.name,
-              vessel: crew.currentVessel,
-              position: crew.currentPosition,
-              daysRemaining: crew.daysRemaining,
-              daysElapsed: crew.daysElapsed,
-              endDate: crew.endDate,
-            },
-            replacement: replacement
-              ? {
-                  seamancode: replacement.seamancode,
-                  name: replacement.name,
-                  position: replacement.position,
-                  lastVessel: replacement.lastVessel,
-                  status: replacement.status,
-                  daysSinceLastVessel: replacement.daysSinceLastVessel,
-                }
-              : null,
-          };
-        });
-
-        const lockedSeamanCodes = Object.values(selectedReplacement)
-          .filter(r => r !== null)
-          .map(r => (r as ReplacementOption).seamancode);
-
-        const payload = {
-          groupKey: selectedGroup,
-          job: formatJobName(job),
-          vessel: _vessel.toUpperCase(),
-          scheduleTable: JSON.stringify(scheduleTable),
-          nahkodaTable: crewToRelieve,
-          daratTable: selectedReplacement,
-          lockedSeamanCodes: lockedSeamanCodes,
-        };
-
-        await lockRotation(payload);
-        await refetchLocked(); // Refresh locked rotations
-        alert('SUCCES! Data berhasil di-lock!');
+        await refetchLocked();
+        toast.success('Data berhasil di-unlock!');
+        // Reset local state if needed, though effect handles it
+      } catch (error: any) {
+        console.error('FAILED! Error unlocking:', error);
+        toast.error(`Gagal unlock: ${error.message}`);
+      } finally {
+        setSubmitting(false);
       }
+      return;
+    }
+
+    // If unlocking (locking new data)
+    setSubmitting(true);
+
+    try {
+      // Lock Logic
+      const scheduleTable = crewToRelieve.map(crew => {
+        const replacement = selectedReplacement[crew.seamancode];
+        return {
+          currentCrew: {
+            seamancode: crew.seamancode,
+            name: crew.name,
+            vessel: crew.currentVessel,
+            position: crew.currentPosition,
+            daysRemaining: crew.daysRemaining,
+            daysElapsed: crew.daysElapsed,
+            endDate: crew.endDate,
+          },
+          replacement: replacement
+            ? {
+                seamancode: replacement.seamancode,
+                name: replacement.name,
+                position: replacement.position,
+                lastVessel: replacement.lastVessel,
+                status: replacement.status,
+                daysSinceLastVessel: replacement.daysSinceLastVessel,
+              }
+            : null,
+        };
+      });
+
+      const lockedSeamanCodes = Object.values(selectedReplacement)
+        .filter(r => r !== null)
+        .map(r => (r as ReplacementOption).seamancode);
+
+      const payload = {
+        groupKey: selectedGroup,
+        job: formatJobName(job),
+        vessel: _vessel.toUpperCase(),
+        categorization: categorization,
+        scheduleTable: scheduleTable,
+        nahkodaTable: crewToRelieve,
+        daratTable: selectedReplacement,
+        lockedSeamanCodes: lockedSeamanCodes,
+      };
+
+      await lockRotation(payload);
+      await refetchLocked(); // Refresh locked rotations
+      toast.success('Data berhasil di-lock!');
     } catch (error: any) {
-      console.error('FAILED! Error toggling lock:', error);
-      alert(`FAILED! Gagal: ${error.message}`);
+      console.error('FAILED! Error locking:', error);
+      toast.error(`Gagal lock: ${error.message}`);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Handle Submit Rotations
+  const handleSubmitRotations = () => {
+    setShowSubmitModal(true);
+  };
+
+  const confirmSubmitRotations = async () => {
+    setShowSubmitModal(false);
+    try {
+      const result = await submitRotations({
+        job,
+        categorization,
+      });
+
+      if (result.status === 'success') {
+        toast.success(
+          `Berhasil mengirim ${result.submitted_count} rotasi! Notifikasi Apollo: ${result.apollo_success} berhasil, ${result.apollo_failed} gagal.`
+        );
+        refetchLocked(); // Refresh status
+      } else {
+        toast.error(result.message || 'Gagal mengirim rotasi');
+      }
+    } catch (error: any) {
+      console.error('Error submitting rotations:', error);
+      toast.error(error.message || 'Gagal mengirim rotasi');
     }
   };
 
@@ -330,27 +399,106 @@ export function JuniorRotation({
 
   return (
     <div className="px-6">
-      <div className="text-3xl mb-3 font-bold">
-        Generate Junior Crew Rotation
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <div className="text-3xl font-bold text-gray-800">
+            Generate Junior Crew Rotation - {formatJobName(job)}
+          </div>
+          <p className="text-gray-600 mt-1">
+            Generate dan kelola jadwal rotasi JUNIOR {formatJobName(job)}
+          </p>
+        </div>
+
+        {/* Submit Button - Visible when AT LEAST ONE group is locked AND (not submitted OR has changes) */}
+        {isAtLeastOneLocked && (!isSubmitted || hasChanges) && (
+          <Button
+            color="success"
+            onClick={handleSubmitRotations}
+            disabled={loadingSubmit}
+          >
+            {loadingSubmit ? (
+              <>
+                <Spinner size="sm" light className="mr-2" />
+                Submitting...
+              </>
+            ) : hasChanges ? (
+              `Kirim Perubahan (${changesCount})`
+            ) : (
+              `Kirim Rotasi`
+            )}
+          </Button>
+        )}
+
+        {/* Show submitted status - only when submitted and no pending changes */}
+        {isAtLeastOneLocked && isSubmitted && !hasChanges && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+            <HiLockClosed className="h-5 w-5" />
+            <span className="font-medium">Terkirim</span>
+          </div>
+        )}
       </div>
+
+      {/* Pending Changes Alert */}
+      {hasChanges && affectedGroups.length > 0 && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <HiExclamationCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-yellow-800 ">
+                Permintaan Perubahan Terdeteksi
+              </h3>
+              <p className="text-sm text-yellow-700 mb-2">
+                {changesCount} rotasi pada grup berikut perlu dikirim ulang:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {affectedGroups.map((groupKey: string) => (
+                  <span
+                    key={groupKey}
+                    className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded"
+                  >
+                    {groupKey.replace('container_rotation', 'Grup ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Card for group selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {Object.entries(groups).map(([groupKey, vessels]) => (
-          <div key={groupKey} className="relative">
-            <CardComponent
-              groupName={`Group ${groupKey.replace('container_rotation', '')}`}
-              listShip={vessels}
-              isActive={selectedGroup === groupKey}
-              onClick={() => handleCardClick(groupKey)}
-            />
-            {isGroupLocked(groupKey) && (
-              <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm">
-                <HiLockClosed className="h-4 w-4 text-green-600" />
-              </div>
-            )}
-          </div>
-        ))}
+        {Object.entries(groups).map(([groupKey, vessels]) => {
+          const isLocked = isGroupLocked(groupKey);
+          const hasPendingChange = affectedGroups.includes(groupKey);
+
+          return (
+            <div key={groupKey} className="relative">
+              {/* Locked Badge */}
+              {isLocked && !hasPendingChange && (
+                <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm z-10">
+                  <HiLockClosed className="h-4 w-4 text-green-600" />
+                </div>
+              )}
+
+              {/* Pending Change Badge - Higher priority than locked */}
+              {hasPendingChange && (
+                <div className="absolute top-4 right-4 bg-yellow-100 rounded-full p-1.5 shadow-sm z-10">
+                  <HiExclamationCircle className="h-4 w-4 text-yellow-600" />
+                </div>
+              )}
+
+              <CardComponent
+                groupName={`Group ${groupKey.replace(
+                  'container_rotation',
+                  ''
+                )}`}
+                listShip={vessels}
+                isActive={selectedGroup === groupKey}
+                onClick={() => handleCardClick(groupKey)}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Main Content */}
@@ -358,7 +506,10 @@ export function JuniorRotation({
         <>
           {isLoadingAnyData ? (
             <div className="py-12">
-              <LoadingSpinner size="lg" message="Loading data..." />
+              <div className="flex flex-col items-center justify-center gap-4">
+                <Spinner size="lg" color="failure" />
+                <span className="text-gray-600">Loading data...</span>
+              </div>
             </div>
           ) : (
             <>
@@ -713,6 +864,37 @@ export function JuniorRotation({
           )}
         </>
       )}
+      {/* Confirm Unlock Modal - REMOVED as per request to make it direct */}
+      {/* <ConfirmModal
+        show={showUnlockModal}
+        onClose={() => setShowUnlockModal(false)}
+        onConfirm={confirmUnlock}
+        confirmColor="failure"
+        message="Apakah anda yakin ingin membuka kembali rotasi ini? Data yang sudah di-lock akan dihapus dan perlu di-set ulang."
+        confirmText="Ya, Unlock"
+        cancelText="Batal"
+      /> */}
+
+      {/* Confirm Submit Modal */}
+      <ConfirmModal
+        show={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onConfirm={confirmSubmitRotations}
+        confirmColor="success"
+        message={
+          <>
+            Apakah anda yakin ingin mengirim rotasi ini ke sistem utama
+            (Apollo)?
+            <br />
+            <span className="text-sm text-gray-500">
+              Pastikan semua data sudah benar. Data yang sudah dikirim akan
+              menunggu persetujuan Crewing Manager.
+            </span>
+          </>
+        }
+        confirmText="Ya, Kirim Rotasi"
+        cancelText="Batal"
+      />
     </div>
   );
 }

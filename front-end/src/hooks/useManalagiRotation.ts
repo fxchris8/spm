@@ -1,5 +1,6 @@
 // src/hooks/useSeniorRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MANALAGI_VESSELS, CONTAINER_VESSELS } from '../constants/vessels';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -280,82 +281,6 @@ export function useMutasiData(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
-  // ✅ DEFINISI KAPAL GROUPS
-  const CONTAINER_VESSELS = new Set([
-    'KM. ORIENTAL EMERALD',
-    'KM. ORIENTAL RUBY',
-    'KM. ORIENTAL SILVER',
-    'KM. ORIENTAL GOLD',
-    'KM. ORIENTAL JADE',
-    'KM. ARMADA SEJATI',
-    'KM. ORIENTAL DIAMOND',
-    'KM. LUZON',
-    'KM. BALI AYU',
-    'KM. VERIZON',
-    'KM. ORIENTAL GALAXY',
-    'KM. HIJAU SAMUDRA',
-    'KM. ARMADA PERMATA',
-    'KM. ORIENTAL SAMUDERA',
-    'KM. ORIENTAL PACIFIC',
-    'KM. PULAU NUNUKAN',
-    'KM. TELUK FLAMINGGO',
-    'KM. TELUK BERAU',
-    'KM. TELUK BINTUNI',
-    'KM. PULAU LAYANG',
-    'KM. PULAU WETAR',
-    'KM. PULAU HOKI',
-    'KM. SPIL HANA',
-    'KM. SPIL HASYA',
-    'KM. SPIL HAPSRI',
-    'KM. SPIL HAYU',
-    'KM. HIJAU JELITA',
-    'KM. HIJAU SEJUK',
-    'KM. ARMADA SERASI',
-    'KM. ARMADA SEGARA',
-    'KM. ARMADA SENADA',
-    'KM. HIJAU SEGAR',
-    'KM. TITANIUM',
-    'KM. VERTIKAL',
-    'KM. SPIL RENATA',
-    'KM. SPIL RATNA',
-    'KM. SPIL RUMI',
-    'KM. PEKAN BERAU',
-    'KM. SPIL RAHAYU',
-    'KM. SPIL RETNO',
-    'KM. MINAS BARU',
-    'KM. PEKAN SAMPIT',
-    'KM. SELILI BARU',
-    'KM. DERAJAT',
-    'KM. MULIANIM',
-    'KM. PRATIWI RAYA',
-    'KM. MAGELLAN',
-    'KM. PAHALA',
-    'KM. PEKAN RIAU',
-    'KM. PEKAN FAJAR',
-    'KM. FORTUNE',
-    'KM. PRATIWI SATU',
-    'KM. BALI GIANYAR',
-    'KM. BALI KUTA',
-    'KM. BALI SANUR',
-    'KM. AKASHIA',
-    'KM. KAPPA',
-  ]);
-
-  const MANALAGI_VESSELS = new Set([
-    'KM. MANALAGI ASTA',
-    'KM. MANALAGI ASTI',
-    'KM. MANALAGI DASA',
-    'KM. MANALAGI ENZI',
-    'KM. MANALAGI HITA',
-    'KM. MANALAGI SAMBA',
-    'KM. MANALAGI TARA',
-    'KM. MANALAGI TISYA',
-    'KM. MANALAGI VIRA',
-    'KM. MANALAGI WANDA',
-    'KM. MANALAGI YASA',
-    'KM. XYS SATU',
-  ]);
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'mutasi-data', job, groupKey, lockedCadanganCodes],
     queryFn: async () => {
@@ -401,6 +326,14 @@ export function useMutasiData(
                   //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
                   // );
                   return null; // Skip seaman ini
+                }
+
+                // New Condition: Minimal harus ada 1 history di kapal Manalagi
+                const hasManalagiHistory = vlist.some((v: string) =>
+                  MANALAGI_VESSELS.has(v)
+                );
+                if (!hasManalagiHistory) {
+                  return null;
                 }
               }
             }
@@ -558,7 +491,11 @@ export function usePotentialPromotion(
           (r: any) =>
             r.seamancode &&
             allowed.has(r.seamancode) &&
-            !lockedCodes.includes(r.seamancode)
+            !lockedCodes.includes(r.seamancode) &&
+            // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi (fuzzy match di string history)
+            Array.from(MANALAGI_VESSELS).some(v =>
+              String(r.history || '').includes(v)
+            )
         )
         .sort((a: any, b: any) => (b.matchCount ?? 0) - (a.matchCount ?? 0))
         .slice(0, 50);
@@ -587,7 +524,15 @@ export function useCadanganData(
 ) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'cadangan-data', job, groupKey, lockedCadanganCodes],
-    queryFn: () => fetchCadanganData(job, groupKey!, lockedCadanganCodes),
+    queryFn: async () => {
+      const data = await fetchCadanganData(job, groupKey!, lockedCadanganCodes);
+      // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi
+      return data.filter((item: any) => {
+        const hist = item.history || item.vessels || '';
+        const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
+        return Array.from(MANALAGI_VESSELS).some(v => histStr.includes(v));
+      });
+    },
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
@@ -615,8 +560,19 @@ export function usePromotionCandidates(
       groupKey,
       lockedCadanganCodes,
     ],
-    queryFn: () =>
-      fetchPromotionCandidates(job, groupKey!, lockedCadanganCodes),
+    queryFn: async () => {
+      const data = await fetchPromotionCandidates(
+        job,
+        groupKey!,
+        lockedCadanganCodes
+      );
+      // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi
+      return data.filter((item: any) => {
+        const hist = item.history || item.vessels || '';
+        const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
+        return Array.from(MANALAGI_VESSELS).some(v => histStr.includes(v));
+      });
+    },
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
@@ -667,6 +623,10 @@ export function useLockRotation() {
       });
       queryClient.invalidateQueries({
         queryKey: ['manalagi', 'mutasi-data', variables.job],
+      });
+      // Invalidate job submitted since lock changes state
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
       });
     },
   });
@@ -720,6 +680,10 @@ export function useLockRotation() {
       queryClient.invalidateQueries({
         queryKey: ['manalagi', 'potential-promotion', variables.job],
       });
+      // Invalidate job submitted
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted'],
+      });
     },
   });
 
@@ -729,5 +693,101 @@ export function useLockRotation() {
     lockLoading: lockMutation.isPending,
     unlockLoading: unlockMutation.isPending,
     error: lockMutation.error?.message || unlockMutation.error?.message || null,
+  };
+}
+
+// Hook untuk submit all rotations (mutation)
+export function useSubmitRotations() {
+  const queryClient = useQueryClient();
+
+  const submitMutation = useMutation({
+    mutationFn: async ({
+      job,
+      categorization,
+    }: {
+      job: string;
+      categorization: string;
+    }) => {
+      const response = await fetch(`${API_BASE_URL}/submit-rotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job: job.toUpperCase(),
+          categorization: categorization,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit rotations');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate ALL queries related to this job (for all vessels)
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'locked-rotations', variables.job],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['manalagi', 'job-submitted', variables.job],
+      });
+    },
+  });
+
+  return {
+    submitRotations: submitMutation.mutateAsync,
+    loading: submitMutation.isPending,
+    error: submitMutation.error?.message || null,
+  };
+}
+
+// Hook untuk check submitted status
+export function useJobSubmitted(job: string, vessel: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['manalagi', 'job-submitted', job, vessel],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-job-submitted?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
+      );
+      const result = await response.json();
+      return result.is_submitted || false;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return {
+    isSubmitted: data || false,
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
+// Hook untuk check pending changes
+export function usePendingChanges(job: string, vessel: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['manalagi', 'pending-changes', job, vessel],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-pending-changes?job=${job.toUpperCase()}&vessel=${vessel.toUpperCase()}`
+      );
+      const result = await response.json();
+      return {
+        hasChanges: result.has_changes || false,
+        count: result.count || 0,
+        affectedGroups: result.affected_groups || [],
+      };
+    },
+    staleTime: 1 * 60 * 1000, // Check tiap menit atau invalidasi manual
+    gcTime: 30 * 60 * 1000,
+  });
+
+  return {
+    hasChanges: data?.hasChanges || false,
+    count: data?.count || 0,
+    affectedGroups: data?.affectedGroups || [],
+    loading: isLoading,
+    error: error?.message || null,
   };
 }

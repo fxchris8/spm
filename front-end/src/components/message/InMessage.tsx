@@ -1,12 +1,15 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { useRotationSubmissions } from '../../hooks/useSeniorRotation';
-import { LoadingComponent } from '../LoadingComponent';
+import { Button, TextInput, Table, Select, Spinner } from 'flowbite-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faInbox,
+  faList,
+  faClock,
+  faCheckCircle,
   faExchangeAlt,
-  faTimesCircle,
+  faChevronLeft,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 
 export function InMessage() {
@@ -113,21 +116,25 @@ export function InMessage() {
   }, [incomingMessages]);
 
   if (loading) {
-    return <LoadingComponent message="Loading incoming messages..." />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading incoming messages...</span>
+      </div>
+    );
   }
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        In Information (Messages from IT)
-      </h1>
-
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This page shows rotation submissions that have
-          received responses from the central IT team. Only entries with a
-          confirmed ready date are displayed here.
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-1">
+          <h1 className="text-3xl font-bold text-gray-800">
+            In Messages (Pesan Masuk)
+          </h1>
+        </div>
+        <p className="text-gray-600">
+          Riwayat pesan masuk dari tim IT untuk keperluan melakukan rotation
+          plan kembali.
         </p>
       </div>
 
@@ -136,10 +143,7 @@ export function InMessage() {
         {/* Total Messages */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
           <div className="p-4 bg-blue-100 rounded-xl mr-4">
-            <FontAwesomeIcon
-              icon={faInbox}
-              className="text-3xl text-blue-600"
-            />
+            <FontAwesomeIcon icon={faList} className="text-3xl text-blue-600" />
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">
@@ -171,7 +175,7 @@ export function InMessage() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
           <div className="p-4 bg-yellow-100 rounded-xl mr-4">
             <FontAwesomeIcon
-              icon={faTimesCircle}
+              icon={faClock}
               className="text-3xl text-yellow-600"
             />
           </div>
@@ -189,7 +193,7 @@ export function InMessage() {
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6 flex items-center">
           <div className="p-4 bg-yellow-100 rounded-xl mr-4">
             <FontAwesomeIcon
-              icon={faTimesCircle}
+              icon={faCheckCircle}
               className="text-3xl text-yellow-600"
             />
           </div>
@@ -207,130 +211,131 @@ export function InMessage() {
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Search */}
-        <input
+        <TextInput
+          id="search"
           type="text"
-          placeholder="Search messages..."
-          className="w-full p-2 border rounded-lg shadow-sm"
+          placeholder="Search incoming messages..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
 
         {/* Job Filter */}
-        <select
-          value={jobFilter}
-          onChange={e => setJobFilter(e.target.value)}
-          className="p-2 border rounded-lg shadow-sm"
-        >
+        <Select value={jobFilter} onChange={e => setJobFilter(e.target.value)}>
           <option value="ALL">All Jobs</option>
           <option value="NAKHODA">NAKHODA</option>
           <option value="KKM">KKM</option>
           <option value="MUALIM I">MUALIM I</option>
           <option value="MASINIS II">MASINIS II</option>
-        </select>
+        </Select>
 
         {/* Status Filter */}
-        <select
+        <Select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="p-2 border rounded-lg shadow-sm"
         >
           <option value="ALL">All Status</option>
-          <option value="CHANGE">CHANGE</option>
+          <option value="PENDING">PENDING</option>
           <option value="ACCEPTED">ACCEPTED</option>
           <option value="REJECTED">REJECTED</option>
-        </select>
+          <option value="CHANGE">CHANGE</option>
+        </Select>
       </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl shadow-md bg-white">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-blue-800 text-white">
-            <tr>
-              {[
-                'Job',
-                'Group',
-                'Seaman Code',
-                'Name',
-                'Mutation From',
-                'Mutation To',
-                'Tanggal Ready',
-                'Status',
-                'Stage',
-                'Updated At',
-              ].map(header => (
-                <th
-                  key={header}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-blue-700"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
+      <div className="overflow-x-auto rounded-xl bg-white">
+        <Table hoverable className="min-w-full border-collapse">
+          <Table.Head>
+            {[
+              'Category',
+              'Job',
+              'Group',
+              'Seaman Code',
+              'Name',
+              'From',
+              'To',
+              'Ready Date',
+              'Status',
+              'Stage',
+              'Updated At',
+            ].map(header => (
+              <Table.HeadCell key={header} className="bg-gray-800 text-white">
+                {header}
+              </Table.HeadCell>
+            ))}
+          </Table.Head>
+          <Table.Body className="divide-y divide-gray-200">
             {currentItems.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+              <Table.Row>
+                <Table.Cell
+                  colSpan={11}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
                   No incoming messages found
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ) : (
               currentItems.map((item: any, idx: number) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-3 text-sm font-medium border-b">
+                <Table.Row key={idx} className="bg-white">
+                  <Table.Cell className="text-left text-gray-800">
+                    {item.categorization.toUpperCase()}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.job}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.group_key?.startsWith('container_rotation')
                       ? `Group ${item.group_key.replace(
                           'container_rotation',
                           ''
                         )}`
-                      : item.group_key}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium border-b">
+                      : item.group_key?.startsWith('manalagi_rotation')
+                        ? `Group ${item.group_key.replace(
+                            'manalagi_rotation',
+                            ''
+                          )}`
+                        : item.group_key}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.seamancode}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">{item.nama}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
+                    {item.nama}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.mutation_from}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-blue-600 font-medium border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.mutation_to}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.tanggal_ready
                       ? new Date(item.tanggal_ready).toLocaleDateString('id-ID')
                       : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
                         item.status_data === 'CHANGE'
                           ? 'bg-orange-100 text-orange-800'
-                          : item.status_data === 'ACCEPTED'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}
                     >
                       {item.status_data}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">{item.stage}</td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
+                    {item.stage}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {new Date(item.updated_at).toLocaleDateString('id-ID', {
                       year: 'numeric',
-                      month: 'short',
+                      month: 'numeric',
                       day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
                     })}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))
             )}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
 
       {/* Count
@@ -340,17 +345,17 @@ export function InMessage() {
         {filteredSubmissions.length} messages
       </div> */}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              size="sm"
+              className="text-gray-500 !bg-transparent text-sm"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Previous
-            </button>
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </Button>
 
             {generatePageNumbers().map((page, index) =>
               page === '...' ? (
@@ -358,47 +363,49 @@ export function InMessage() {
                   ...
                 </span>
               ) : (
-                <button
+                <Button
                   key={`page-${page}`}
-                  onClick={() => setCurrentPage(page as number)}
-                  className={`px-3 py-1 border rounded-lg shadow-sm hover:bg-gray-100 ${
+                  size="sm"
+                  className={
                     currentPage === page
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
-                      : ''
-                  }`}
+                      ? '!bg-gray-500 text-white border border-gray-200'
+                      : '!bg-white text-gray-500 hover:!bg-gray-100 border border-gray-200'
+                  }
+                  onClick={() => setCurrentPage(page as number)}
                 >
                   {page}
-                </button>
+                </Button>
               )
             )}
 
-            <button
+            <Button
+              size="sm"
+              className="text-gray-500 !bg-transparent text-sm"
               onClick={() =>
                 setCurrentPage(prev => Math.min(totalPages, prev + 1))
               }
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Next
-            </button>
+              <FontAwesomeIcon icon={faChevronRight} />
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Items per page:</span>
-            <select
+            <Select
+              sizing="sm"
               value={itemsPerPage}
               onChange={e => {
                 setItemsPerPage(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="p-1 border rounded-lg shadow-sm"
             >
               {[10, 20, 50, 100].map(num => (
                 <option key={num} value={num}>
                   {num}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}

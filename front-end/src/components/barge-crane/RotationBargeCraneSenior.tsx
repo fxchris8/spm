@@ -1,18 +1,18 @@
 // src/components/barge-crane/RotationBargeCraneSenior.tsx
 'use client';
 
-import { Tabs } from 'flowbite-react';
+import { Tabs, Spinner } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
-import { useRotationConfigs } from '../../hooks/useRotationConfigs';
+import { useRotationVessels } from '../../hooks/useRotationVessels';
 
 export function RotationBargeCraneSenior() {
-  const { configs, loading, error } = useRotationConfigs('senior', 'bc');
+  const { vessels, loading, error } = useRotationVessels('senior', 'bc');
 
   // Urutan tabs untuk barge crane
   const bargeCraneOrder = ['nakhoda', 'KKM'];
 
-  const sortedConfigs = [...configs].sort((a, b) => {
+  const sortedVessels = [...vessels].sort((a, b) => {
     const indexA = bargeCraneOrder.indexOf(a.job_title);
     const indexB = bargeCraneOrder.indexOf(b.job_title);
 
@@ -25,11 +25,9 @@ export function RotationBargeCraneSenior() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading barge crane rotations...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading barge crane rotations...</span>
       </div>
     );
   }
@@ -37,13 +35,13 @@ export function RotationBargeCraneSenior() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="text-red-600 mb-2">⚠️ Error loading data</div>
+        <div className="text-red-600 mb-2">Error loading data</div>
         <p className="text-gray-600">{error}</p>
       </div>
     );
   }
 
-  if (configs.length === 0) {
+  if (vessels.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">
@@ -56,23 +54,19 @@ export function RotationBargeCraneSenior() {
   return (
     <div className="flex flex-col gap-3 mb-0">
       <Tabs aria-label="Default tabs" variant="default">
-        {sortedConfigs.map((config, index) => (
+        {sortedVessels.map((v, index) => (
           <Tabs.Item
-            key={config.id}
+            key={v.id}
             active={index === 0}
-            title={
-              config.job_title === 'KKM'
-                ? 'KKM'
-                : formatJobTitle(config.job_title)
-            }
+            title={v.job_title === 'KKM' ? 'KKM' : formatJobTitle(v.job_title)}
             icon={HiUserCircle}
           >
             <BargeCraneSeniorRotation
-              vessel={config.vessel}
-              type={config.type}
-              part={config.part}
-              job={config.job_title}
-              groups={config.groups}
+              vessel={v.vessel}
+              type={v.type}
+              part={v.part}
+              job={v.job_title}
+              groups={v.groups}
             />
           </Tabs.Item>
         ))}

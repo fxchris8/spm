@@ -2,18 +2,20 @@
 'use client';
 
 import { useDashboardRotationData } from '../../hooks/useDashboardRotationData';
-import { LoadingSpinner } from '../LoadingComponent';
+import { useVesselStats } from '../../hooks/useVesselStats';
+import { Spinner, Tabs, Accordion, Badge } from 'flowbite-react';
 import { HiLockClosed } from 'react-icons/hi';
 import { FaShip } from 'react-icons/fa';
-import { Tabs, Accordion } from 'flowbite-react';
 
 export function RotationSummary() {
   const { dashboardData, loading } = useDashboardRotationData();
+  const { vesselStats, loading: loadingVesselStats } = useVesselStats();
 
-  if (loading) {
+  if (loading || loadingVesselStats) {
     return (
-      <div className="py-8">
-        <LoadingSpinner size="lg" message="Loading rotation data..." />
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading rotation data...</span>
       </div>
     );
   }
@@ -71,10 +73,92 @@ export function RotationSummary() {
   };
 
   return (
-    <div className="mb-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        Rotation Overview
-      </h2>
+    <div className="mb-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-1">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Rotation Overview
+          </h1>
+        </div>
+        <p className="text-gray-600">
+          Ringkasan data rotasi dan kapal di PT Salam Pacific Indonesia Lines.
+        </p>
+      </div>
+
+      {/* Vessel Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {/* Container */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Container
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.container > 0 ? vesselStats.container : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* Manalagi */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Manalagi
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.manalagi > 0 ? vesselStats.manalagi : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* Barge Crane */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">
+              Total Barge Crane
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {vesselStats.bc > 0 ? vesselStats.bc : '-'}{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* MT */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total MT</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* TB */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total TB</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* TK */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm transition-shadow p-6">
+          <div className="flex flex-col">
+            <p className="text-sm text-gray-600 font-medium mb-1">Total TK</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              -{' '}
+              <span className="text-xs font-normal text-gray-600">vessels</span>
+            </h3>
+          </div>
+        </div>
+      </div>
 
       {dashboardData.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl shadow-sm">
@@ -97,9 +181,9 @@ export function RotationSummary() {
                       <h4 className="text-lg font-semibold text-gray-800">
                         Senior
                       </h4>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      <Badge className="border border-purple-600 text-purple-600 bg-transparent text-[10px] font-medium rounded-full">
                         {catData.senior.totalGroups} Groups
-                      </span>
+                      </Badge>
                     </div>
 
                     <div className="space-y-3">
@@ -255,9 +339,12 @@ export function RotationSummary() {
                       <h4 className="text-lg font-semibold text-gray-800">
                         Junior
                       </h4>
-                      <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                      <Badge
+                        color="info"
+                        className="border border-blue-600 text-blue-600 bg-transparent text-[10px] font-medium rounded-full"
+                      >
                         {catData.junior.totalGroups} Groups
-                      </span>
+                      </Badge>
                     </div>
 
                     <div className="space-y-3">

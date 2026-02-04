@@ -165,41 +165,34 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
 # ============================================================================
 
 
-def get_locked_rotations(job=None, vessel=None):
+def get_locked_rotations(job=None, vessel=None, categorization=None):
     try:
-        if job and vessel:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE job = :job AND vessel = :vessel AND is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query), {"job": job, "vessel": vessel})
-                rows = result.fetchall()
-        elif job:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE job = :job AND is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query), {"job": job})
-                rows = result.fetchall()
-        else:
-            query = """
-                SELECT id, group_key, job, vessel, schedule_data, crew_data, reliever_data,
-                       locked_seaman_codes, locked_at, locked_by, is_active
-                FROM locked_rotation_schedules
-                WHERE is_active = TRUE
-                ORDER BY locked_at DESC
-            """
-            with engine.connect() as conn:
-                result = conn.execute(text(query))
-                rows = result.fetchall()
+        params = {}
+        conditions = ["is_active = TRUE"]
+
+        if job:
+            conditions.append("job = :job")
+            params["job"] = job
+
+        if vessel:
+            conditions.append("vessel = :vessel")
+            params["vessel"] = vessel
+
+        if categorization:
+            conditions.append("categorization = :categorization")
+            params["categorization"] = categorization
+
+        query = f"""
+            SELECT id, group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
+                   locked_seaman_codes, locked_at, locked_by, is_active
+            FROM locked_rotation_schedules
+            WHERE {' AND '.join(conditions)}
+            ORDER BY locked_at DESC
+        """
+
+        with engine.connect() as conn:
+            result = conn.execute(text(query), params)
+            rows = result.fetchall()
 
         # Convert to list of dicts
         # Parse JSON strings dari TEXT columns
@@ -211,19 +204,20 @@ def get_locked_rotations(job=None, vessel=None):
                     "group_key": row[1],
                     "job": row[2],
                     "vessel": row[3],
+                    "categorization": row[4],
                     "schedule_data": (
-                        json.loads(row[4]) if row[4] else None
-                    ),  # Parse JSON string
-                    "crew_data": (
                         json.loads(row[5]) if row[5] else None
                     ),  # Parse JSON string
-                    "reliever_data": (
+                    "crew_data": (
                         json.loads(row[6]) if row[6] else None
                     ),  # Parse JSON string
-                    "locked_seaman_codes": row[7],
-                    "locked_at": row[8].isoformat() if row[8] else None,
-                    "locked_by": row[9],
-                    "is_active": row[10],
+                    "reliever_data": (
+                        json.loads(row[7]) if row[7] else None
+                    ),  # Parse JSON string
+                    "locked_seaman_codes": row[8],
+                    "locked_at": row[9].isoformat() if row[9] else None,
+                    "locked_by": row[10],
+                    "is_active": row[11],
                 }
             )
 
@@ -244,6 +238,7 @@ def save_locked_rotation(
     reliever_data,
     locked_seaman_codes,
     locked_by=None,
+    categorization=None,
 ):
     try:
         # Convert dict to JSON string (untuk TEXT column)
@@ -261,9 +256,9 @@ def save_locked_rotation(
         # Then insert new lock
         insert_query = """
             INSERT INTO locked_rotation_schedules
-            (group_key, job, vessel, schedule_data, crew_data, reliever_data,
+            (group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
              locked_seaman_codes, locked_by, is_active, locked_at)
-            VALUES (:group_key, :job, :vessel, :schedule_data, :crew_data, :reliever_data,
+            VALUES (:group_key, :job, :vessel, :categorization, :schedule_data, :crew_data, :reliever_data,
                     :locked_seaman_codes, :locked_by, TRUE, NOW())
             RETURNING id
         """
@@ -282,6 +277,7 @@ def save_locked_rotation(
                     "group_key": group_key,
                     "job": job,
                     "vessel": vessel,
+                    "categorization": categorization,
                     "schedule_data": schedule_json,  # JSON string
                     "crew_data": crew_json,  # JSON string
                     "reliever_data": reliever_json,  # JSON string or None
@@ -294,7 +290,7 @@ def save_locked_rotation(
             new_id = result.fetchone()[0]
 
         print(
-            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}) with ID {new_id}"
+            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}, cat {categorization}) with ID {new_id}"
         )
         return {
             "success": True,
@@ -624,7 +620,7 @@ def sync_mutations_to_database(df):
 # ============================================================================
 
 
-def submit_all_rotations(job):
+def submit_all_rotations(job, categorization):
     """
     Submit all locked rotations untuk job tertentu ke rotation_submissions
     dan kirim notifikasi ke API pusat Apollo
@@ -651,8 +647,8 @@ def submit_all_rotations(job):
 
         import requests
 
-        # Get all locked rotations for this job
-        locked_rotations = get_locked_rotations(job=job)
+        # Get all locked rotations for this job (filtered by categorization if provided)
+        locked_rotations = get_locked_rotations(job=job, categorization=categorization)
 
         if not locked_rotations:
             return {
@@ -673,14 +669,160 @@ def submit_all_rotations(job):
                     group_key = rotation["group_key"]
                     crew_data = rotation["crew_data"]
                     schedule_data = rotation["schedule_data"]
+                    reliever_data = rotation.get("reliever_data")
 
-                    if not crew_data or not schedule_data:
-                        print(
-                            f"WARNING - Skipping {group_key}: missing crew or schedule data"
-                        )
+                    if not crew_data:
+                        print(f"WARNING - Skipping {group_key}: missing crew data")
                         continue
 
-                    # Get the last crew member (paling bawah) from crew_data
+                    # =========================================================
+                    # DETECT JUNIOR vs SENIOR
+                    # Junior: crew_data is a LIST (array of crew objects)
+                    # Senior: crew_data is a DICT with "columns" and "data" keys
+                    # =========================================================
+                    is_junior = isinstance(crew_data, list)
+
+                    if is_junior:
+                        print(
+                            f"INFO - Processing JUNIOR rotation for group {group_key}"
+                        )
+
+                        # Junior uses reliever_data: {seamancode_currentCrew: replacement_info}
+                        if not reliever_data:
+                            print(
+                                f"WARNING - Skipping {group_key}: no reliever_data for Junior"
+                            )
+                            continue
+
+                        for current_crew in crew_data:
+                            current_seamancode = current_crew.get("seamancode")
+                            # Try both string and int keys for reliever_data lookup
+                            replacement = reliever_data.get(
+                                str(current_seamancode)
+                            ) or reliever_data.get(current_seamancode)
+
+                            if not replacement:
+                                print(
+                                    f"INFO - No replacement found for seamancode {current_seamancode}, reliever_data keys: {list(reliever_data.keys())}"
+                                )
+                                continue
+
+                            # Extract replacement data - try multiple key variations
+                            seamancode = str(replacement.get("seamancode") or "")
+                            nama = str(replacement.get("name") or "")
+                            # Try lastVessel, last_vessel, lastLocation, last_location
+                            last_location = str(
+                                replacement.get("lastVessel")
+                                or replacement.get("last_vessel")
+                                or replacement.get("lastLocation")
+                                or replacement.get("last_location")
+                                or ""
+                            )
+                            mutation_to = str(current_crew.get("currentVessel") or "")
+                            start_date = current_crew.get("endDate")
+
+                            print(
+                                f"DEBUG - Processing: seamancode={seamancode}, nama={nama}, last_location={last_location}, mutation_to={mutation_to}"
+                            )
+
+                            # Check existing submission
+                            ck_q = """
+                                SELECT id, version, status_data, is_active
+                                FROM rotation_submissions
+                                WHERE job = :job AND group_key = :group_key AND seamancode = :seamancode
+                                AND (is_deleted = FALSE OR is_deleted IS NULL)
+                                ORDER BY version DESC LIMIT 1
+                            """
+                            r = conn.execute(
+                                text(ck_q),
+                                {
+                                    "job": job,
+                                    "group_key": group_key,
+                                    "seamancode": seamancode,
+                                },
+                            ).fetchone()
+
+                            ver = 1
+                            if r:
+                                if r[2] == "CHANGE" and not r[3]:
+                                    ver = r[1] + 1
+                                elif r[3]:
+                                    print(
+                                        f"INFO - Skipping {seamancode}: already active"
+                                    )
+                                    continue  # Already active
+
+                            # Parse start_date
+                            sd = start_date
+                            if sd and isinstance(sd, str):
+                                try:
+                                    # Format: "Wed, 04 Mar 2026 17:00:00 GMT"
+                                    from email.utils import parsedate_to_datetime
+
+                                    sd = parsedate_to_datetime(sd)
+                                except (ValueError, TypeError):
+                                    try:
+                                        sd = (
+                                            datetime.strptime(sd, "%d-%m-%Y")
+                                            if "-" in sd
+                                            else datetime.strptime(sd, "%d/%m/%Y")
+                                        )
+                                    except (ValueError, TypeError):
+                                        sd = None
+
+                            # Calculate dates (same as Senior: H+6 dari sekarang)
+                            tanggal = datetime.now() + timedelta(days=6)
+                            tanggal_ready = None  # Kosong, diisi manual
+                            auto_accept_at = datetime.now() + timedelta(days=6)
+
+                            # Insert submission
+                            ins_q = """
+                                INSERT INTO rotation_submissions
+                                (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
+                                 start_date, tanggal, tanggal_ready, auto_accept_at,
+                                 version, status_data, is_active, categorization, created_at)
+                                VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from, :mutation_to,
+                                 :start_date, :tanggal, :tanggal_ready, :auto_accept_at,
+                                 :version, 'PENDING', TRUE, :categorization, NOW())
+                                RETURNING id
+                            """
+                            conn.execute(
+                                text(ins_q),
+                                {
+                                    "job": job,
+                                    "group_key": group_key,
+                                    "seamancode": seamancode,
+                                    "nama": nama,
+                                    "last_location": last_location,
+                                    "mutation_from": last_location,  # mutation_from = last_location (where replacement comes from)
+                                    "mutation_to": mutation_to,
+                                    "start_date": sd,
+                                    "tanggal": tanggal,
+                                    "tanggal_ready": tanggal_ready,
+                                    "auto_accept_at": auto_accept_at,
+                                    "version": ver,
+                                    "categorization": categorization,
+                                },
+                            )
+                            apollo_notifications.append(
+                                {
+                                    "seamancode": seamancode,
+                                    "tanggal": tanggal.strftime("%d-%m-%Y"),
+                                    "mutationfrom": last_location,
+                                    "mutationto": mutation_to,
+                                }
+                            )
+                            submissions.append({"seamancode": seamancode})
+
+                        continue  # Skip Senior Logic for this rotation
+
+                    # =========================================================
+                    # SENIOR ROTATION LOGIC (Data is Dict/Grid)
+                    # =========================================================
+                    if not schedule_data:
+                        print(f"WARNING - Skipping {group_key}: missing schedule data")
+                        continue
+
                     crew_rows = crew_data.get("data", [])
                     if not crew_rows:
                         print(f"WARNING - Skipping {group_key}: no crew data")
@@ -870,10 +1012,10 @@ def submit_all_rotations(job):
                         INSERT INTO rotation_submissions
                         (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
                          start_date, end_date, first_rotation_date, tanggal, tanggal_ready,
-                         auto_accept_at, status_data, version, is_active)
+                         auto_accept_at, status_data, version, is_active, categorization)
                         VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from,
                                 :mutation_to, :start_date, :end_date, :first_rotation_date, :tanggal,
-                                :tanggal_ready, :auto_accept_at, :status_data, :version, :is_active)
+                                :tanggal_ready, :auto_accept_at, :status_data, :version, :is_active, :categorization)
                         RETURNING id
                     """
 
@@ -896,6 +1038,7 @@ def submit_all_rotations(job):
                             "status_data": "PENDING",
                             "version": new_version,
                             "is_active": True,
+                            "categorization": categorization,
                         },
                     )
 
@@ -1029,7 +1172,7 @@ def get_rotation_submissions(job=None):
     try:
         if job:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1042,7 +1185,7 @@ def get_rotation_submissions(job=None):
                 rows = result.fetchall()
         else:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1061,22 +1204,23 @@ def get_rotation_submissions(job=None):
                 {
                     "id": row[0],
                     "job": row[1],
-                    "group_key": row[2],
-                    "seamancode": row[3],
-                    "nama": row[4],
-                    "last_location": row[5],
-                    "mutation_from": row[6],
-                    "mutation_to": row[7],
-                    "start_date": row[8].isoformat() if row[8] else None,
-                    "end_date": row[9].isoformat() if row[9] else None,
-                    "first_rotation_date": row[10].isoformat() if row[10] else None,
-                    "tanggal": row[11].isoformat() if row[11] else None,
-                    "tanggal_ready": row[12].isoformat() if row[12] else None,
-                    "auto_accept_at": row[13].isoformat() if row[13] else None,
-                    "status_data": row[14],
-                    "created_at": row[15].isoformat() if row[15] else None,
-                    "updated_at": row[16].isoformat() if row[16] else None,
-                    "stage": row[17],
+                    "categorization": row[2],
+                    "group_key": row[3],
+                    "seamancode": row[4],
+                    "nama": row[5],
+                    "last_location": row[6],
+                    "mutation_from": row[7],
+                    "mutation_to": row[8],
+                    "start_date": row[9].isoformat() if row[9] else None,
+                    "end_date": row[10].isoformat() if row[10] else None,
+                    "first_rotation_date": row[11].isoformat() if row[11] else None,
+                    "tanggal": row[12].isoformat() if row[12] else None,
+                    "tanggal_ready": row[13].isoformat() if row[13] else None,
+                    "auto_accept_at": row[14].isoformat() if row[14] else None,
+                    "status_data": row[15],
+                    "created_at": row[16].isoformat() if row[16] else None,
+                    "updated_at": row[17].isoformat() if row[17] else None,
+                    "stage": row[18],
                 }
             )
 
@@ -1101,7 +1245,7 @@ def get_all_rotation_submissions(job=None):
     try:
         if job:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1114,7 +1258,7 @@ def get_all_rotation_submissions(job=None):
                 rows = result.fetchall()
         else:
             query = """
-                SELECT id, job, group_key, seamancode, nama, last_location,
+                SELECT id, job, categorization, group_key, seamancode, nama, last_location,
                        mutation_from, mutation_to, start_date, end_date,
                        first_rotation_date, tanggal, tanggal_ready, auto_accept_at,
                        status_data, created_at, updated_at, stage
@@ -1132,22 +1276,23 @@ def get_all_rotation_submissions(job=None):
                 {
                     "id": row[0],
                     "job": row[1],
-                    "group_key": row[2],
-                    "seamancode": row[3],
-                    "nama": row[4],
-                    "last_location": row[5],
-                    "mutation_from": row[6],
-                    "mutation_to": row[7],
-                    "start_date": row[8].isoformat() if row[8] else None,
-                    "end_date": row[9].isoformat() if row[9] else None,
-                    "first_rotation_date": row[10].isoformat() if row[10] else None,
-                    "tanggal": row[11].isoformat() if row[11] else None,
-                    "tanggal_ready": row[12].isoformat() if row[12] else None,
-                    "auto_accept_at": row[13].isoformat() if row[13] else None,
-                    "status_data": row[14],
-                    "created_at": row[15].isoformat() if row[15] else None,
-                    "updated_at": row[16].isoformat() if row[16] else None,
-                    "stage": row[17],
+                    "categorization": row[2],
+                    "group_key": row[3],
+                    "seamancode": row[4],
+                    "nama": row[5],
+                    "last_location": row[6],
+                    "mutation_from": row[7],
+                    "mutation_to": row[8],
+                    "start_date": row[9].isoformat() if row[9] else None,
+                    "end_date": row[10].isoformat() if row[10] else None,
+                    "first_rotation_date": row[11].isoformat() if row[11] else None,
+                    "tanggal": row[12].isoformat() if row[12] else None,
+                    "tanggal_ready": row[13].isoformat() if row[13] else None,
+                    "auto_accept_at": row[14].isoformat() if row[14] else None,
+                    "status_data": row[15],
+                    "created_at": row[16].isoformat() if row[16] else None,
+                    "updated_at": row[17].isoformat() if row[17] else None,
+                    "stage": row[18],
                 }
             )
 
@@ -1161,26 +1306,29 @@ def get_all_rotation_submissions(job=None):
         raise Exception(f"Failed to fetch all rotation submissions: {str(e)}")
 
 
-def check_job_submitted(job, vessel):
+def check_job_submitted(job, vessel=None, categorization=None):
     """
     Check if ALL locked rotations for a job have been submitted
 
     Logic dengan Versioning:
-    - Get all locked rotation group_keys for this job and vessel
+    - Get all locked rotation group_keys for this job and vessel/categorization
     - Check if ALL of them exist in rotation_submissions dengan is_active = TRUE
     - Return True only if ALL locked rotations have been submitted dengan status aktif
     - Status CHANGE dengan is_active = FALSE tidak dianggap submitted
 
     Args:
         job: Job title
-        vessel: Vessel name (CONTAINER/MANALAGI)
+        vessel: Vessel name (optional, for Senior)
+        categorization: Categorization (optional, for Junior - e.g., 'container', 'manalagi')
 
     Returns:
         Boolean - True jika SEMUA locked rotations sudah di-submit dengan is_active = TRUE
     """
     try:
-        # Get all locked rotations for this job and vessel
-        locked_rotations = get_locked_rotations(job=job, vessel=vessel)
+        # Get all locked rotations for this job and vessel/categorization
+        locked_rotations = get_locked_rotations(
+            job=job, vessel=vessel, categorization=categorization
+        )
 
         if not locked_rotations or len(locked_rotations) == 0:
             # Tidak ada rotations yang di-lock, anggap belum submitted
@@ -1232,7 +1380,7 @@ def check_job_submitted(job, vessel):
         return False
 
 
-def check_has_pending_changes(job, vessel):
+def check_has_pending_changes(job, vessel=None, categorization=None):
     """
     Check if there are any rotation submissions with status CHANGE and is_active = FALSE
     yang perlu di-resubmit, KECUALI jika sudah ada version lebih tinggi dengan is_active = TRUE
@@ -1240,21 +1388,24 @@ def check_has_pending_changes(job, vessel):
     Logic:
     - Cari semua data dengan status CHANGE dan is_active = FALSE
     - Filter: hanya ambil yang BELUM punya version lebih tinggi dengan is_active = TRUE
-    - Filter by vessel untuk memisahkan CONTAINER dan MANALAGI
+    - Filter by vessel/categorization untuk memisahkan CONTAINER dan MANALAGI
     - Filter: hanya data yang is_deleted = FALSE
     - Return: count dan affected_groups yang benar-benar perlu resubmit
 
     Args:
         job: Job title
-        vessel: Vessel name (CONTAINER/MANALAGI)
+        vessel: Vessel name (optional, for Senior)
+        categorization: Categorization (optional, for Junior - e.g., 'container', 'manalagi')
 
     Returns:
         Dict dengan has_changes (boolean), count (int), dan affected_groups (list)
     """
     try:
         with engine.connect() as conn:
-            # Get all locked group_keys for this job and vessel
-            locked_rotations = get_locked_rotations(job=job, vessel=vessel)
+            # Get all locked group_keys for this job and vessel/categorization
+            locked_rotations = get_locked_rotations(
+                job=job, vessel=vessel, categorization=categorization
+            )
             if not locked_rotations:
                 return {"has_changes": False, "count": 0, "affected_groups": []}
 
@@ -1642,7 +1793,7 @@ def soft_delete_rotation_and_reset_locks():
 
 
 # ============================================================================
-# BAGIAN 6: ROTATION CONFIGS MANAGEMENT (CRUD)
+# BAGIAN 6: ROTATION VESSELS MANAGEMENT (CRUD)
 # ============================================================================
 
 # Validation Constants - Easy to update without database migration
@@ -1651,9 +1802,9 @@ VALID_TYPES = ["senior", "junior", "manalagi"]
 VALID_PARTS = ["deck", "engine"]
 
 
-def validate_rotation_config(vessel, rotation_type, part, groups=None):
+def validate_rotation_vessel(vessel, rotation_type, part, groups=None):
     """
-    Validate rotation config data before insert/update
+    Validate rotation vessel data before insert/update
 
     Args:
         vessel: Vessel code
@@ -1699,9 +1850,9 @@ def validate_rotation_config(vessel, rotation_type, part, groups=None):
     return True
 
 
-def get_rotation_configs(rotation_type=None, categorization=None):
+def get_rotation_vessels(rotation_type=None, categorization=None):
     """
-    Fetch rotation configs dari database dengan groups dan ships
+    Fetch rotation vessels dari database dengan groups dan ships
 
     Args:
         rotation_type: Optional filter by type ('senior', 'junior')
@@ -1739,7 +1890,7 @@ def get_rotation_configs(rotation_type=None, categorization=None):
 
         query = f"""
             SELECT id, job_title, vessel, type, part, categorization, created_at, updated_at
-            FROM rotation_configs
+            FROM vessels
             WHERE {where_sql}
             ORDER BY job_title
         """
@@ -1749,20 +1900,20 @@ def get_rotation_configs(rotation_type=None, categorization=None):
             configs = result.fetchall()
 
         # Convert to list of dicts dengan groups
-        config_list = []
+        vessel_list = []
         with engine.connect() as conn:
-            for config in configs:
-                config_id = config[0]
+            for vessel_row in configs:
+                vessel_id = vessel_row[0]
 
-                # Fetch groups untuk config ini
+                # Fetch groups untuk vessel ini
                 groups_query = """
                     SELECT id, group_key, group_number
-                    FROM rotation_groups
-                    WHERE rotation_config_id = :config_id
+                    FROM vessels_groups
+                    WHERE vessel_id = :vessel_id
                     ORDER BY group_number
                 """
                 groups_result = conn.execute(
-                    text(groups_query), {"config_id": config_id}
+                    text(groups_query), {"vessel_id": vessel_id}
                 )
                 groups = groups_result.fetchall()
 
@@ -1772,11 +1923,11 @@ def get_rotation_configs(rotation_type=None, categorization=None):
                     group_id = group[0]
                     group_key = group[1]
 
-                    # Fetch ships untuk group ini
+                    # Fetch ships berdasarkan group_id
                     ships_query = """
                         SELECT ship_name
-                        FROM rotation_ships
-                        WHERE rotation_group_id = :group_id
+                        FROM vessels_ships
+                        WHERE group_id = :group_id
                         ORDER BY order_index
                     """
                     ships_result = conn.execute(
@@ -1786,61 +1937,61 @@ def get_rotation_configs(rotation_type=None, categorization=None):
 
                     groups_dict[group_key] = ships
 
-                # Build config dict
-                config_dict = {
-                    "id": config[0],
-                    "job_title": config[1],
-                    "vessel": config[2],
-                    "type": config[3],
-                    "part": config[4],
-                    "categorization": config[5],
+                # Build vessel dict
+                vessel_dict = {
+                    "id": vessel_row[0],
+                    "job_title": vessel_row[1],
+                    "vessel": vessel_row[2],
+                    "type": vessel_row[3],
+                    "part": vessel_row[4],
+                    "categorization": vessel_row[5],
                     "groups": groups_dict,
-                    "created_at": config[6].isoformat() if config[6] else None,
-                    "updated_at": config[7].isoformat() if config[7] else None,
+                    "created_at": vessel_row[6].isoformat() if vessel_row[6] else None,
+                    "updated_at": vessel_row[7].isoformat() if vessel_row[7] else None,
                 }
 
-                config_list.append(config_dict)
+                vessel_list.append(vessel_dict)
 
-        print(f"DONE - Fetched {len(config_list)} rotation configs from database")
-        return config_list
+        print(f"DONE - Fetched {len(vessel_list)} rotation vessels from database")
+        return vessel_list
 
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to fetch rotation configs: {str(e)}")
+        raise Exception(f"Failed to fetch rotation vessels: {str(e)}")
 
 
-def get_rotation_config_by_id(config_id):
+def get_rotation_vessel_by_id(vessel_id):
     """
-    Fetch single rotation config by ID
+    Fetch single rotation vessel by ID
 
     Args:
-        config_id: ID of the config
+        vessel_id: ID of the vessel
 
     Returns:
-        Dict dengan struktur sama seperti get_rotation_configs
+        Dict dengan struktur sama seperti get_rotation_vessels
     """
     try:
         query = """
-            SELECT id, job_title, vessel, type, part, created_at, updated_at
-            FROM rotation_configs
-            WHERE id = :config_id
+            SELECT id, job_title, vessel, type, part, categorization, created_at, updated_at
+            FROM vessels
+            WHERE id = :vessel_id
         """
 
         with engine.connect() as conn:
-            result = conn.execute(text(query), {"config_id": config_id})
-            config = result.fetchone()
+            result = conn.execute(text(query), {"vessel_id": vessel_id})
+            vessel_row = result.fetchone()
 
-            if not config:
+            if not vessel_row:
                 return None
 
             # Fetch groups
             groups_query = """
                 SELECT id, group_key, group_number
-                FROM rotation_groups
-                WHERE rotation_config_id = :config_id
+                FROM vessels_groups
+                WHERE vessel_id = :vessel_id
                 ORDER BY group_number
             """
-            groups_result = conn.execute(text(groups_query), {"config_id": config_id})
+            groups_result = conn.execute(text(groups_query), {"vessel_id": vessel_id})
             groups = groups_result.fetchall()
 
             # Build groups dict
@@ -1849,11 +2000,11 @@ def get_rotation_config_by_id(config_id):
                 group_id = group[0]
                 group_key = group[1]
 
-                # Fetch ships
+                # Fetch ships berdasarkan group_id
                 ships_query = """
                     SELECT ship_name
-                    FROM rotation_ships
-                    WHERE rotation_group_id = :group_id
+                    FROM vessels_ships
+                    WHERE group_id = :group_id
                     ORDER BY order_index
                 """
                 ships_result = conn.execute(text(ships_query), {"group_id": group_id})
@@ -1861,30 +2012,31 @@ def get_rotation_config_by_id(config_id):
 
                 groups_dict[group_key] = ships
 
-            config_dict = {
-                "id": config[0],
-                "job_title": config[1],
-                "vessel": config[2],
-                "type": config[3],
-                "part": config[4],
+            vessel_dict = {
+                "id": vessel_row[0],
+                "job_title": vessel_row[1],
+                "vessel": vessel_row[2],
+                "type": vessel_row[3],
+                "part": vessel_row[4],
+                "categorization": vessel_row[5],
                 "groups": groups_dict,
-                "created_at": config[5].isoformat() if config[5] else None,
-                "updated_at": config[6].isoformat() if config[6] else None,
+                "created_at": vessel_row[6].isoformat() if vessel_row[6] else None,
+                "updated_at": vessel_row[7].isoformat() if vessel_row[7] else None,
             }
 
-            print(f"DONE - Fetched rotation config ID {config_id}")
-            return config_dict
+            print(f"DONE - Fetched rotation vessel ID {vessel_id}")
+            return vessel_dict
 
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to fetch rotation config: {str(e)}")
+        raise Exception(f"Failed to fetch rotation vessel: {str(e)}")
 
 
-def create_rotation_config(
+def create_rotation_vessel(
     job_title, vessel, rotation_type, part, groups, categorization=None
 ):
     """
-    Create new rotation config dengan groups dan ships
+    Create new rotation vessel dengan groups dan ships
 
     Args:
         job_title: Job title (e.g. 'mualimII')
@@ -1903,21 +2055,21 @@ def create_rotation_config(
     """
     try:
         # Validate input first
-        validate_rotation_config(vessel, rotation_type, part, groups)
+        validate_rotation_vessel(vessel, rotation_type, part, groups)
 
         with engine.connect() as conn:
             # Start transaction
             trans = conn.begin()
 
             try:
-                # Insert config
-                config_query = """
-                    INSERT INTO rotation_configs (job_title, vessel, type, part, categorization)
+                # Insert vessel
+                vessel_query = """
+                    INSERT INTO vessels (job_title, vessel, type, part, categorization)
                     VALUES (:job_title, :vessel, :type, :part, :categorization)
                     RETURNING id
                 """
                 result = conn.execute(
-                    text(config_query),
+                    text(vessel_query),
                     {
                         "job_title": job_title,
                         "vessel": vessel,
@@ -1926,7 +2078,7 @@ def create_rotation_config(
                         "categorization": categorization,
                     },
                 )
-                config_id = result.fetchone()[0]
+                vessel_id = result.fetchone()[0]
 
                 # Insert groups dan ships
                 for group_key, ships in groups.items():
@@ -1935,24 +2087,24 @@ def create_rotation_config(
 
                     # Insert group
                     group_query = """
-                        INSERT INTO rotation_groups (rotation_config_id, group_key, group_number)
-                        VALUES (:config_id, :group_key, :group_number)
+                        INSERT INTO vessels_groups (vessel_id, group_key, group_number)
+                        VALUES (:vessel_id, :group_key, :group_number)
                         RETURNING id
                     """
                     group_result = conn.execute(
                         text(group_query),
                         {
-                            "config_id": config_id,
+                            "vessel_id": vessel_id,
                             "group_key": group_key,
                             "group_number": group_number,
                         },
                     )
                     group_id = group_result.fetchone()[0]
 
-                    # Insert ships
+                    # Insert ships (dengan group_id)
                     for idx, ship_name in enumerate(ships):
                         ship_query = """
-                            INSERT INTO rotation_ships (rotation_group_id, ship_name, order_index)
+                            INSERT INTO vessels_ships (group_id, ship_name, order_index)
                             VALUES (:group_id, :ship_name, :order_index)
                         """
                         conn.execute(
@@ -1968,12 +2120,12 @@ def create_rotation_config(
                 trans.commit()
 
                 print(
-                    f"DONE - Created rotation config '{job_title}' with ID {config_id}"
+                    f"DONE - Created rotation vessel '{job_title}' with ID {vessel_id}"
                 )
                 return {
                     "success": True,
-                    "message": f"Konfigurasi rotasi {job_title} berhasil dibuat",
-                    "id": config_id,
+                    "message": f"Konfigurasi rotasi {job_title} berhasil di-create",
+                    "id": vessel_id,
                 }
 
             except Exception as e:
@@ -1986,46 +2138,40 @@ def create_rotation_config(
         raise ValueError(f"Validation failed: {str(e)}")
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to create rotation config: {str(e)}")
+        raise Exception(f"Failed to create rotation vessel: {str(e)}")
 
 
-def update_rotation_config(
-    config_id, job_title, vessel, rotation_type, part, groups, categorization=None
+def update_rotation_vessel(
+    vessel_id, job_title, vessel, rotation_type, part, groups, categorization=None
 ):
     """
-    Update existing rotation config
+    Update existing rotation vessel
 
     Args:
-        config_id: ID of config to update
-        job_title, vessel, rotation_type, categorization, part, groups: Same as create_rotation_config
+        vessel_id: ID of vessel to update
+        job_title, vessel, rotation_type, categorization, part, groups: Same as create_rotation_vessel
 
     Returns:
         Dict dengan 'success'
     """
     try:
-        # Validate input first
-        validate_rotation_config(vessel, rotation_type, part, groups)
+        # Validate input
+        validate_rotation_vessel(vessel, rotation_type, part, groups)
 
         with engine.connect() as conn:
-            # Start transaction
             trans = conn.begin()
-
             try:
-                # Update config
-                update_query = """
-                    UPDATE rotation_configs
-                    SET job_title = :job_title,
-                        vessel = :vessel,
-                        type = :type,
-                        part = :part,
-                        categorization = :categorization,
-                        updated_at = NOW()
-                    WHERE id = :config_id
+                # Update main vessel
+                query = """
+                    UPDATE vessels
+                    SET job_title = :job_title, vessel = :vessel, type = :type,
+                        part = :part, categorization = :categorization, updated_at = NOW()
+                    WHERE id = :vessel_id
                 """
                 conn.execute(
-                    text(update_query),
+                    text(query),
                     {
-                        "config_id": config_id,
+                        "vessel_id": vessel_id,
                         "job_title": job_title,
                         "vessel": vessel,
                         "type": rotation_type,
@@ -2034,37 +2180,34 @@ def update_rotation_config(
                     },
                 )
 
-                # Delete old groups dan ships (CASCADE akan handle ships)
-                delete_groups_query = """
-                    DELETE FROM rotation_groups
-                    WHERE rotation_config_id = :config_id
-                """
-                conn.execute(text(delete_groups_query), {"config_id": config_id})
+                # Update groups dan ships: delete groups (ships akan CASCADE delete)
+                conn.execute(
+                    text("DELETE FROM vessels_groups WHERE vessel_id = :vessel_id"),
+                    {"vessel_id": vessel_id},
+                )
 
-                # Insert new groups dan ships
+                # Re-insert groups dan ships
                 for group_key, ships in groups.items():
                     group_number = int("".join(filter(str.isdigit, group_key)))
-
-                    # Insert group
                     group_query = """
-                        INSERT INTO rotation_groups (rotation_config_id, group_key, group_number)
-                        VALUES (:config_id, :group_key, :group_number)
+                        INSERT INTO vessels_groups (vessel_id, group_key, group_number)
+                        VALUES (:vessel_id, :group_key, :group_number)
                         RETURNING id
                     """
                     group_result = conn.execute(
                         text(group_query),
                         {
-                            "config_id": config_id,
+                            "vessel_id": vessel_id,
                             "group_key": group_key,
                             "group_number": group_number,
                         },
                     )
                     group_id = group_result.fetchone()[0]
 
-                    # Insert ships
+                    # Insert ships dengan group_id
                     for idx, ship_name in enumerate(ships):
                         ship_query = """
-                            INSERT INTO rotation_ships (rotation_group_id, ship_name, order_index)
+                            INSERT INTO vessels_ships (group_id, ship_name, order_index)
                             VALUES (:group_id, :ship_name, :order_index)
                         """
                         conn.execute(
@@ -2079,7 +2222,7 @@ def update_rotation_config(
                 # Commit transaction
                 trans.commit()
 
-                print(f"DONE - Updated rotation config ID {config_id}")
+                print(f"DONE - Updated rotation vessel ID {vessel_id}")
                 return {
                     "success": True,
                     "message": "Konfigurasi rotasi berhasil diupdate",
@@ -2095,44 +2238,37 @@ def update_rotation_config(
         raise ValueError(f"Validation failed: {str(e)}")
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to update rotation config: {str(e)}")
+        raise Exception(f"Failed to update rotation vessel: {str(e)}")
 
 
-def delete_rotation_config(config_id):
+def delete_rotation_vessel(vessel_id):
     """
-    Delete rotation config (CASCADE akan handle groups dan ships)
+    Delete rotation vessel (CASCADE akan handle groups dan ships)
 
     Args:
-        config_id: ID of config to delete
+        vessel_id: ID of vessel to delete
 
     Returns:
         Dict dengan 'success'
     """
     try:
         with engine.connect() as conn:
-            query = """
-                DELETE FROM rotation_configs
-                WHERE id = :config_id
-                RETURNING id
-            """
+            trans = conn.begin()
+            try:
+                # CASCADE akan otomatis hapus groups dan ships jika FK di-set CASCADE
+                query = "DELETE FROM vessels WHERE id = :vessel_id"
+                conn.execute(text(query), {"vessel_id": vessel_id})
+                trans.commit()
 
-            result = conn.execute(text(query), {"config_id": config_id})
-            conn.commit()
-
-            deleted = result.fetchone()
-
-            if deleted:
-                print(f"DONE - Deleted rotation config ID {config_id}")
+                print(f"DONE - Deleted rotation vessel ID {vessel_id}")
                 return {
                     "success": True,
                     "message": "Konfigurasi rotasi berhasil dihapus",
                 }
-            else:
-                return {
-                    "success": False,
-                    "message": "Konfigurasi rotasi tidak ditemukan",
-                }
+            except Exception as e:
+                trans.rollback()
+                raise e
 
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to delete rotation config: {str(e)}")
+        raise Exception(f"Failed to delete rotation vessel: {str(e)}")

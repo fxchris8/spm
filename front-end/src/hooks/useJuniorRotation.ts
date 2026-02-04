@@ -35,6 +35,7 @@ interface PromotionCandidate {
   seamancode: string | number;
   name: string;
   rank: string;
+  vessel: string;
   history: string;
   matchCount: number;
 }
@@ -270,6 +271,7 @@ async function fetchPromotionCandidates(
     return result.data.map((item: any) => ({
       seamancode: item.code || item.seamancode || 0,
       name: item.name || '',
+      vessel: item.vessel || item.last_location || '',
       rank: item.rank || item.last_position || '',
       history: Array.isArray(item.history)
         ? item.history
@@ -521,5 +523,108 @@ export function useLockRotation() {
     lockLoading: lockMutation.isPending,
     unlockLoading: unlockMutation.isPending,
     error: lockMutation.error?.message || unlockMutation.error?.message || null,
+  };
+}
+
+// Hook untuk submit all rotations (mutation)
+export function useSubmitRotations() {
+  const queryClient = useQueryClient();
+
+  const submitMutation = useMutation({
+    mutationFn: async ({
+      job,
+      categorization,
+    }: {
+      job: string;
+      categorization: string;
+    }) => {
+      const response = await fetch(`${API_BASE_URL}/submit-rotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job: formatJobName(job),
+          categorization: categorization,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit rotations');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate queries for this job and vessel category
+      queryClient.invalidateQueries({
+        queryKey: ['junior-locked-rotations', variables.job],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['job-submitted', variables.job, variables.categorization],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['pending-changes', variables.job, variables.categorization],
+      });
+    },
+  });
+
+  return {
+    submitRotations: submitMutation.mutateAsync,
+    loading: submitMutation.isPending,
+    error: submitMutation.error?.message || null,
+  };
+}
+
+// Hook untuk check job submitted status (Junior uses categorization)
+export function useJobSubmitted(job: string, categorization: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['job-submitted', job, categorization],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-job-submitted?job=${formatJobName(
+          job
+        )}&categorization=${categorization.toLowerCase()}`
+      );
+      const result = await response.json();
+      return result.is_submitted || false;
+    },
+    staleTime: 5 * 60 * 1000, // Fresh 5 menit
+    gcTime: 30 * 60 * 1000, // Cache 30 menit
+  });
+
+  return {
+    isSubmitted: data || false,
+    loading: isLoading,
+    error: error?.message || null,
+  };
+}
+
+// Hook untuk check pending changes (status CHANGE with is_active FALSE)
+export function usePendingChanges(job: string, categorization: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['pending-changes', job, categorization],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_BASE_URL}/check-pending-changes?job=${formatJobName(
+          job
+        )}&categorization=${categorization.toLowerCase()}`
+      );
+      const result = await response.json();
+      return {
+        hasChanges: result.has_changes || false,
+        count: result.count || 0,
+        affectedGroups: result.affected_groups || [],
+      };
+    },
+    staleTime: 1 * 60 * 1000, // Fresh 1 menit (lebih sering update untuk detect changes)
+    gcTime: 10 * 60 * 1000, // Cache 10 menit
+  });
+
+  return {
+    hasChanges: data?.hasChanges || false,
+    count: data?.count || 0,
+    affectedGroups: data?.affectedGroups || [],
+    loading: isLoading,
+    error: error?.message || null,
   };
 }

@@ -11,7 +11,10 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 # Import database functions dari connection.py
-from connection import sync_mutations_to_database, sync_seamen_to_database
+try:
+    from database.connection import sync_mutations_to_database, sync_seamen_to_database
+except ImportError:
+    from connection import sync_mutations_to_database, sync_seamen_to_database
 from dotenv import load_dotenv
 
 load_dotenv()

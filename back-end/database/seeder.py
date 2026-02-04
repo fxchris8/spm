@@ -1,5 +1,5 @@
 # @faw_sd
-# Seeder untuk tabel rotation_configs, rotation_groups, dan rotation_ships
+# Seeder untuk tabel vessels, vessels_groups, dan vessels_ships
 # Script ini akan mengisi data awal untuk rotation configuration
 
 import os
@@ -197,7 +197,7 @@ def seed_rotation_junior_data():
 
     for config in configs:
         try:
-            result = connection.create_rotation_config(**config)
+            result = connection.create_rotation_vessel(**config)
             print(f"[SUCCES] {result['message']} (ID: {result['id']})")
         except Exception as e:
             print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
@@ -404,7 +404,7 @@ def seed_rotation_senior_data():
 
     for config in configs:
         try:
-            result = connection.create_rotation_config(**config)
+            result = connection.create_rotation_vessel(**config)
             print(f"[SUCCESS] {result['message']} (ID: {result['id']})")
         except Exception as e:
             print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
@@ -483,7 +483,7 @@ def seed_rotation_manalagi_senior_data():
 
     for config in configs:
         try:
-            result = connection.create_rotation_config(**config)
+            result = connection.create_rotation_vessel(**config)
             print(f"[SUCCES] {result['message']} (ID: {result['id']})")
         except Exception as e:
             print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
@@ -566,7 +566,7 @@ def seed_rotation_barge_crane_senior_data():
 
     for config in configs:
         try:
-            result = connection.create_rotation_config(**config)
+            result = connection.create_rotation_vessel(**config)
             print(f"[SUCCES] {result['message']} (ID: {result['id']})")
         except Exception as e:
             print(f"[FAILED] Failed to create {config['job_title']}: {str(e)}")
@@ -582,8 +582,8 @@ def clear_rotation_data():
         from sqlalchemy import text
 
         with connection.engine.connect() as conn:
-            # CASCADE akan otomatis hapus rotation_groups dan rotation_ships
-            conn.execute(text("DELETE FROM rotation_configs"))
+            # CASCADE akan otomatis hapus vessels_groups dan vessels_ships
+            conn.execute(text("DELETE FROM vessels"))
             conn.commit()
             print("[SUCCES] All rotation data cleared successfully")
     except Exception as e:

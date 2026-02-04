@@ -14,22 +14,22 @@ from database.connection import (
     auto_accept_expired_rotations,
     check_has_pending_changes,
     check_job_submitted,
-    create_rotation_config,
-    delete_rotation_config,
+    create_rotation_vessel,
+    delete_rotation_vessel,
     get_all_locked_seaman_codes,
     get_all_rotation_submissions,
     get_locked_rotations,
     get_mutations_as_data,
-    get_rotation_config_by_id,
-    get_rotation_configs,
     get_rotation_submissions,
+    get_rotation_vessel_by_id,
+    get_rotation_vessels,
     get_seamen_as_data,
     get_submitted_seamancodes,
     save_locked_rotation,
     submit_all_rotations,
     unlock_rotation,
-    update_rotation_config,
     update_rotation_status_change,
+    update_rotation_vessel,
 )
 from models.model import (
     filter_in_vessel,
@@ -48,7 +48,7 @@ from rotation import (
 
 app = Flask(__name__)
 
-# CORS Configuration - Auto detect environment
+# CORS vesseluration - Auto detect environment
 ENV = os.environ.get("FLASK_ENV", "development")
 
 # Allowed origins for production (HTTP & HTTPS)
@@ -468,6 +468,91 @@ def get_dashboard_data():
 
     # Kembalikan data sebagai JSON
     return data.to_json(orient="records")
+
+
+# Route to manually trigger data sync from central API
+@app.route("/api/manual-sync", methods=["POST"])
+def manual_sync():
+    try:
+        print(f"[MANUAL SYNC] Started at {datetime.now()}")
+
+        # Import sync functions from scheduler
+        from database.scheduler import scheduled_sync_mutations, scheduled_sync_seamen
+
+        # Execute sync for seamen
+        print("[MANUAL SYNC] Syncing seamen data...")
+        scheduled_sync_seamen()
+
+        # Execute sync for mutations
+        print("[MANUAL SYNC] Syncing mutations data...")
+        scheduled_sync_mutations()
+
+        print(f"[MANUAL SYNC] Completed at {datetime.now()}")
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Data berhasil di-sync dari API pusat",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"[MANUAL SYNC ERROR] {str(e)}")
+        return (
+            jsonify({"status": "error", "message": f"Gagal melakukan sync: {str(e)}"}),
+            500,
+        )
+
+
+# Route to get vessel statistics by category
+@app.route("/api/vessel-stats")
+def get_vessel_stats():
+    """
+    Returns the count of unique vessels for each category.
+    Categories: container, manalagi, bc
+    """
+    try:
+        # Get rotation vessels from database
+        rotation_vessels = get_rotation_vessels()
+
+        # Count unique ships per category
+        container_ships = set()
+        manalagi_ships = set()
+        bc_ships = set()
+
+        for vessel in rotation_vessels:
+            categorization = vessel.get("categorization", "").lower()
+            groups = vessel.get("groups", {})
+
+            # Collect all ships from all groups in this vessel
+            for group_ships in groups.values():
+                if categorization == "container":
+                    container_ships.update(group_ships)
+                elif categorization == "manalagi":
+                    manalagi_ships.update(group_ships)
+                elif categorization == "bc":
+                    bc_ships.update(group_ships)
+
+        stats = {
+            "container": len(container_ships),
+            "manalagi": len(manalagi_ships),
+            "bc": len(bc_ships),
+        }
+
+        return jsonify(stats), 200
+
+    except Exception as e:
+        print(f"[VESSEL STATS ERROR] {str(e)}")
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
+            ),
+            500,
+        )
 
 
 # ============================================================================
@@ -1201,7 +1286,7 @@ def get_promotion_candidates_nakhoda():
                     .tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1298,7 +1383,7 @@ def get_promotion_candidates_kkm():
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1357,7 +1442,7 @@ def get_promotion_candidates_mualimI():
                     .tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1454,7 +1539,7 @@ def get_promotion_candidates_masinisII():
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1491,9 +1576,9 @@ def get_promotion_candidates_mualimII():
         ]["seamancode"].unique()
 
         # Tambahkan seamen dengan is_talent di posisi MUALIM III
-        seamancode_talent = df_seamen[
-            (df_seamen["last_position"] == "MUALIM III") & (df_seamen["is_talent"])
-        ]["seamancode"].unique()
+        seamancode_talent = df_seamen[(df_seamen["last_position"] == "MUALIM III")][
+            "seamancode"
+        ].unique()
 
         # Gabungkan kedua kriteria (experience + talent)
         seamancode_qualified = list(
@@ -1508,7 +1593,7 @@ def get_promotion_candidates_mualimII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1522,6 +1607,7 @@ def get_promotion_candidates_mualimII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1535,7 +1621,7 @@ def get_promotion_candidates_mualimII():
                     .tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1627,7 +1713,7 @@ def get_promotion_candidates_masinisIII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1641,6 +1727,7 @@ def get_promotion_candidates_masinisIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1649,7 +1736,7 @@ def get_promotion_candidates_masinisIII():
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1700,7 +1787,7 @@ def get_promotion_candidates_mualimIII():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1714,6 +1801,7 @@ def get_promotion_candidates_mualimIII():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1727,7 +1815,7 @@ def get_promotion_candidates_mualimIII():
                     .tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -1819,7 +1907,7 @@ def get_promotion_candidates_masinisIV():
         # Merge untuk ambil nama
         df_mutasi_filtered = df_mutasi_filtered.merge(
             df_seamen[
-                ["seamancode", "name", "last_position", "is_talent"]
+                ["seamancode", "name", "last_position", "is_talent", "last_location"]
             ].drop_duplicates(),
             on="seamancode",
             how="left",
@@ -1833,6 +1921,7 @@ def get_promotion_candidates_masinisIV():
                     "code": int(g["seamancode"].iloc[0]),
                     "name": g["name"].iloc[0],
                     "rank": g["last_position"].iloc[0],
+                    "vessel": g["last_location"].iloc[0],
                     "is_talent": (
                         bool(g["is_talent"].iloc[0])
                         if pd.notna(g["is_talent"].iloc[0])
@@ -1841,7 +1930,7 @@ def get_promotion_candidates_masinisIV():
                     "history": g["fromvesselname"].dropna().unique().tolist(),
                 }
             )
-            .tolist()
+            .values.tolist()
         )
 
         return jsonify({"status": "success", "data": result})
@@ -2011,6 +2100,11 @@ def api_save_locked_rotation():
         group_key = data["groupKey"]
         job = data["job"].upper()
         vessel = data["vessel"].upper()
+        categorization = (
+            data.get("categorization", "").lower()
+            if data.get("categorization")
+            else None
+        )
         schedule_table = data["scheduleTable"]
         nahkoda_table = data["nahkodaTable"]
         darat_table = data.get("daratTable")
@@ -2036,6 +2130,7 @@ def api_save_locked_rotation():
             reliever_data=darat_table,
             locked_seaman_codes=locked_seaman_codes,
             locked_by=locked_by,
+            categorization=categorization,
         )
 
         return jsonify(
@@ -2085,6 +2180,7 @@ def api_submit_all_rotations():
     try:
         data = request.get_json()
         job = data.get("job", "").upper()
+        categorization = data.get("categorization")
 
         if not job:
             return (
@@ -2093,7 +2189,7 @@ def api_submit_all_rotations():
             )
 
         # Submit rotations menggunakan fungsi di database.py
-        result = submit_all_rotations(job=job)
+        result = submit_all_rotations(job=job, categorization=categorization)
 
         if result["success"]:
             return jsonify(
@@ -2162,6 +2258,11 @@ def api_check_job_submitted():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        categorization = (
+            request.args.get("categorization", "").lower()
+            if request.args.get("categorization")
+            else None
+        )
 
         if not job:
             return (
@@ -2169,13 +2270,21 @@ def api_check_job_submitted():
                 400,
             )
 
-        if not vessel:
+        # Allow either vessel or categorization (for Junior rotation)
+        if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Vessel or categorization parameter required",
+                    }
+                ),
                 400,
             )
 
-        is_submitted = check_job_submitted(job=job, vessel=vessel)
+        is_submitted = check_job_submitted(
+            job=job, vessel=vessel if vessel else None, categorization=categorization
+        )
 
         return jsonify({"status": "success", "is_submitted": is_submitted})
 
@@ -2193,6 +2302,11 @@ def api_check_pending_changes():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        categorization = (
+            request.args.get("categorization", "").lower()
+            if request.args.get("categorization")
+            else None
+        )
 
         if not job:
             return (
@@ -2200,13 +2314,21 @@ def api_check_pending_changes():
                 400,
             )
 
-        if not vessel:
+        # Allow either vessel or categorization (for Junior rotation)
+        if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Vessel or categorization parameter required",
+                    }
+                ),
                 400,
             )
 
-        result = check_has_pending_changes(job=job, vessel=vessel)
+        result = check_has_pending_changes(
+            job=job, vessel=vessel if vessel else None, categorization=categorization
+        )
 
         return jsonify(
             {
@@ -2874,40 +2996,40 @@ def api_get_rotation_summary():
 
 
 # ============================================================================
-# BAGIAN 10: ROTATION CONFIGS (CRUD)
+# BAGIAN 10: ROTATION vesselS (CRUD)
 # ============================================================================
 
 
-@app.route("/api/rotation-configs", methods=["GET"])
-def api_get_rotation_configs():
-    """GET - Ambil semua rotation configs"""
+@app.route("/api/rotation-vessels", methods=["GET"])
+def api_get_rotation_vessels():
+    """GET - Ambil semua rotation vessels"""
     try:
         rotation_type = request.args.get("type")  # Optional filter
         categorization = request.args.get("categorization")  # Optional filter
-        configs = get_rotation_configs(rotation_type, categorization)
-        return jsonify(configs), 200
+        vessels = get_rotation_vessels(rotation_type, categorization)
+        return jsonify(vessels), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/rotation-configs/<int:config_id>", methods=["GET"])
-def api_get_rotation_config(config_id):
-    """GET - Ambil single rotation config by ID"""
+@app.route("/api/rotation-vessels/<int:vessel_id>", methods=["GET"])
+def api_get_rotation_vessel(vessel_id):
+    """GET - Ambil single rotation vessel by ID"""
     try:
-        config = get_rotation_config_by_id(config_id)
+        vessel = get_rotation_vessel_by_id(vessel_id)
 
-        if config:
-            return jsonify(config), 200
+        if vessel:
+            return jsonify(vessel), 200
         else:
-            return jsonify({"error": "Config not found"}), 404
+            return jsonify({"error": "vessel not found"}), 404
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/rotation-configs", methods=["POST"])
-def api_create_rotation_config():
-    """POST - Create new rotation config"""
+@app.route("/api/rotation-vessels", methods=["POST"])
+def api_create_rotation_vessel():
+    """POST - Create new rotation vessel"""
     try:
         data = request.json
 
@@ -2917,7 +3039,7 @@ def api_create_rotation_config():
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
-        result = create_rotation_config(
+        result = create_rotation_vessel(
             job_title=data["job_title"],
             vessel=data["vessel"],
             rotation_type=data["type"],
@@ -2934,9 +3056,9 @@ def api_create_rotation_config():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/rotation-configs/<int:config_id>", methods=["PUT"])
-def api_update_rotation_config(config_id):
-    """PUT - Update existing rotation config"""
+@app.route("/api/rotation-vessels/<int:vessel_id>", methods=["PUT"])
+def api_update_rotation_vessel(vessel_id):
+    """PUT - Update existing rotation vessel"""
     try:
         data = request.json
 
@@ -2946,8 +3068,8 @@ def api_update_rotation_config(config_id):
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
-        result = update_rotation_config(
-            config_id=config_id,
+        result = update_rotation_vessel(
+            vessel_id=vessel_id,
             job_title=data["job_title"],
             vessel=data["vessel"],
             rotation_type=data["type"],
@@ -2964,11 +3086,11 @@ def api_update_rotation_config(config_id):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/rotation-configs/<int:config_id>", methods=["DELETE"])
-def api_delete_rotation_config(config_id):
-    """DELETE - Delete rotation config"""
+@app.route("/api/rotation-vessels/<int:vessel_id>", methods=["DELETE"])
+def api_delete_rotation_vessel(vessel_id):
+    """DELETE - Delete rotation vessel"""
     try:
-        result = delete_rotation_config(config_id)
+        result = delete_rotation_vessel(vessel_id)
 
         if result["success"]:
             return jsonify(result), 200

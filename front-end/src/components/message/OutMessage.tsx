@@ -1,13 +1,16 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { useRotationSubmissions } from '../../hooks/useSeniorRotation';
-import { LoadingComponent } from '../LoadingComponent';
+import { Button, TextInput, Table, Select, Spinner } from 'flowbite-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ConfirmModal } from '../container/ConfirmModal';
 import {
   faPaperPlane,
   faClock,
   faCheckCircle,
   faExchangeAlt,
+  faChevronLeft,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 
 export function OutMessage() {
@@ -16,6 +19,7 @@ export function OutMessage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   // Fetch all submissions (no job filter initially)
   const { submissions, loading } = useRotationSubmissions();
@@ -103,17 +107,20 @@ export function OutMessage() {
   }, [submissions]);
 
   if (loading) {
-    return <LoadingComponent message="Loading submissions..." />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Spinner size="xl" color="failure" />
+        <span className="text-gray-600">Loading submissions...</span>
+      </div>
+    );
   }
 
-  const handleResetAll = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to RESET ALL rotations? This will:\n- Soft delete ALL rotation submissions\n- Reset ALL locked schedules\n- Allow you to create new rotations from scratch\n\nThis action cannot be undone!`
-      )
-    ) {
-      return;
-    }
+  const handleResetClick = () => {
+    setShowResetModal(true);
+  };
+
+  const confirmReset = async () => {
+    setShowResetModal(false);
 
     try {
       const response = await fetch(
@@ -145,17 +152,24 @@ export function OutMessage() {
 
   return (
     <section className="p-6 flex-1 overflow-y-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Out Information (Rotation Submissions)
-        </h1>
-        <button
-          onClick={handleResetAll}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium flex items-center gap-2"
-          title="Reset all rotations for next batch"
-        >
-          Reset All for Next Batch
-        </button>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-1">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Out Message (Pesan Keluar)
+          </h1>
+          <Button
+            color="failure"
+            onClick={handleResetClick}
+            className="font-medium"
+            title="Reset all rotations for next batch"
+          >
+            RESET ROTATION
+          </Button>
+        </div>
+        <p className="text-gray-600">
+          Log pengiriman pesan keluar. Anda dapat memantau riwayat distribusi
+          dan melakukan reset rotasi untuk memperbarui antrean sistem.
+        </p>
       </div>
 
       {/* Dashboard Cards */}
@@ -230,121 +244,118 @@ export function OutMessage() {
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Search */}
-        <input
+        <TextInput
+          id="search"
           type="text"
           placeholder="Search submissions..."
-          className="w-full p-2 border rounded-lg shadow-sm"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
 
         {/* Job Filter */}
-        <select
-          value={jobFilter}
-          onChange={e => setJobFilter(e.target.value)}
-          className="p-2 border rounded-lg shadow-sm"
-        >
+        <Select value={jobFilter} onChange={e => setJobFilter(e.target.value)}>
           <option value="ALL">All Jobs</option>
           <option value="NAKHODA">NAKHODA</option>
           <option value="KKM">KKM</option>
           <option value="MUALIM I">MUALIM I</option>
           <option value="MASINIS II">MASINIS II</option>
-        </select>
+        </Select>
 
         {/* Status Filter */}
-        <select
+        <Select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="p-2 border rounded-lg shadow-sm"
         >
           <option value="ALL">All Status</option>
           <option value="PENDING">PENDING</option>
           <option value="ACCEPTED">ACCEPTED</option>
           <option value="REJECTED">REJECTED</option>
           <option value="CHANGE">CHANGE</option>
-        </select>
+        </Select>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl shadow-md bg-white">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-gray-800 text-white">
-            <tr>
-              {[
-                'Job',
-                'Group',
-                'Seaman Code',
-                'Name',
-                'Mutation From',
-                'Mutation To',
-                'Tanggal',
-                'Tanggal Ready',
-                'Auto Accept At',
-                'Status',
-                'Created At',
-                'Stage',
-              ].map(header => (
-                <th
-                  key={header}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider border-b border-gray-700"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
+      <div className="overflow-x-auto">
+        <Table hoverable>
+          <Table.Head>
+            {[
+              'Category',
+              'Job',
+              'Group',
+              'Seaman Code',
+              'Name',
+              'From',
+              'To',
+              'Date',
+              'Auto Accept',
+              'Status',
+              'Created At',
+            ].map(header => (
+              <Table.HeadCell key={header} className="bg-gray-800 text-white">
+                {header}
+              </Table.HeadCell>
+            ))}
+          </Table.Head>
+          <Table.Body className="divide-y">
             {currentItems.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={12}
+              <Table.Row className="bg-white">
+                <Table.Cell
+                  colSpan={11}
                   className="px-4 py-8 text-center text-gray-500"
                 >
                   No submissions found
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ) : (
               currentItems.map((item: any, idx: number) => (
-                <tr key={idx} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 text-sm font-medium border-b">
+                <Table.Row
+                  key={idx}
+                  className="bg-white hover:bg-gray-50 transition"
+                >
+                  <Table.Cell className="text-left text-gray-800">
+                    {item.categorization.toUpperCase()}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.job}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.group_key?.startsWith('container_rotation')
                       ? `Group ${item.group_key.replace(
                           'container_rotation',
                           ''
                         )}`
-                      : item.group_key}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium border-b">
+                      : item.group_key?.startsWith('manalagi_rotation')
+                        ? `Group ${item.group_key.replace(
+                            'manalagi_rotation',
+                            ''
+                          )}`
+                        : item.group_key}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.seamancode}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">{item.nama}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
+                    {item.nama}
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.mutation_from}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-blue-600 font-medium border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.mutation_to}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.tanggal
                       ? new Date(item.tanggal).toLocaleDateString('id-ID')
                       : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
-                    {item.tanggal_ready
-                      ? new Date(item.tanggal_ready).toLocaleDateString('id-ID')
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {item.auto_accept_at
                       ? new Date(item.auto_accept_at).toLocaleDateString(
                           'id-ID'
                         )
                       : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
                         item.status_data === 'PENDING'
@@ -358,18 +369,15 @@ export function OutMessage() {
                     >
                       {item.status_data}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
+                  </Table.Cell>
+                  <Table.Cell className="text-left text-gray-800">
                     {new Date(item.created_at).toLocaleDateString('id-ID')}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-b">
-                    {item.stage || '-'}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))
             )}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
 
       {/* Count
@@ -383,13 +391,14 @@ export function OutMessage() {
       {totalPages > 1 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              size="sm"
+              className="text-gray-500 !bg-transparent text-sm"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Previous
-            </button>
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </Button>
 
             {generatePageNumbers().map((page, index) =>
               page === '...' ? (
@@ -397,50 +406,70 @@ export function OutMessage() {
                   ...
                 </span>
               ) : (
-                <button
+                <Button
                   key={`page-${page}`}
-                  onClick={() => setCurrentPage(page as number)}
-                  className={`px-3 py-1 border rounded-lg shadow-sm hover:bg-gray-100 ${
+                  size="sm"
+                  className={
                     currentPage === page
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
-                      : ''
-                  }`}
+                      ? '!bg-gray-500 text-white border border-gray-200'
+                      : '!bg-white text-gray-500 hover:!bg-gray-100 border border-gray-200'
+                  }
+                  onClick={() => setCurrentPage(page as number)}
                 >
                   {page}
-                </button>
+                </Button>
               )
             )}
 
-            <button
+            <Button
+              size="sm"
+              className="text-gray-500 !bg-transparent text-sm"
               onClick={() =>
                 setCurrentPage(prev => Math.min(totalPages, prev + 1))
               }
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Next
-            </button>
+              <FontAwesomeIcon icon={faChevronRight} />
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Items per page:</span>
-            <select
+            <Select
+              sizing="sm"
               value={itemsPerPage}
               onChange={e => {
                 setItemsPerPage(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="p-1 border rounded-lg shadow-sm"
             >
               {[10, 20, 50, 100].map(num => (
                 <option key={num} value={num}>
                   {num}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}
+      <ConfirmModal
+        show={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={confirmReset}
+        confirmColor="failure"
+        message={
+          <>
+            Are you sure you want to RESET ALL rotations?
+            <br />
+            <span className="text-sm">
+              This will delete all submissions and reset locked schedules. This
+              action cannot be undone.
+            </span>
+          </>
+        }
+        confirmText="Yes, Reset All"
+        cancelText="Cancel"
+      />
     </section>
   );
 }

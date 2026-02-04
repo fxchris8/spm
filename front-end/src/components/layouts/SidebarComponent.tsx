@@ -47,20 +47,20 @@ export function SidebarComponent() {
           <Sidebar.Collapse
             icon={() => <HiOutlineMagnifyingGlassCircle className="w-6 h-6" />}
             label="Search"
-            open={isParentActive(['/search_on_duty', '/search_off_duty'])}
+            open={isParentActive(['/search-onduty', '/search-offduty'])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/search_on_duty')}
+              onClick={() => handleNavigation('/search-onduty')}
               icon={() => <HiOutlineBriefcase className="w-6 h-6" />}
-              active={isActive('/search_on_duty')}
+              active={isActive('/search-onduty')}
               className="cursor-pointer"
             >
               On Duty
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/search_off_duty')}
+              onClick={() => handleNavigation('/search-offduty')}
               icon={() => <HiOutlineUserMinus className="w-6 h-6" />}
-              active={isActive('/search_off_duty')}
+              active={isActive('/search-offduty')}
               className="cursor-pointer"
             >
               Off Duty
@@ -68,31 +68,31 @@ export function SidebarComponent() {
           </Sidebar.Collapse>
 
           <Sidebar.Item
-            onClick={() => handleNavigation('/rotation_ship')}
+            onClick={() => handleNavigation('/vessel-management')}
             icon={() => <HiOutlineShieldCheck className="w-6 h-6" />}
-            active={isActive('/rotation_ship')}
+            active={isActive('/vessel-management')}
             className="cursor-pointer"
           >
-            Rotation Ship
+            Vessel Management
           </Sidebar.Item>
 
           <Sidebar.Collapse
             icon={() => <HiOutlineCube className="w-6 h-6" />}
             label="Container Rotation"
-            open={isParentActive(['/senior_rotation', '/junior_rotation'])}
+            open={isParentActive(['/senior-rotation', '/junior-rotation'])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/senior_rotation')}
+              onClick={() => handleNavigation('/senior-rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
-              active={isActive('/senior_rotation')}
+              active={isActive('/senior-rotation')}
               className="cursor-pointer"
             >
               Senior
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/junior_rotation')}
+              onClick={() => handleNavigation('/junior-rotation')}
               icon={() => <HiOutlineUser className="w-6 h-6" />}
-              active={isActive('/junior_rotation')}
+              active={isActive('/junior-rotation')}
               className="cursor-pointer"
             >
               Junior
@@ -103,22 +103,22 @@ export function SidebarComponent() {
             icon={() => <GiShipWheel className="w-6 h-6" />}
             label="Manalagi Rotation"
             open={isParentActive([
-              '/manalagi_senior_rotation',
-              '/manalagi_junior_rotation',
+              '/manalagi-senior-rotation',
+              '/manalagi-junior-rotation',
             ])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/manalagi_senior_rotation')}
+              onClick={() => handleNavigation('/manalagi-senior-rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
-              active={isActive('/manalagi_senior_rotation')}
+              active={isActive('/manalagi-senior-rotation')}
               className="cursor-pointer"
             >
               Senior
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/manalagi_junior_rotation')}
+              onClick={() => handleNavigation('/manalagi-junior-rotation')}
               icon={() => <HiOutlineUser className="w-6 h-6" />}
-              active={isActive('/manalagi_junior_rotation')}
+              active={isActive('/manalagi-junior-rotation')}
               className="cursor-pointer"
             >
               Junior
@@ -129,22 +129,22 @@ export function SidebarComponent() {
             icon={() => <HiOutlineArrowPath className="w-6 h-6" />}
             label="Barge Crane Rotation"
             open={isParentActive([
-              '/barge_crane_senior_rotation',
-              '/barge_crane_junior_rotation',
+              '/bc-senior-rotation',
+              '/bc-junior-rotation',
             ])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/barge_crane_senior_rotation')}
+              onClick={() => handleNavigation('/bc-senior-rotation')}
               icon={() => <HiOutlineUserGroup className="w-6 h-6" />}
-              active={isActive('/barge_crane_senior_rotation')}
+              active={isActive('/bc-senior-rotation')}
               className="cursor-pointer"
             >
               Senior
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/barge_crane_junior_rotation')}
+              onClick={() => handleNavigation('/bc-junior-rotation')}
               icon={() => <HiOutlineUser className="w-6 h-6" />}
-              active={isActive('/barge_crane_junior_rotation')}
+              active={isActive('/bc-junior-rotation')}
               className="cursor-pointer"
             >
               Junior
@@ -154,31 +154,31 @@ export function SidebarComponent() {
             icon={() => <HiOutlineEnvelope className="w-6 h-6" />}
             label="Messages"
             open={isParentActive([
-              '/all_message',
-              '/in_message',
-              '/out_message',
+              '/all-message',
+              '/in-message',
+              '/out-message',
             ])}
           >
             <Sidebar.Item
-              onClick={() => handleNavigation('/all_message')}
+              onClick={() => handleNavigation('/all-message')}
               icon={() => <HiOutlineEnvelope className="w-6 h-6" />}
-              active={isActive('/all_message')}
+              active={isActive('/all-message')}
               className="cursor-pointer"
             >
               All - Message
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/in_message')}
+              onClick={() => handleNavigation('/in-message')}
               icon={() => <HiOutlineArrowDownCircle className="w-6 h-6" />}
-              active={isActive('/in_message')}
+              active={isActive('/in-message')}
               className="cursor-pointer"
             >
               In - Message
             </Sidebar.Item>
             <Sidebar.Item
-              onClick={() => handleNavigation('/out_message')}
+              onClick={() => handleNavigation('/out-message')}
               icon={() => <HiOutlineArrowUpCircle className="w-6 h-6" />}
-              active={isActive('/out_message')}
+              active={isActive('/out-message')}
               className="cursor-pointer"
             >
               Out - Message

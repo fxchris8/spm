@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
     group_key VARCHAR(255),
     job VARCHAR(50),
     vessel VARCHAR(50),
+    categorization VARCHAR(100),
     schedule_data TEXT,
     crew_data TEXT,
     reliever_data TEXT,
@@ -137,14 +138,16 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
 );
 
 -- Indexes for locked_rotation_schedules
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_locked_seaman_code 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_locked_seaman_code
     ON locked_rotation_schedules USING GIN(locked_seaman_codes);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_is_active 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_is_active
     ON locked_rotation_schedules(is_active);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_job 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_job
     ON locked_rotation_schedules(job);
-CREATE INDEX IF NOT EXISTS idx_locked_rotation_group_key 
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_group_key
     ON locked_rotation_schedules(group_key);
+CREATE INDEX IF NOT EXISTS idx_locked_rotation_categorization
+    ON locked_rotation_schedules(categorization);
 """
 
 # Table: sync_logs
@@ -176,10 +179,10 @@ FROM sync_logs
 ORDER BY table_name, sync_timestamp DESC;
 """
 
-# Table: rotation_configs
-CREATE_TABLE_ROTATION_CONFIGS = """
--- Table: rotation_configs
-CREATE TABLE IF NOT EXISTS rotation_configs (
+# Table: vessels
+CREATE_TABLE_VESSELS = """
+-- Table: vessels
+CREATE TABLE IF NOT EXISTS vessels (
     id BIGSERIAL PRIMARY KEY,
     job_title VARCHAR(50),
     categorization VARCHAR(100),
@@ -192,55 +195,55 @@ CREATE TABLE IF NOT EXISTS rotation_configs (
     UNIQUE(job_title, type, categorization)
 );
 
--- Index for rotation_configs
-CREATE INDEX IF NOT EXISTS idx_rotation_configs_type ON rotation_configs(type);
-CREATE INDEX IF NOT EXISTS idx_rotation_configs_job_title ON rotation_configs(job_title);
+-- Index for vessels
+CREATE INDEX IF NOT EXISTS idx_vessels_type ON vessels(type);
+CREATE INDEX IF NOT EXISTS idx_vessels_job_title ON vessels(job_title);
 """
 
-# Table: rotation_groups
-CREATE_TABLE_ROTATION_GROUPS = """
--- Table: rotation_groups
-CREATE TABLE IF NOT EXISTS rotation_groups (
+# Table: vessels_groups
+CREATE_TABLE_VESSELS_GROUPS = """
+-- Table: vessels_groups
+CREATE TABLE IF NOT EXISTS vessels_groups (
     id BIGSERIAL PRIMARY KEY,
-    rotation_config_id BIGINT,
+    vessel_id BIGINT,
     group_key VARCHAR(50),
     group_number INT CHECK (group_number > 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    CONSTRAINT fk_rotation_groups_config
-        FOREIGN KEY (rotation_config_id) 
-        REFERENCES rotation_configs(id) 
+
+    CONSTRAINT fk_vessels_groups_vessel
+        FOREIGN KEY (vessel_id)
+        REFERENCES vessels(id)
         ON DELETE CASCADE,
-    
-    UNIQUE(rotation_config_id, group_key)
+
+    UNIQUE(vessel_id, group_key)
 );
 
--- Index for rotation_groups
-CREATE INDEX IF NOT EXISTS idx_rotation_groups_config ON rotation_groups(rotation_config_id);
+-- Index for vessels_groups
+CREATE INDEX IF NOT EXISTS idx_vessels_groups_vessel ON vessels_groups(vessel_id);
 """
 
-# Table: rotation_ships
-CREATE_TABLE_ROTATION_SHIPS = """
--- Table: rotation_ships
-CREATE TABLE IF NOT EXISTS rotation_ships (
+# Table: vessels_ships
+CREATE_TABLE_VESSELS_SHIPS = """
+-- Table: vessels_ships
+CREATE TABLE IF NOT EXISTS vessels_ships (
     id BIGSERIAL PRIMARY KEY,
-    rotation_group_id BIGINT,
+    group_id BIGINT,
     ship_name VARCHAR(100),
     order_index INT CHECK (order_index >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-    CONSTRAINT fk_rotation_ships_group
-        FOREIGN KEY (rotation_group_id)
-        REFERENCES rotation_groups(id)
+    CONSTRAINT fk_vessels_ships_group
+        FOREIGN KEY (group_id)
+        REFERENCES vessels_groups(id)
         ON DELETE CASCADE,
 
-    UNIQUE(rotation_group_id, ship_name)
+    UNIQUE(group_id, ship_name)
 );
 
--- Index for rotation_ships
-CREATE INDEX IF NOT EXISTS idx_rotation_ships_group ON rotation_ships(rotation_group_id);
+-- Index for vessels_ships
+CREATE INDEX IF NOT EXISTS idx_vessels_ships_group ON vessels_ships(group_id);
 """
 
 # Table: rotation_submissions
@@ -249,6 +252,7 @@ CREATE_TABLE_ROTATION_SUBMISSIONS = """
 CREATE TABLE IF NOT EXISTS rotation_submissions (
     id SERIAL PRIMARY KEY,
     job VARCHAR(50),
+    categorization VARCHAR(50),
     group_key VARCHAR(100),
     seamancode VARCHAR(100),
     nama VARCHAR(255),
@@ -273,6 +277,7 @@ CREATE TABLE IF NOT EXISTS rotation_submissions (
 
 -- Indexes for rotation_submissions
 CREATE INDEX IF NOT EXISTS idx_rotation_job ON rotation_submissions (job);
+CREATE INDEX IF NOT EXISTS idx_rotation_categorization ON rotation_submissions (categorization);
 CREATE INDEX IF NOT EXISTS idx_rotation_group_key ON rotation_submissions (group_key);
 CREATE INDEX IF NOT EXISTS idx_rotation_seamancode ON rotation_submissions (seamancode);
 CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_data);
@@ -323,9 +328,9 @@ def create_tables():
             ("mutations", CREATE_TABLE_MUTATIONS),
             ("locked_rotation_schedules", CREATE_TABLE_LOCKED_ROTATIONS),
             ("sync_logs", CREATE_TABLE_SYNC_LOGS),
-            ("rotation_configs", CREATE_TABLE_ROTATION_CONFIGS),
-            ("rotation_groups", CREATE_TABLE_ROTATION_GROUPS),
-            ("rotation_ships", CREATE_TABLE_ROTATION_SHIPS),
+            ("vessels", CREATE_TABLE_VESSELS),
+            ("vessels_groups", CREATE_TABLE_VESSELS_GROUPS),
+            ("vessels_ships", CREATE_TABLE_VESSELS_SHIPS),
             ("rotation_submissions", CREATE_TABLE_ROTATION_SUBMISSIONS),
         ]
 
@@ -355,9 +360,9 @@ def verify_database():
             "mutations",
             "locked_rotation_schedules",
             "sync_logs",
-            "rotation_configs",
-            "rotation_groups",
-            "rotation_ships",
+            "vessels",
+            "vessels_groups",
+            "vessels_ships",
             "rotation_submissions",
         ]
 
