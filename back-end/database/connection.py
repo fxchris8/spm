@@ -669,14 +669,127 @@ def submit_all_rotations(job, categorization):
                     group_key = rotation["group_key"]
                     crew_data = rotation["crew_data"]
                     schedule_data = rotation["schedule_data"]
+                    reliever_data = rotation.get("reliever_data")
 
-                    if not crew_data or not schedule_data:
+                    if not crew_data:
                         print(
-                            f"WARNING - Skipping {group_key}: missing crew or schedule data"
+                            f"WARNING - Skipping {group_key}: missing crew data"
                         )
                         continue
 
-                    # Get the last crew member (paling bawah) from crew_data
+                    # =========================================================
+                    # DETECT JUNIOR vs SENIOR
+                    # Junior: crew_data is a LIST (array of crew objects)
+                    # Senior: crew_data is a DICT with "columns" and "data" keys
+                    # =========================================================
+                    is_junior = isinstance(crew_data, list)
+
+                    if is_junior:
+                        print(f"INFO - Processing JUNIOR rotation for group {group_key}")
+
+                        # Junior uses reliever_data: {seamancode_currentCrew: replacement_info}
+                        if not reliever_data:
+                            print(f"WARNING - Skipping {group_key}: no reliever_data for Junior")
+                            continue
+
+                        for current_crew in crew_data:
+                            current_seamancode = current_crew.get("seamancode")
+                            # Try both string and int keys for reliever_data lookup
+                            replacement = reliever_data.get(str(current_seamancode)) or reliever_data.get(current_seamancode)
+
+                            if not replacement:
+                                print(f"INFO - No replacement found for seamancode {current_seamancode}, reliever_data keys: {list(reliever_data.keys())}")
+                                continue
+
+                            # Extract replacement data - try multiple key variations
+                            seamancode = str(replacement.get("seamancode") or "")
+                            nama = str(replacement.get("name") or "")
+                            # Try lastVessel, last_vessel, lastLocation, last_location
+                            last_location = str(
+                                replacement.get("lastVessel") or
+                                replacement.get("last_vessel") or
+                                replacement.get("lastLocation") or
+                                replacement.get("last_location") or
+                                ""
+                            )
+                            mutation_to = str(current_crew.get("currentVessel") or "")
+                            start_date = current_crew.get("endDate")
+
+                            print(f"DEBUG - Processing: seamancode={seamancode}, nama={nama}, last_location={last_location}, mutation_to={mutation_to}")
+
+                            # Check existing submission
+                            ck_q = """
+                                SELECT id, version, status_data, is_active
+                                FROM rotation_submissions
+                                WHERE job = :job AND group_key = :group_key AND seamancode = :seamancode
+                                AND (is_deleted = FALSE OR is_deleted IS NULL)
+                                ORDER BY version DESC LIMIT 1
+                            """
+                            r = conn.execute(text(ck_q), {"job": job, "group_key": group_key, "seamancode": seamancode}).fetchone()
+
+                            ver = 1
+                            if r:
+                                if r[2] == "CHANGE" and not r[3]:
+                                    ver = r[1] + 1
+                                elif r[3]:
+                                    print(f"INFO - Skipping {seamancode}: already active")
+                                    continue  # Already active
+
+                            # Parse start_date
+                            sd = start_date
+                            if sd and isinstance(sd, str):
+                                try:
+                                    # Format: "Wed, 04 Mar 2026 17:00:00 GMT"
+                                    from email.utils import parsedate_to_datetime
+                                    sd = parsedate_to_datetime(sd)
+                                except:
+                                    try:
+                                        sd = datetime.strptime(sd, '%d-%m-%Y') if '-' in sd else datetime.strptime(sd, '%d/%m/%Y')
+                                    except:
+                                        sd = None
+
+                            # Calculate dates (same as Senior: H+6 dari sekarang)
+                            tanggal = datetime.now() + timedelta(days=6)
+                            tanggal_ready = None  # Kosong, diisi manual
+                            auto_accept_at = datetime.now() + timedelta(days=6)
+
+                            # Insert submission
+                            ins_q = """
+                                INSERT INTO rotation_submissions
+                                (job, group_key, seamancode, nama, last_location, mutation_from, mutation_to,
+                                 start_date, tanggal, tanggal_ready, auto_accept_at,
+                                 version, status_data, is_active, categorization, created_at)
+                                VALUES (:job, :group_key, :seamancode, :nama, :last_location, :mutation_from, :mutation_to,
+                                 :start_date, :tanggal, :tanggal_ready, :auto_accept_at,
+                                 :version, 'PENDING', TRUE, :categorization, NOW())
+                                RETURNING id
+                            """
+                            conn.execute(text(ins_q), {
+                                "job": job, "group_key": group_key, "seamancode": seamancode,
+                                "nama": nama, "last_location": last_location,
+                                "mutation_from": last_location,  # mutation_from = last_location (where replacement comes from)
+                                "mutation_to": mutation_to, "start_date": sd,
+                                "tanggal": tanggal, "tanggal_ready": tanggal_ready,
+                                "auto_accept_at": auto_accept_at,
+                                "version": ver, "categorization": categorization
+                            })
+                            apollo_notifications.append({
+                                "seamancode": seamancode,
+                                "tanggal": tanggal.strftime("%d-%m-%Y"),
+                                "mutationfrom": last_location,
+                                "mutationto": mutation_to
+                            })
+                            submissions.append({"seamancode": seamancode})
+
+                        continue  # Skip Senior Logic for this rotation
+
+                    # =========================================================
+                    # SENIOR ROTATION LOGIC (Data is Dict/Grid)
+                    # =========================================================
+                    if not schedule_data:
+                        print(f"WARNING - Skipping {group_key}: missing schedule data")
+                        continue
+
                     crew_rows = crew_data.get("data", [])
                     if not crew_rows:
                         print(f"WARNING - Skipping {group_key}: no crew data")
@@ -1160,26 +1273,27 @@ def get_all_rotation_submissions(job=None):
         raise Exception(f"Failed to fetch all rotation submissions: {str(e)}")
 
 
-def check_job_submitted(job, vessel):
+def check_job_submitted(job, vessel=None, categorization=None):
     """
     Check if ALL locked rotations for a job have been submitted
 
     Logic dengan Versioning:
-    - Get all locked rotation group_keys for this job and vessel
+    - Get all locked rotation group_keys for this job and vessel/categorization
     - Check if ALL of them exist in rotation_submissions dengan is_active = TRUE
     - Return True only if ALL locked rotations have been submitted dengan status aktif
     - Status CHANGE dengan is_active = FALSE tidak dianggap submitted
 
     Args:
         job: Job title
-        vessel: Vessel name (CONTAINER/MANALAGI)
+        vessel: Vessel name (optional, for Senior)
+        categorization: Categorization (optional, for Junior - e.g., 'container', 'manalagi')
 
     Returns:
         Boolean - True jika SEMUA locked rotations sudah di-submit dengan is_active = TRUE
     """
     try:
-        # Get all locked rotations for this job and vessel
-        locked_rotations = get_locked_rotations(job=job, vessel=vessel)
+        # Get all locked rotations for this job and vessel/categorization
+        locked_rotations = get_locked_rotations(job=job, vessel=vessel, categorization=categorization)
 
         if not locked_rotations or len(locked_rotations) == 0:
             # Tidak ada rotations yang di-lock, anggap belum submitted
@@ -1231,7 +1345,7 @@ def check_job_submitted(job, vessel):
         return False
 
 
-def check_has_pending_changes(job, vessel):
+def check_has_pending_changes(job, vessel=None, categorization=None):
     """
     Check if there are any rotation submissions with status CHANGE and is_active = FALSE
     yang perlu di-resubmit, KECUALI jika sudah ada version lebih tinggi dengan is_active = TRUE
@@ -1239,21 +1353,22 @@ def check_has_pending_changes(job, vessel):
     Logic:
     - Cari semua data dengan status CHANGE dan is_active = FALSE
     - Filter: hanya ambil yang BELUM punya version lebih tinggi dengan is_active = TRUE
-    - Filter by vessel untuk memisahkan CONTAINER dan MANALAGI
+    - Filter by vessel/categorization untuk memisahkan CONTAINER dan MANALAGI
     - Filter: hanya data yang is_deleted = FALSE
     - Return: count dan affected_groups yang benar-benar perlu resubmit
 
     Args:
         job: Job title
-        vessel: Vessel name (CONTAINER/MANALAGI)
+        vessel: Vessel name (optional, for Senior)
+        categorization: Categorization (optional, for Junior - e.g., 'container', 'manalagi')
 
     Returns:
         Dict dengan has_changes (boolean), count (int), dan affected_groups (list)
     """
     try:
         with engine.connect() as conn:
-            # Get all locked group_keys for this job and vessel
-            locked_rotations = get_locked_rotations(job=job, vessel=vessel)
+            # Get all locked group_keys for this job and vessel/categorization
+            locked_rotations = get_locked_rotations(job=job, vessel=vessel, categorization=categorization)
             if not locked_rotations:
                 return {"has_changes": False, "count": 0, "affected_groups": []}
 

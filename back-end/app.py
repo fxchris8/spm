@@ -2247,6 +2247,7 @@ def api_check_job_submitted():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        categorization = request.args.get("categorization", "").lower() if request.args.get("categorization") else None
 
         if not job:
             return (
@@ -2254,13 +2255,14 @@ def api_check_job_submitted():
                 400,
             )
 
-        if not vessel:
+        # Allow either vessel or categorization (for Junior rotation)
+        if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                jsonify({"status": "error", "message": "Vessel or categorization parameter required"}),
                 400,
             )
 
-        is_submitted = check_job_submitted(job=job, vessel=vessel)
+        is_submitted = check_job_submitted(job=job, vessel=vessel if vessel else None, categorization=categorization)
 
         return jsonify({"status": "success", "is_submitted": is_submitted})
 
@@ -2278,6 +2280,7 @@ def api_check_pending_changes():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        categorization = request.args.get("categorization", "").lower() if request.args.get("categorization") else None
 
         if not job:
             return (
@@ -2285,13 +2288,14 @@ def api_check_pending_changes():
                 400,
             )
 
-        if not vessel:
+        # Allow either vessel or categorization (for Junior rotation)
+        if not vessel and not categorization:
             return (
-                jsonify({"status": "error", "message": "Vessel parameter required"}),
+                jsonify({"status": "error", "message": "Vessel or categorization parameter required"}),
                 400,
             )
 
-        result = check_has_pending_changes(job=job, vessel=vessel)
+        result = check_has_pending_changes(job=job, vessel=vessel if vessel else None, categorization=categorization)
 
         return jsonify(
             {
