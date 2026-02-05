@@ -169,73 +169,79 @@ export function GroupsEditor({
     >
       {/* Groups Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.entries(groups).map(([groupKey, ships]) => (
-          <div
-            key={groupKey}
-            className="relative bg-white border border-gray-200 rounded-lg p-4"
-          >
-            {/* Group Header */}
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-bold text-gray-900 text-lg">
-                {formatGroupName(groupKey)}
-              </h4>
-              {isEditMode && (
-                <Button
-                  size="xs"
-                  color="failure"
-                  onClick={() => handleRemoveGroup(groupKey)}
-                >
-                  Hapus
-                </Button>
-              )}
-            </div>
-
-            {/* Add Ship Input (Edit Mode Only) */}
-            {isEditMode && (
-              <div className="flex gap-2 mb-3">
-                <TextInput
-                  value={newShipInputs[groupKey] || ''}
-                  onChange={e =>
-                    setNewShipInputs(prev => ({
-                      ...prev,
-                      [groupKey]: e.target.value,
-                    }))
-                  }
-                  onKeyPress={e => handleKeyPress(e, groupKey)}
-                  placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
-                  className="flex-1"
-                  sizing="sm"
-                />
-                <Button size="sm" onClick={() => handleAddShip(groupKey)}>
-                  <HiPlus />
-                </Button>
-              </div>
-            )}
-
-            {/* Ships List */}
-            <SortableContext
-              items={ships.map((_, idx) => `${groupKey}-${idx}`)}
-              strategy={verticalListSortingStrategy}
+        {Object.entries(groups)
+          .sort(([keyA], [keyB]) => {
+            const numA = parseInt(keyA.match(/rotation(\d+)$/)?.[1] || '0', 10);
+            const numB = parseInt(keyB.match(/rotation(\d+)$/)?.[1] || '0', 10);
+            return numA - numB;
+          })
+          .map(([groupKey, ships]) => (
+            <div
+              key={groupKey}
+              className="relative bg-white border border-gray-200 rounded-lg p-4"
             >
-              <div className="space-y-1 max-h-60 overflow-y-auto">
-                {ships.length === 0 ? (
-                  <EmptyGroupDropZone groupKey={groupKey} />
-                ) : (
-                  ships.map((ship, index) => (
-                    <DraggableShipCard
-                      key={`${groupKey}-${index}`}
-                      shipName={ship}
-                      groupKey={groupKey}
-                      index={index}
-                      onDelete={() => handleRemoveShip(groupKey, index)}
-                      isEditMode={isEditMode}
-                    />
-                  ))
+              {/* Group Header */}
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-bold text-gray-900 text-lg">
+                  {formatGroupName(groupKey)}
+                </h4>
+                {isEditMode && (
+                  <Button
+                    size="xs"
+                    color="failure"
+                    onClick={() => handleRemoveGroup(groupKey)}
+                  >
+                    Hapus
+                  </Button>
                 )}
               </div>
-            </SortableContext>
-          </div>
-        ))}
+
+              {/* Add Ship Input (Edit Mode Only) */}
+              {isEditMode && (
+                <div className="flex gap-2 mb-3">
+                  <TextInput
+                    value={newShipInputs[groupKey] || ''}
+                    onChange={e =>
+                      setNewShipInputs(prev => ({
+                        ...prev,
+                        [groupKey]: e.target.value,
+                      }))
+                    }
+                    onKeyPress={e => handleKeyPress(e, groupKey)}
+                    placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
+                    className="flex-1"
+                    sizing="sm"
+                  />
+                  <Button size="sm" onClick={() => handleAddShip(groupKey)}>
+                    <HiPlus />
+                  </Button>
+                </div>
+              )}
+
+              {/* Ships List */}
+              <SortableContext
+                items={ships.map((_, idx) => `${groupKey}-${idx}`)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {ships.length === 0 ? (
+                    <EmptyGroupDropZone groupKey={groupKey} />
+                  ) : (
+                    ships.map((ship, index) => (
+                      <DraggableShipCard
+                        key={`${groupKey}-${index}`}
+                        shipName={ship}
+                        groupKey={groupKey}
+                        index={index}
+                        onDelete={() => handleRemoveShip(groupKey, index)}
+                        isEditMode={isEditMode}
+                      />
+                    ))
+                  )}
+                </div>
+              </SortableContext>
+            </div>
+          ))}
 
         {/* Add Group Card - appears as last item in grid */}
         {isEditMode && (

@@ -467,38 +467,44 @@ export function JuniorRotation({
 
       {/* Card for group selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {Object.entries(groups).map(([groupKey, vessels]) => {
-          const isLocked = isGroupLocked(groupKey);
-          const hasPendingChange = affectedGroups.includes(groupKey);
+        {Object.entries(groups)
+          .sort(([keyA], [keyB]) => {
+            const numA = parseInt(keyA.match(/rotation(\d+)$/)?.[1] || '0', 10);
+            const numB = parseInt(keyB.match(/rotation(\d+)$/)?.[1] || '0', 10);
+            return numA - numB;
+          })
+          .map(([groupKey, vessels]) => {
+            const isLocked = isGroupLocked(groupKey);
+            const hasPendingChange = affectedGroups.includes(groupKey);
 
-          return (
-            <div key={groupKey} className="relative">
-              {/* Locked Badge */}
-              {isLocked && !hasPendingChange && (
-                <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm z-10">
-                  <HiLockClosed className="h-4 w-4 text-green-600" />
-                </div>
-              )}
+            return (
+              <div key={groupKey} className="relative">
+                {/* Locked Badge */}
+                {isLocked && !hasPendingChange && (
+                  <div className="absolute top-4 right-4 bg-green-100 rounded-full p-1.5 shadow-sm z-10">
+                    <HiLockClosed className="h-4 w-4 text-green-600" />
+                  </div>
+                )}
 
-              {/* Pending Change Badge - Higher priority than locked */}
-              {hasPendingChange && (
-                <div className="absolute top-4 right-4 bg-yellow-100 rounded-full p-1.5 shadow-sm z-10">
-                  <HiExclamationCircle className="h-4 w-4 text-yellow-600" />
-                </div>
-              )}
+                {/* Pending Change Badge - Higher priority than locked */}
+                {hasPendingChange && (
+                  <div className="absolute top-4 right-4 bg-yellow-100 rounded-full p-1.5 shadow-sm z-10">
+                    <HiExclamationCircle className="h-4 w-4 text-yellow-600" />
+                  </div>
+                )}
 
-              <CardComponent
-                groupName={`Group ${groupKey.replace(
-                  'container_rotation',
-                  ''
-                )}`}
-                listShip={vessels}
-                isActive={selectedGroup === groupKey}
-                onClick={() => handleCardClick(groupKey)}
-              />
-            </div>
-          );
-        })}
+                <CardComponent
+                  groupName={`Group ${groupKey.replace(
+                    'container_rotation',
+                    ''
+                  )}`}
+                  listShip={vessels}
+                  isActive={selectedGroup === groupKey}
+                  onClick={() => handleCardClick(groupKey)}
+                />
+              </div>
+            );
+          })}
       </div>
 
       {/* Main Content */}
