@@ -31,7 +31,7 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from models.model import (
+from ai.model import (
     filter_in_vessel,
     getRecommendation,
     search_candidate,
@@ -307,7 +307,7 @@ def load_word2vec_model():
     global word2vec_model
 
     ROOT_DIR = pathlib.Path(__file__).parent.resolve()
-    MODEL_PATH = ROOT_DIR / "models" / "word2vec_model.model"
+    MODEL_PATH = ROOT_DIR / "ai" / "word2vec_model.model"
 
     try:
         word2vec_model = Word2Vec.load(str(MODEL_PATH))
