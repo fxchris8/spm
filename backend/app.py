@@ -78,6 +78,15 @@ def add_cors_headers(response):
 
 app.secret_key = "supersecretkey"
 
+# ============================================================================
+# REGISTER BLUEPRINTS
+# ============================================================================
+
+from routes.dashboard_route import dashboard_bp
+
+app.register_blueprint(dashboard_bp, url_prefix="/api")
+
+
 
 # ============================================================================
 # BAGIAN 1: BASIC & UTILITY ENDPOINTS
@@ -434,125 +443,17 @@ def get_top_5_similar(target_seaman_code):
 # BAGIAN 2: DASHBOARD & DATA FETCHING
 # ============================================================================
 
+# NOTE: Dashboard data endpoint has been moved to layered architecture
+# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
+#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
 
-# Route to serve the main dashboard
-@app.route("/api/dashboard-data")
-def get_dashboard_data():
-    # Load from Supabase instead of Excel
-    data = get_seamen_as_data()
-    data = data.rename(
-        columns={
-            "age": "UMUR",
-            "certificate": "CERTIFICATE",
-            "day_remains": "DAY REMAINS",
-            "last_position": "RANK",
-            "last_location": "VESSEL",
-            "name": "SEAMAN NAME",
-            "seafarercode": "SEAFARER CODE",
-            "seamancode": "SEAMAN CODE",
-        }
-    )
+# NOTE: Vessel stats endpoint has been moved to layered architecture
+# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
+#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
 
-    data = data[
-        [
-            "SEAMAN CODE",
-            "SEAFARER CODE",
-            "SEAMAN NAME",
-            "RANK",
-            "VESSEL",
-            "UMUR",
-            "CERTIFICATE",
-            "DAY REMAINS",
-        ]
-    ]
-
-    # Kembalikan data sebagai JSON
-    return data.to_json(orient="records")
-
-
-# Route to manually trigger data sync from central API
-@app.route("/api/manual-sync", methods=["POST"])
-def manual_sync():
-    try:
-        print(f"[MANUAL SYNC] Started at {datetime.now()}")
-
-        # Import sync functions from scheduler
-        from database.scheduler import scheduled_sync_mutations, scheduled_sync_seamen
-
-        # Execute sync for seamen
-        print("[MANUAL SYNC] Syncing seamen data...")
-        scheduled_sync_seamen()
-
-        # Execute sync for mutations
-        print("[MANUAL SYNC] Syncing mutations data...")
-        scheduled_sync_mutations()
-
-        print(f"[MANUAL SYNC] Completed at {datetime.now()}")
-
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Data berhasil di-sync dari API pusat",
-                    "timestamp": datetime.now().isoformat(),
-                }
-            ),
-            200,
-        )
-
-    except Exception as e:
-        print(f"[MANUAL SYNC ERROR] {str(e)}")
-        return (
-            jsonify({"status": "error", "message": f"Gagal melakukan sync: {str(e)}"}),
-            500,
-        )
-
-
-# Route to get vessel statistics by category
-@app.route("/api/vessel-stats")
-def get_vessel_stats():
-    """
-    Returns the count of unique vessels for each category.
-    Categories: container, manalagi, bc
-    """
-    try:
-        # Get rotation vessels from database
-        rotation_vessels = get_rotation_vessels()
-
-        # Count unique ships per category
-        container_ships = set()
-        manalagi_ships = set()
-        bc_ships = set()
-
-        for vessel in rotation_vessels:
-            categorization = vessel.get("categorization", "").lower()
-            groups = vessel.get("groups", {})
-
-            # Collect all ships from all groups in this vessel
-            for group_ships in groups.values():
-                if categorization == "container":
-                    container_ships.update(group_ships)
-                elif categorization == "manalagi":
-                    manalagi_ships.update(group_ships)
-                elif categorization == "bc":
-                    bc_ships.update(group_ships)
-
-        stats = {
-            "container": len(container_ships),
-            "manalagi": len(manalagi_ships),
-            "bc": len(bc_ships),
-        }
-
-        return jsonify(stats), 200
-
-    except Exception as e:
-        print(f"[VESSEL STATS ERROR] {str(e)}")
-        return (
-            jsonify(
-                {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
-            ),
-            500,
-        )
+# NOTE: Manual sync endpoint has been moved to layered architecture
+# See: routes/dashboard_route.py -> controllers/sync_controller.py
+#      -> services/sync_service.py -> repositories/sync_repository.py
 
 
 # ============================================================================
