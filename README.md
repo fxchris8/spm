@@ -1,6 +1,10 @@
 <!-- @faw_sd -->
 
-# Ship Personnel Management (SPM) System
+<div align='center'>
+
+<h1> Ship Personnel Management (SPM) System </h1>
+
+</div>
 
 Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, dan penjadwalan awak kapal. Sistem ini membantu dalam perencanaan rotasi nahkoda, KKM (Kepala Kamar Mesin), dan crew lainnya di berbagai jenis kapal.
 
