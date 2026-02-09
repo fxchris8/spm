@@ -10,6 +10,12 @@ from flask_cors import CORS
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
+from ai.model import (
+    filter_in_vessel,
+    getRecommendation,
+    search_candidate,
+    vessel_group_id_deck,
+)
 from database.connection import (
     auto_accept_expired_rotations,
     check_has_pending_changes,
@@ -31,12 +37,6 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from ai.model import (
-    filter_in_vessel,
-    getRecommendation,
-    search_candidate,
-    vessel_group_id_deck,
-)
 from rotation import (
     get_kkm,
     get_masinisII,
@@ -45,6 +45,7 @@ from rotation import (
     get_nganggur,
     get_schedule,
 )
+from routes.dashboard_route import dashboard_bp
 
 app = Flask(__name__)
 
@@ -82,10 +83,7 @@ app.secret_key = "supersecretkey"
 # REGISTER BLUEPRINTS
 # ============================================================================
 
-from routes.dashboard_route import dashboard_bp
-
 app.register_blueprint(dashboard_bp, url_prefix="/api")
-
 
 
 # ============================================================================

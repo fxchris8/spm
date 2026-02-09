@@ -21,7 +21,12 @@ def get_dashboard_data_controller():
 
     except Exception as e:
         return (
-            jsonify({"status": "error", "message": f"Failed to get dashboard data: {str(e)}"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"Failed to get dashboard data: {str(e)}",
+                }
+            ),
             500,
         )
 
@@ -41,6 +46,8 @@ def get_vessel_stats_controller():
     except Exception as e:
         print(f"[VESSEL STATS ERROR] {str(e)}")
         return (
-            jsonify({"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}),
+            jsonify(
+                {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
+            ),
             500,
         )

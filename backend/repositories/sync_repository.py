@@ -14,10 +14,10 @@ from database.database import get_db_connection
 def sync_seamen_to_database(df):
     """
     Sync seamen data to database using direct SQL queries.
-    
+
     Args:
         df: DataFrame containing seamen data
-        
+
     Returns:
         bool: True if sync successful, False otherwise
     """
@@ -56,7 +56,9 @@ def sync_seamen_to_database(df):
             for i in range(0, len(df), batch_size):
                 batch_df = df.iloc[i : i + batch_size]
                 batch_num = (i // batch_size) + 1
-                print(f"   Inserting batch {batch_num}/{total_batches} ({len(batch_df)} rows)...")
+                print(
+                    f"   Inserting batch {batch_num}/{total_batches} ({len(batch_df)} rows)..."
+                )
                 batch_df.to_sql("seamen", conn, if_exists="append", index=False)
                 conn.commit()
 
@@ -117,10 +119,10 @@ def sync_seamen_to_database(df):
 def sync_mutations_to_database(df):
     """
     Sync mutations data to database using direct SQL queries.
-    
+
     Args:
         df: DataFrame containing mutations data
-        
+
     Returns:
         bool: True if sync successful, False otherwise
     """
@@ -133,12 +135,16 @@ def sync_mutations_to_database(df):
 
         # Convert seamancode to integer
         print("Converting seamancode to integer...")
-        df["seamancode"] = pd.to_numeric(df["seamancode"], errors="coerce").fillna(0).astype(int)
+        df["seamancode"] = (
+            pd.to_numeric(df["seamancode"], errors="coerce").fillna(0).astype(int)
+        )
 
         # Convert date columns
         if "transactiondate" in df.columns:
             print("Converting transactiondate format...")
-            df["transactiondate"] = pd.to_datetime(df["transactiondate"], errors="coerce")
+            df["transactiondate"] = pd.to_datetime(
+                df["transactiondate"], errors="coerce"
+            )
 
         print("DONE - Data conversion completed")
 
@@ -160,7 +166,9 @@ def sync_mutations_to_database(df):
             filtered_count = original_count - len(df)
 
             if filtered_count > 0:
-                print(f"WARNING - Filtered out {filtered_count} mutations with invalid seamancode")
+                print(
+                    f"WARNING - Filtered out {filtered_count} mutations with invalid seamancode"
+                )
 
             print(f"PROCESS - Proceeding with {len(df)} valid mutation records")
 
@@ -182,7 +190,9 @@ def sync_mutations_to_database(df):
             for i in range(0, len(df), batch_size):
                 batch_df = df.iloc[i : i + batch_size]
                 batch_num = (i // batch_size) + 1
-                print(f"   Inserting batch {batch_num}/{total_batches} ({len(batch_df)} rows)...")
+                print(
+                    f"   Inserting batch {batch_num}/{total_batches} ({len(batch_df)} rows)..."
+                )
                 batch_df.to_sql("mutations", conn, if_exists="append", index=False)
                 conn.commit()
 

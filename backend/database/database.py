@@ -32,7 +32,7 @@ print("=" * 60)
 def get_db_connection():
     """
     Get database connection from engine.
-    
+
     Returns:
         Connection object
     """
@@ -42,7 +42,7 @@ def get_db_connection():
 def get_api_config():
     """
     Get external API configuration.
-    
+
     Returns:
         dict: API configuration with base URLs
     """
