@@ -1,7 +1,7 @@
 import pandas as pd
 
 from database.connection import get_seamen_as_data
-from models.model import filter_in_vessel, vessel_group_id_deck
+from ai.model import filter_in_vessel, vessel_group_id_deck
 
 # ============================================================================
 # GLOBAL VARIABLES & CONFIGURATIONS

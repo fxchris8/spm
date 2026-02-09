@@ -1,6 +1,10 @@
 <!-- @faw_sd -->
 
-# Ship Personnel Management (SPM) System
+<div align='center'>
+
+<h1> Ship Personnel Management (SPM) System </h1>
+
+</div>
 
 Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, dan penjadwalan awak kapal. Sistem ini membantu dalam perencanaan rotasi nahkoda, KKM (Kepala Kamar Mesin), dan crew lainnya di berbagai jenis kapal.
 
@@ -26,9 +30,9 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
   - Menyimpan data training dan sertifikasi
   - Tracking history perubahan data
 - **Setup Tools**:
-  - `db_setup.py` - Membuat struktur database dan tabel
-  - `seeder.py` - Mengisi data awal untuk development/testing
-  - `scheduler.py` - Background task untuk sinkronisasi data
+  - `scripts/schema.py` - Membuat struktur database dan tabel
+  - `database/seeder.py` - Mengisi data awal untuk development/testing
+  - `scripts/scheduler.py` - Background task untuk sinkronisasi data
 
 ### Frontend
 
@@ -72,7 +76,7 @@ nano .env  # atau gunakan text editor favorit Anda
 docker-compose up -d
 
 # 5. Setup database (hanya pertama kali)
-docker exec -it spm-backend python database/db_setup.py
+docker exec -it spm-backend python scripts/schema.py
 docker exec -it spm-backend python database/seeder.py
 
 # 6. Cek logs untuk memastikan semua berjalan
@@ -153,16 +157,16 @@ Jalankan script-script berikut secara berurutan:
 
 ```bash
 # 1. Setup database (membuat tabel-tabel)
-python database/db_setup.py
-# Opsi: python database/db_setup.py --drop (untuk drop & recreate semua tabel)
+python scripts/schema.py
+# Opsi: python scripts/schema.py --drop (untuk drop & recreate semua tabel)
 
 # 2. Seeding data awal (mengisi data ke database)
 python database/seeder.py
 # Opsi: python database/seeder.py --fresh (untuk hapus data lama & insert data baru)
 
 # 3. Jalankan scheduler (background task untuk fetch data berkala)
-python database/scheduler.py
-# Opsi: python database/scheduler.py --manual (untuk run sekali tanpa schedule otomatis)
+python scripts/scheduler.py
+# Opsi: python scripts/scheduler.py --manual (untuk run sekali tanpa schedule otomatis)
 
 # 4. Jalankan Flask server
 python app.py
@@ -172,7 +176,7 @@ python app.py
 
 **Catatan:**
 
-- `db_setup.py` - Membuat struktur database dan tabel-tabel yang diperlukan
+- `schema.py` - Membuat struktur database dan tabel-tabel yang diperlukan
   - Gunakan `--drop` untuk drop dan recreate semua tabel (hati-hati, data akan hilang!)
 - `seeder.py` - Mengisi data awal untuk testing/development
   - Gunakan `--fresh` untuk menghapus data lama dan insert data baru
@@ -361,3 +365,6 @@ Jika ada error, perbaiki terlebih dahulu sebelum melakukan commit.
 - [@Miuura](https://github.com/Miuura)
 
 ---
+```markdown
+> **Catatan:** Untuk saat ini repository masih dalam proses refactor. Apabila refactor belum selesai, berarti saya sudah tidak pegang project ini --hilmi
+```
