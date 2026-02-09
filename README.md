@@ -365,6 +365,5 @@ Jika ada error, perbaiki terlebih dahulu sebelum melakukan commit.
 - [@Miuura](https://github.com/Miuura)
 
 ---
-```markdown
+
 > **Catatan:** Untuk saat ini repository masih dalam proses refactor. Apabila refactor belum selesai, berarti saya sudah tidak pegang project ini --hilmi
-```
