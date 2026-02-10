@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import connection
+from database import connection
 
 
 def seed_rotation_junior_data():

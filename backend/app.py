@@ -2,14 +2,15 @@ import io
 import os
 import pathlib
 from datetime import datetime
-
-import numpy as np
 import pandas as pd
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
-from gensim.models import Word2Vec
-from sklearn.metrics.pairwise import cosine_similarity
-
+from ai import (
+    filter_in_vessel,
+    getRecommendation,
+    load_word2vec_model,
+    vessel_group_id_deck,
+)
 from database.connection import (
     auto_accept_expired_rotations,
     check_has_pending_changes,
@@ -31,12 +32,6 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from ai.model import (
-    filter_in_vessel,
-    getRecommendation,
-    search_candidate,
-    vessel_group_id_deck,
-)
 from rotation import (
     get_kkm,
     get_masinisII,
@@ -45,18 +40,22 @@ from rotation import (
     get_nganggur,
     get_schedule,
 )
+from routes import dashboard_bp, search_bp
+
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"
 
-# CORS vesseluration - Auto detect environment
+# ============================================================================
+# CORS CONFIGURATION
+# ============================================================================
+
 ENV = os.environ.get("FLASK_ENV", "development")
 
-# Allowed origins for production (HTTP & HTTPS)
 ALLOWED_ORIGINS = [
-    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id with any port
-    r"https?://spil\.co\.id(:\d+)?",  # spil.co.id with any port
+    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id
+    r"https?://spil\.co\.id(:\d+)?",  # Main spil.co.id domain
 ]
-
 if ENV == "production":
     CORS(
         app=app,
@@ -65,379 +64,43 @@ if ENV == "production":
         },
     )
 else:
-    # Development - allow all origins
     CORS(app=app)
-
 
 @app.after_request
 def add_cors_headers(response):
-    # Required for Private Network Access (PNA)
+    """
+    Add CORS headers to all responses.
+    Required for Private Network Access (PNA) in modern browsers.
+    """
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
-
-
-app.secret_key = "supersecretkey"
 
 # ============================================================================
 # REGISTER BLUEPRINTS
 # ============================================================================
 
-from routes.dashboard_route import dashboard_bp
-
 app.register_blueprint(dashboard_bp, url_prefix="/api")
-
-
+app.register_blueprint(search_bp, url_prefix="/api")
 
 # ============================================================================
 # BAGIAN 1: BASIC & UTILITY ENDPOINTS
 # ============================================================================
 
-
-# Route to check if the app is working
 @app.route("/")
 def index():
+    """
+    Health check endpoint to verify Flask application is running.
+
+    Returns:
+        str: Simple status message
+    """
     return "Flask app is running!"
 
+# ============================================================================
+# WORD2VEC MODEL INITIALIZATION
+# ============================================================================
 
-SHIP_GROUPS = {
-    "manalagi_rotation": [
-        "KM. MANALAGI PRITA",
-        "KM. MANALAGI ASTA",
-        "KM. MANALAGI ASTI",
-        "KM. MANALAGI DASA",
-        "KM. MANALAGI ENZI",
-        "KM. MANALAGI TARA",
-        "KM. MANALAGI WANDA",
-    ],
-    "manalagi_rotation2": [
-        "KM. MANALAGI TISYA",
-        "KM. MANALAGI SAMBA",
-        "KM. MANALAGI HITA",
-        "KM. MANALAGI VIRA",
-        "KM. MANALAGI YASA",
-        "KM. XYS SATU",
-    ],
-    "manalagi_kkm": [
-        "KM. MANALAGI ASTA",
-        "KM. MANALAGI ASTI",
-        "KM. MANALAGI SAMBA",
-        "KM. MANALAGI YASA",
-        "KM. XYS SATU",
-        "KM. MANALAGI WANDA",
-    ],
-    "manalagi_kkm2": [
-        "KM. MANALAGI TISYA",
-        "KM. MANALAGI PRITA",
-        "KM. MANALAGI DASA",
-        "KM. MANALAGI HITA",
-        "KM. MANALAGI ENZI",
-        "KM. MANALAGI TARA",
-        "KM. MANALAGI VIRA",
-    ],
-    "container_rotation1": [
-        "KM. ORIENTAL EMERALD",
-        "KM. ORIENTAL RUBY",
-        "KM. ORIENTAL SILVER",
-        "KM. ORIENTAL GOLD",
-        "KM. ORIENTAL JADE",
-        "KM. ORIENTAL DIAMOND",
-    ],
-    "container_rotation2": [
-        "KM. LUZON",
-        "KM. VERIZON",
-        "KM. ORIENTAL GALAXY",
-        "KM. HIJAU SAMUDRA",
-        "KM. ARMADA PERMATA",
-    ],
-    "container_rotation3": [
-        "KM. ORIENTAL SAMUDERA",
-        "KM. ORIENTAL PACIFIC",
-        "KM. PULAU NUNUKAN",
-        "KM. TELUK FLAMINGGO",
-        "KM. TELUK BERAU",
-        "KM. TELUK BINTUNI",
-    ],
-    "container_rotation4": [
-        "KM. PULAU LAYANG",
-        "KM. PULAU WETAR",
-        "KM. PULAU HOKI",
-        "KM. SPIL HANA",
-        "KM. SPIL HASYA",
-        "KM. SPIL HAPSRI",
-        "KM. SPIL HAYU",
-    ],
-    "container_rotation5": [
-        "KM. HIJAU JELITA",
-        "KM. HIJAU SEJUK",
-        "KM. ARMADA SEJATI",
-        "KM. ARMADA SERASI",
-        "KM. ARMADA SEGARA",
-        "KM. ARMADA SENADA",
-        "KM. HIJAU SEGAR",
-        "KM. TITANIUM",
-        "KM. VERTIKAL",
-    ],
-    "container_rotation6": [
-        "KM. SPIL RENATA",
-        "KM. SPIL RATNA",
-        "KM. SPIL RUMI",
-        "KM. PEKAN BERAU",
-        "KM SPIL RAHAYU",
-        "KM. SPIL RETNO",
-        "KM. MINAS BARU",
-        "KM PEKAN SAMPIT",
-        "KM. SELILI BARU",
-    ],
-    "container_rotation7": [
-        "KM. DERAJAT",
-        "KM. MULIANIM",
-        "KM. PRATIWI RAYA",
-        "KM. MAGELLAN",
-        "KM. PAHALA",
-        "KM. PEKAN RIAU",
-        "KM. PEKAN FAJAR",
-        "KM. FORTUNE",
-    ],
-    "container_rotation8": [
-        "KM. PRATIWI SATU",
-        "KM. BALI SANUR",
-        "KM. BALI KUTA",
-        "KM. BALI GIANYAR",
-        "KM. BALI AYU",
-        "KM. AKASHIA",
-        "KM KAPPA",
-    ],
-    "container_kkm1": [
-        "KM. ORIENTAL GOLD",
-        "KM. ORIENTAL EMERALD",
-        "KM. ORIENTAL GALAXY",
-        "KM. ORIENTAL RUBY",
-        "KM. ORIENTAL SILVER",
-        "KM. ORIENTAL JADE",
-        "KM. VERIZON",
-        "KM. LUZON",
-        "KM. ORIENTAL DIAMOND",
-    ],
-    "container_kkm2": [
-        "KM. SPIL HAPSRI",
-        "KM. ARMADA PERMATA",
-        "KM. HIJAU SAMUDRA",
-        "KM. SPIL HASYA",
-        "KM. ARMADA SEJATI",
-        "KM. SPIL HAYU",
-        "KM. SPIL HANA",
-        "KM. HIJAU SEJUK",
-        "KM. HIJAU JELITA",
-    ],
-    "container_kkm3": [
-        "KM. ORIENTAL PACIFIC",
-        "KM. ORIENTAL SAMUDERA",
-        "KM. ARMADA SEGARA",
-        "KM. ARMADA SENADA",
-        "KM. ARMADA SERASI",
-        "KM. SPIL RATNA",
-        "KM. SPIL RUMI",
-        "KM. PULAU NUNUKAN",
-    ],
-    "container_kkm4": [
-        "KM. PULAU HOKI",
-        "KM. TELUK BINTUNI",
-        "KM. TELUK FLAMINGGO",
-        "KM. PULAU LAYANG",
-        "KM. TELUK BERAU",
-        "KM. SPIL RENATA",
-        "KM. PULAU WETAR",
-        "KM SPIL RAHAYU",
-        "KM. SPIL RETNO",
-    ],
-    "container_kkm5": [
-        "KM. MINAS BARU",
-        "KM. SELILI BARU",
-        "KM. VERTIKAL",
-        "KM. HIJAU SEGAR",
-        "KM. PEKAN RIAU",
-        "KM. PEKAN BERAU",
-        "KM. PEKAN FAJAR",
-        "KM. PEKAN SAMPIT",
-        "KM. TITANIUM",
-    ],
-    "container_kkm6": [
-        "KM. PRATIWI RAYA",
-        "KM. PRATIWI SATU",
-        "KM. BALI AYU",
-        "KM. BALI GIANYAR",
-        "KM. BALI SANUR",
-        "KM. BALI KUTA",
-    ],
-    "container_kkm7": [
-        "KM. MAGELLAN",
-        "KM. MULIANIM",
-        "KM. PAHALA",
-        "KM. FORTUNE",
-        "KM. AKASHIA",
-        "KM. DERAJAT",
-    ],
-}
-
-# Load data from Supabase instead of Excel
-combined_df = get_seamen_as_data()
-
-timestamp_file = "../last_request_time.txt"
-
-# combined_df["DAY REMAINS DIFF"] = combined_df["day_remains"]
-combined_df["DAY REMAINS DIFF"] = pd.to_numeric(
-    combined_df["day_remains"], errors="coerce"
-)
-
-df_filtered = combined_df[combined_df["DAY REMAINS DIFF"] > 0][
-    [
-        "seamancode",
-        "seafarercode",
-        "name",
-        "last_position",
-        "last_location",
-        "age",
-        "certificate",
-        "DAY REMAINS DIFF",
-    ]
-]
-
-sorted_df = df_filtered.sort_values(by="DAY REMAINS DIFF")
-
-sorted_df.to_csv("../data/sorted_seamen_data_diff.csv", index=False)
-
-word2vec_model = None
-
-
-def load_word2vec_model():
-    """
-    Memuat model Word2Vec.
-    """
-    global word2vec_model
-
-    ROOT_DIR = pathlib.Path(__file__).parent.resolve()
-    MODEL_PATH = ROOT_DIR / "ai" / "word2vec_model.model"
-
-    try:
-        word2vec_model = Word2Vec.load(str(MODEL_PATH))
-        print(f"Word2Vec model loaded successfully from: {MODEL_PATH}")
-    except FileNotFoundError:
-        print(f"Error: Word2Vec model file not found at {MODEL_PATH}")
-    except Exception as e:
-        print(f"Error loading Word2Vec model: {e}")
-
-
-# Panggil fungsi untuk memuat Word2Vec model saat aplikasi dimulai
 load_word2vec_model()
-
-
-def get_last_request_time():
-    if os.path.exists(timestamp_file):
-        with open(timestamp_file, "r") as f:
-            return datetime.fromisoformat(f.read().strip())
-    return None
-
-
-def save_last_request_time():
-    with open(timestamp_file, "w") as f:
-        f.write(datetime.now().isoformat())
-
-
-def get_top_5_similar(target_seaman_code):
-    try:
-        global combined_df
-        global word2vec_model
-
-        if word2vec_model is None:
-            print("Word2Vec model is None!")
-            return {"error": "Word2Vec model belum dimuat"}
-
-        target_seaman_data = combined_df[
-            combined_df["seamancode"] == target_seaman_code
-        ]
-
-        if target_seaman_data.empty:
-            print("No seaman found with that code")
-            return {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
-
-        rank = target_seaman_data.iloc[0]["last_position"]
-        certificate = target_seaman_data.iloc[0]["certificate"]
-
-        def get_word2vec_vector(text):
-            if not isinstance(text, str):
-                return np.zeros(word2vec_model.vector_size)
-            words = str(text).split()
-            try:
-                word_vectors = [
-                    word2vec_model.wv[word]
-                    for word in words
-                    if word in word2vec_model.wv
-                ]
-                if word_vectors:
-                    return np.mean(word_vectors, axis=0)
-                return np.zeros(word2vec_model.vector_size)
-            except Exception as e:
-                print(f"Error in get_word2vec_vector: {str(e)}")
-                return np.zeros(word2vec_model.vector_size)
-
-        user_input = f"{rank} {certificate}"
-        user_vector = get_word2vec_vector(user_input)
-
-        filtered_candidates = combined_df[
-            combined_df["seamancode"] != target_seaman_code
-        ].copy()
-
-        filtered_candidates["vector"] = (
-            filtered_candidates["last_position"].astype(str)
-            + " "
-            + filtered_candidates["certificate"].astype(str)
-        )
-        filtered_candidates["vector"] = filtered_candidates["vector"].apply(
-            get_word2vec_vector
-        )
-
-        filtered_candidates["vector"] = filtered_candidates["vector"].apply(
-            lambda x: x.tolist()
-        )
-
-        filtered_candidates["similarity"] = filtered_candidates["vector"].apply(
-            lambda x: float(cosine_similarity([user_vector], [x])[0][0])
-        )
-
-        filtered_candidates = filtered_candidates.sort_values(
-            by="similarity", ascending=False
-        )
-        top_5_recommendations = filtered_candidates.head(5)
-
-        columns_to_drop = [
-            "vector",
-            "phone_number_1",
-            "phone_number_2",
-            "phone_number_3",
-            "phone_number_4",
-            "experience",
-        ]
-        top_5_recommendations = top_5_recommendations.drop(columns=columns_to_drop)
-
-        top_5_dict = top_5_recommendations.to_dict(orient="records")
-
-        for record in top_5_dict:
-            for key, value in record.items():
-                if "numpy" in str(type(value)):
-                    if np.issubdtype(type(value), np.floating):
-                        record[key] = float(value)
-                    elif np.issubdtype(type(value), np.integer):
-                        record[key] = int(value)
-                    else:
-                        record[key] = str(value)
-
-        response = {"status": "success", "data": top_5_dict}
-
-        return response
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
 
 # ============================================================================
 # BAGIAN 2: DASHBOARD & DATA FETCHING
@@ -455,23 +118,14 @@ def get_top_5_similar(target_seaman_code):
 # See: routes/dashboard_route.py -> controllers/sync_controller.py
 #      -> services/sync_service.py -> repositories/sync_repository.py
 
+# NOTE: Similarity endpoint has been moved to layered architecture
+# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
+#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
+
 
 # ============================================================================
-# BAGIAN 3: SIMILARITY & RECOMMENDATION ENGINE
+# BAGIAN 3: CREW DATA & MUTATIONS
 # ============================================================================
-
-
-# Route to get the top 5 similar seamen
-@app.route("/api/similarity/<int:seaman_code>", methods=["GET"])
-def get_similarity(seaman_code):
-    top_5 = get_top_5_similar(seaman_code)
-    print(f"Top 5 similar seamen for code {seaman_code}: {top_5}")
-    return jsonify(top_5)
-
-
-# Global variable to hold the current DataFrame
-original_df = combined_df  # Asumsikan combined_df adalah DataFrame awal Anda
-
 
 def generate_schedule(ship_names, first_assignments, start_year, end_year):
     months = [
@@ -963,13 +617,15 @@ def download_csv():
 
 @app.route("/api/options", methods=["POST"])
 def get_options():
-    copy_df = original_df.copy()
+    # Fetch fresh data from database
+    seamen_df = get_seamen_as_data()
+
     data = request.get_json()
 
     type_ = data.get("type")
     part = data.get("part")
 
-    copy_df = filter_in_vessel(original_df, type_)
+    copy_df = filter_in_vessel(seamen_df, type_)
     if part:
         copy_df = vessel_group_id_deck(copy_df, type_, part)
     else:
@@ -1057,6 +713,9 @@ def get_options():
 
 @app.route("/get-recommendation", methods=["POST"])
 def get_recommendation():
+    # Fetch fresh data from database
+    seamen_df = get_seamen_as_data()
+
     data_candidate = request.json
     bagian = data_candidate["BAGIAN"]
     vessel_name = data_candidate["VESSEL"]
@@ -1064,71 +723,11 @@ def get_recommendation():
     certificate = data_candidate["CERTIFICATE"]
     age_range = (data_candidate["UMUR"], data_candidate["UMUR"])
 
-    # Panggil getRecommendation dengan original_df sebagai parameter
+    # Call getRecommendation with fresh data
     recommendations = getRecommendation(
-        original_df, data_candidate, bagian, vessel_name, rank, certificate, age_range
+        seamen_df, data_candidate, bagian, vessel_name, rank, certificate, age_range
     )
     result = recommendations.to_dict(orient="records")
-    return jsonify(result)
-
-
-@app.route("/api/get-manual-search", methods=["POST"])
-def get_manual_search():
-    copy_df = original_df.copy()
-    data_candidate = request.json
-
-    type_ = data_candidate["TYPE"]
-    part = data_candidate["PART"]
-
-    copy_df = filter_in_vessel(original_df, type_)
-    if part:
-        copy_df = vessel_group_id_deck(copy_df, type_, part)
-    else:
-        copy_df = vessel_group_id_deck(copy_df, type_)
-
-    bagian = data_candidate["BAGIAN"]
-    vessel_name = data_candidate["VESSEL"]
-    age_range = (int(data_candidate["LB"]), int(data_candidate["UB"]))
-
-    print("DATA: ", data_candidate)
-
-    # Call search_candidate with original_df as the parameter
-    filtered_candidates = search_candidate(copy_df, bagian, vessel_name, age_range)
-
-    if filtered_candidates.empty:
-        return jsonify([])
-
-    print("THIS IS VESSEL GROUP ID", filtered_candidates["VESSEL GROUP ID"])
-    print("DATAFRAME COLUMNS:", copy_df.columns)
-
-    recommendations = getRecommendation(
-        copy_df,
-        data_candidate,
-        bagian,
-        vessel_name,
-        data_candidate["RANK"],
-        data_candidate["CERTIFICATE"],
-        age_range,
-    )
-
-    # Ensure PHONE1, PHONE2, PHONE3, and PHONE4 are included in the response
-    result = recommendations[
-        [
-            "seamancode",
-            "seafarercode",
-            "name",
-            "last_position",
-            "last_location",
-            "age",
-            "certificate",
-            "phone_number_1",
-            "phone_number_2",
-            "phone_number_3",
-            "phone_number_4",
-            "day_remains",
-        ]
-    ].to_dict(orient="records")
-
     return jsonify(result)
 
 

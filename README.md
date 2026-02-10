@@ -13,12 +13,19 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
 ### Backend
 
 - **Framework**: Flask (Python)
+- **Architecture**: Layered Architecture (Routes → Controllers → Services → Repositories → Database)
 - **Fungsi**:
   - API untuk manajemen data seaman/awak kapal
   - Sistem rekomendasi menggunakan Word2Vec dan similarity matching
   - Penjadwalan otomatis rotasi crew
   - Integrasi dengan data API eksternal
-  - Background scheduler untuk fetch data berkala
+  - Background scheduler untuk sync data berkala
+- **Architecture Components**:
+  - `routes/` - API endpoints dan routing
+  - `controllers/` - HTTP request/response handlers
+  - `services/` - Business logic layer
+  - `repositories/` - Data access layer (Database & External API)
+  - `database/` - Database connection dan configuration
 
 ### Database
 
@@ -31,13 +38,14 @@ Sistem manajemen personel kapal yang dirancang untuk mengelola rotasi, promosi, 
   - Tracking history perubahan data
 - **Setup Tools**:
   - `scripts/schema.py` - Membuat struktur database dan tabel
-  - `database/seeder.py` - Mengisi data awal untuk development/testing
-  - `scripts/scheduler.py` - Background task untuk sinkronisasi data
+  - `scripts/seeder.py` - Mengisi data awal untuk development/testing
+  - `scripts/scheduler.py` - Background scheduler untuk sinkronisasi data otomatis
 
 ### Frontend
 
 - **Framework**: React 19 + TypeScript
 - **UI Library**: Flowbite React + Tailwind CSS
+- **Architecture**: Component-based Architecture dengan Custom Hooks
 - **Fungsi**:
   - Dashboard monitoring awak kapal
   - Interface untuk rotasi container dan manalagi ships
@@ -77,7 +85,7 @@ docker-compose up -d
 
 # 5. Setup database (hanya pertama kali)
 docker exec -it spm-backend python scripts/schema.py
-docker exec -it spm-backend python database/seeder.py
+docker exec -it spm-backend python scripts/seeder.py
 
 # 6. Cek logs untuk memastikan semua berjalan
 docker-compose logs -f
@@ -161,10 +169,10 @@ python scripts/schema.py
 # Opsi: python scripts/schema.py --drop (untuk drop & recreate semua tabel)
 
 # 2. Seeding data awal (mengisi data ke database)
-python database/seeder.py
-# Opsi: python database/seeder.py --fresh (untuk hapus data lama & insert data baru)
+python scripts/seeder.py
+# Opsi: python scripts/seeder.py --fresh (untuk hapus data lama & insert data baru)
 
-# 3. Jalankan scheduler (background task untuk fetch data berkala)
+# 3. Jalankan scheduler (background task untuk sync data berkala)
 python scripts/scheduler.py
 # Opsi: python scripts/scheduler.py --manual (untuk run sekali tanpa schedule otomatis)
 
@@ -180,9 +188,10 @@ python app.py
   - Gunakan `--drop` untuk drop dan recreate semua tabel (hati-hati, data akan hilang!)
 - `seeder.py` - Mengisi data awal untuk testing/development
   - Gunakan `--fresh` untuk menghapus data lama dan insert data baru
-- `scheduler.py` - Background task untuk fetch dan sinkronisasi data berkala
-  - Gunakan `--manual` untuk menjalankan sekali saja tanpa schedule otomatis
-  - Jika dijalankan tanpa parameter, akan berjalan sebagai background scheduler
+- `scheduler.py` - Background scheduler untuk sync data dari API Pusat ke database
+  - **Mode otomatis** (default): `python scripts/scheduler.py` - Sync otomatis setiap hari pukul 00:01
+  - **Mode manual**: `python scripts/scheduler.py --manual` - Sync sekali langsung tanpa schedule
+  - Scheduler menggunakan layered architecture (Service → Repository)
 - `app.py` - Server utama aplikasi
 
 ### 2. Setup Frontend (React)
@@ -292,6 +301,41 @@ BUILD_TARGET=development
 
 ## API Documentation
 
+### Manual Data Sync API
+
+API untuk trigger manual sync data dari API Pusat ke database.
+
+**Endpoint:** `POST /api/manual-sync`
+
+**Request:**
+
+```bash
+curl -X POST http://localhost:18037/api/manual-sync
+```
+
+**Response (Success):**
+
+```json
+{
+  "status": "success",
+  "message": "Data berhasil di-sync dari API pusat",
+  "timestamp": "2026-02-10T12:00:00.000000"
+}
+```
+
+**Response (Error):**
+
+```json
+{
+  "status": "error",
+  "message": "Gagal melakukan sync: [error details]"
+}
+```
+
+**Note:** Sync akan fetch data seamen dan mutations dari API Pusat, lalu melakukan batch insert ke database Supabase.
+
+---
+
 ### Change Schedule Rotation API
 
 API untuk tim IT apabila ada kru yang tidak ready.
@@ -342,7 +386,7 @@ Parameter tambahan: 4. `stage` - Informasi stage dimana kru tidak ready atau gag
 Sebelum melakukan `git add`, pastikan untuk menjalankan pre-commit hooks untuk memastikan kode sudah sesuai dengan standar:
 
 ```bash
-# Jalankan pre-commit pada semua file
+# Jalankan pre-commit pada semua file (root project)
 pre-commit run --all-files
 ```
 
