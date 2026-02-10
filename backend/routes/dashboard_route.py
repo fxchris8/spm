@@ -7,6 +7,7 @@ from flask import Blueprint
 
 from controllers.dashboard_controller import (
     get_dashboard_data_controller,
+    get_similarity_controller,
     get_vessel_stats_controller,
 )
 from controllers.sync_controller import manual_sync_controller
@@ -41,3 +42,12 @@ def manual_sync():
     Manually trigger data sync from external API to database.
     """
     return manual_sync_controller()
+
+
+@dashboard_bp.route("/similarity/<int:seaman_code>", methods=["GET"])
+def get_similarity(seaman_code):
+    """
+    GET /api/similarity/<seaman_code>
+    Returns top 5 similar seamen based on rank and certificate using Word2Vec.
+    """
+    return get_similarity_controller(seaman_code)

@@ -343,102 +343,6 @@ def save_last_request_time():
         f.write(datetime.now().isoformat())
 
 
-def get_top_5_similar(target_seaman_code):
-    try:
-        global combined_df
-        global word2vec_model
-
-        if word2vec_model is None:
-            print("Word2Vec model is None!")
-            return {"error": "Word2Vec model belum dimuat"}
-
-        target_seaman_data = combined_df[
-            combined_df["seamancode"] == target_seaman_code
-        ]
-
-        if target_seaman_data.empty:
-            print("No seaman found with that code")
-            return {"error": f"Seaman dengan kode {target_seaman_code} tidak ditemukan"}
-
-        rank = target_seaman_data.iloc[0]["last_position"]
-        certificate = target_seaman_data.iloc[0]["certificate"]
-
-        def get_word2vec_vector(text):
-            if not isinstance(text, str):
-                return np.zeros(word2vec_model.vector_size)
-            words = str(text).split()
-            try:
-                word_vectors = [
-                    word2vec_model.wv[word]
-                    for word in words
-                    if word in word2vec_model.wv
-                ]
-                if word_vectors:
-                    return np.mean(word_vectors, axis=0)
-                return np.zeros(word2vec_model.vector_size)
-            except Exception as e:
-                print(f"Error in get_word2vec_vector: {str(e)}")
-                return np.zeros(word2vec_model.vector_size)
-
-        user_input = f"{rank} {certificate}"
-        user_vector = get_word2vec_vector(user_input)
-
-        filtered_candidates = combined_df[
-            combined_df["seamancode"] != target_seaman_code
-        ].copy()
-
-        filtered_candidates["vector"] = (
-            filtered_candidates["last_position"].astype(str)
-            + " "
-            + filtered_candidates["certificate"].astype(str)
-        )
-        filtered_candidates["vector"] = filtered_candidates["vector"].apply(
-            get_word2vec_vector
-        )
-
-        filtered_candidates["vector"] = filtered_candidates["vector"].apply(
-            lambda x: x.tolist()
-        )
-
-        filtered_candidates["similarity"] = filtered_candidates["vector"].apply(
-            lambda x: float(cosine_similarity([user_vector], [x])[0][0])
-        )
-
-        filtered_candidates = filtered_candidates.sort_values(
-            by="similarity", ascending=False
-        )
-        top_5_recommendations = filtered_candidates.head(5)
-
-        columns_to_drop = [
-            "vector",
-            "phone_number_1",
-            "phone_number_2",
-            "phone_number_3",
-            "phone_number_4",
-            "experience",
-        ]
-        top_5_recommendations = top_5_recommendations.drop(columns=columns_to_drop)
-
-        top_5_dict = top_5_recommendations.to_dict(orient="records")
-
-        for record in top_5_dict:
-            for key, value in record.items():
-                if "numpy" in str(type(value)):
-                    if np.issubdtype(type(value), np.floating):
-                        record[key] = float(value)
-                    elif np.issubdtype(type(value), np.integer):
-                        record[key] = int(value)
-                    else:
-                        record[key] = str(value)
-
-        response = {"status": "success", "data": top_5_dict}
-
-        return response
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-
 # ============================================================================
 # BAGIAN 2: DASHBOARD & DATA FETCHING
 # ============================================================================
@@ -455,18 +359,15 @@ def get_top_5_similar(target_seaman_code):
 # See: routes/dashboard_route.py -> controllers/sync_controller.py
 #      -> services/sync_service.py -> repositories/sync_repository.py
 
+# NOTE: Similarity endpoint has been moved to layered architecture
+# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
+#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
+
 
 # ============================================================================
-# BAGIAN 3: SIMILARITY & RECOMMENDATION ENGINE
+# BAGIAN 3: CREW DATA & MUTATIONS
 # ============================================================================
 
-
-# Route to get the top 5 similar seamen
-@app.route("/api/similarity/<int:seaman_code>", methods=["GET"])
-def get_similarity(seaman_code):
-    top_5 = get_top_5_similar(seaman_code)
-    print(f"Top 5 similar seamen for code {seaman_code}: {top_5}")
-    return jsonify(top_5)
 
 
 # Global variable to hold the current DataFrame

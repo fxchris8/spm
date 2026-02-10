@@ -91,3 +91,31 @@ def get_vessels_data():
 
         print(f"DONE - Fetched {len(vessels)} rotation vessels from database")
         return vessels
+
+
+def get_seaman_by_code(seaman_code):
+    """
+    Get seaman data by seamancode.
+
+    Args:
+        seaman_code: Seaman code to search for
+
+    Returns:
+        dict: Seaman data or None if not found
+    """
+    query = "SELECT * FROM seamen WHERE seamancode = :seaman_code"
+
+    with get_db_connection() as conn:
+        result = conn.execute(text(query), {"seaman_code": seaman_code})
+        row = result.fetchone()
+
+        if row:
+            # Convert to dict
+            columns = result.keys()
+            seaman_data = dict(zip(columns, row))
+            print(f"DONE - Found seaman with code {seaman_code}")
+            return seaman_data
+
+        print(f"WARN - No seaman found with code {seaman_code}")
+        return None
+
