@@ -5,13 +5,13 @@ Handles business logic for manual data synchronization.
 
 from datetime import datetime
 
+from repositories.external_api_repository import (
+    fetch_mutations_from_api,
+    fetch_seamen_from_api,
+)
 from repositories.sync_repository import (
     sync_mutations_to_database,
     sync_seamen_to_database,
-)
-from scripts.scheduler import (
-    fetch_mutations_from_original_api,
-    fetch_seamen_from_original_api,
 )
 
 
@@ -28,7 +28,7 @@ def manual_sync():
 
         # Fetch and sync seamen data
         print("[MANUAL SYNC] Syncing seamen data...")
-        seamen_df = fetch_seamen_from_original_api()
+        seamen_df = fetch_seamen_from_api()
         if seamen_df is not None:
             sync_seamen_to_database(seamen_df)
         else:
@@ -36,7 +36,7 @@ def manual_sync():
 
         # Fetch and sync mutations data
         print("[MANUAL SYNC] Syncing mutations data...")
-        mutations_df = fetch_mutations_from_original_api()
+        mutations_df = fetch_mutations_from_api()
         if mutations_df is not None:
             sync_mutations_to_database(mutations_df)
         else:
