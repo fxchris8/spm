@@ -82,4 +82,3 @@ def get_similarity_controller(seaman_code):
             ),
             500,
         )
-

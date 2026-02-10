@@ -118,4 +118,3 @@ def get_seaman_by_code(seaman_code):
 
         print(f"WARN - No seaman found with code {seaman_code}")
         return None
-

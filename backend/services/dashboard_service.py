@@ -49,7 +49,6 @@ def get_dashboard_data():
     return data
 
 
-
 def get_vessel_stats():
     """
     Get vessel statistics by category (container, manalagi, bc).
@@ -195,4 +194,3 @@ def get_similar_seamen(target_seaman_code):
     except Exception as e:
         print(f"[SIMILARITY ERROR] {str(e)}")
         return {"status": "error", "message": str(e)}
-
