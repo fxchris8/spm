@@ -46,6 +46,7 @@ from rotation import (
     get_schedule,
 )
 from routes.dashboard_route import dashboard_bp
+from routes.search_route import search_bp
 
 app = Flask(__name__)
 
@@ -84,6 +85,7 @@ app.secret_key = "supersecretkey"
 # ============================================================================
 
 app.register_blueprint(dashboard_bp, url_prefix="/api")
+app.register_blueprint(search_bp, url_prefix="/api")
 
 
 # ============================================================================
@@ -1070,69 +1072,10 @@ def get_recommendation():
     return jsonify(result)
 
 
-@app.route("/api/get-manual-search", methods=["POST"])
-def get_manual_search():
-    copy_df = original_df.copy()
-    data_candidate = request.json
-
-    type_ = data_candidate["TYPE"]
-    part = data_candidate["PART"]
-
-    copy_df = filter_in_vessel(original_df, type_)
-    if part:
-        copy_df = vessel_group_id_deck(copy_df, type_, part)
-    else:
-        copy_df = vessel_group_id_deck(copy_df, type_)
-
-    bagian = data_candidate["BAGIAN"]
-    vessel_name = data_candidate["VESSEL"]
-    age_range = (int(data_candidate["LB"]), int(data_candidate["UB"]))
-
-    print("DATA: ", data_candidate)
-
-    # Call search_candidate with original_df as the parameter
-    filtered_candidates = search_candidate(copy_df, bagian, vessel_name, age_range)
-
-    if filtered_candidates.empty:
-        return jsonify([])
-
-    print("THIS IS VESSEL GROUP ID", filtered_candidates["VESSEL GROUP ID"])
-    print("DATAFRAME COLUMNS:", copy_df.columns)
-
-    recommendations = getRecommendation(
-        copy_df,
-        data_candidate,
-        bagian,
-        vessel_name,
-        data_candidate["RANK"],
-        data_candidate["CERTIFICATE"],
-        age_range,
-    )
-
-    # Ensure PHONE1, PHONE2, PHONE3, and PHONE4 are included in the response
-    result = recommendations[
-        [
-            "seamancode",
-            "seafarercode",
-            "name",
-            "last_position",
-            "last_location",
-            "age",
-            "certificate",
-            "phone_number_1",
-            "phone_number_2",
-            "phone_number_3",
-            "phone_number_4",
-            "day_remains",
-        ]
-    ].to_dict(orient="records")
-
-    return jsonify(result)
-
-
 # ============================================================================
 # BAGIAN 5: PROMOTION CANDIDATES (KENAIKAN PANGKAT)
 # ============================================================================
+
 
 
 @app.route("/api/seamen/promotion-candidates-nakhoda", methods=["GET"])
