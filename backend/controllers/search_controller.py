@@ -33,7 +33,15 @@ def manual_search_controller():
             return jsonify({"error": "No search parameters provided"}), 400
 
         # Validate required fields
-        required_fields = ["TYPE", "BAGIAN", "VESSEL", "LB", "UB", "RANK", "CERTIFICATE"]
+        required_fields = [
+            "TYPE",
+            "BAGIAN",
+            "VESSEL",
+            "LB",
+            "UB",
+            "RANK",
+            "CERTIFICATE",
+        ]
         for field in required_fields:
             if field not in search_params:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
