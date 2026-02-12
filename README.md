@@ -173,8 +173,8 @@ python scripts/seeder.py
 # Opsi: python scripts/seeder.py --fresh (untuk hapus data lama & insert data baru)
 
 # 3. Jalankan scheduler (background task untuk sync data berkala)
-python scripts/scheduler.py
-# Opsi: python scripts/scheduler.py --manual (untuk run sekali tanpa schedule otomatis)
+python -m scripts.scheduler
+# Opsi: python -m scripts.scheduler --manual (untuk run sekali tanpa schedule otomatis)
 
 # 4. Jalankan Flask server
 python app.py
@@ -189,8 +189,8 @@ python app.py
 - `seeder.py` - Mengisi data awal untuk testing/development
   - Gunakan `--fresh` untuk menghapus data lama dan insert data baru
 - `scheduler.py` - Background scheduler untuk sync data dari API Pusat ke database
-  - **Mode otomatis** (default): `python scripts/scheduler.py` - Sync otomatis setiap hari pukul 00:01
-  - **Mode manual**: `python scripts/scheduler.py --manual` - Sync sekali langsung tanpa schedule
+  - **Mode otomatis** (default): `python -m scripts.scheduler` - Sync otomatis setiap hari pukul 00:01
+  - **Mode manual**: `python -m scripts.scheduler --manual` - Sync sekali langsung tanpa schedule
   - Scheduler menggunakan layered architecture (Service → Repository)
 - `app.py` - Server utama aplikasi
 
