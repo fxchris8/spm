@@ -91,7 +91,7 @@ services:
       - API_BASE_URL_IT=${API_BASE_URL_IT}
     env_file:
       - ./backend/.env
-    command: python database/scheduler.py
+    command: python scripts/scheduler.py
     restart: unless-stopped
     networks:
       - spm-net
