@@ -116,12 +116,6 @@ dmypy.json
 # ruff
 .ruff_cache/
 
-# Machine Learning Models (large files)
-*.model
-*.pkl
-*.joblib
-*.h5
-
 # ===== DOCKER =====
 # Do not ignore Docker configuration files, but ignore runtime data
 postgres_data/
