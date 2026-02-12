@@ -1,6 +1,8 @@
-# @faw_sd
-# Seeder untuk tabel vessels, vessels_groups, dan vessels_ships
-# Script ini akan mengisi data awal untuk rotation configuration
+"""
+@faw_sd
+Seeder untuk tabel vessels, vessels_groups, dan vessels_ships
+Script ini akan mengisi data awal untuk vessel management
+"""
 
 import os
 import sys

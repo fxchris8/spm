@@ -1,6 +1,7 @@
-# @faw_sd
-# Untuk menjalankan aplikasi Flask dengan menginstal dependencies dari requirements.txt
-# Jalankan pertama kali sebelum menjalankan app.py
+"""
+Script ini digunakan untuk mengotomatisasi proses instalasi dependensi dari file requirements.txt
+dan menjalankan file aplikasi utama (app.py).
+"""
 
 import os
 import subprocess
@@ -14,7 +15,7 @@ def install_requirements():
             [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
         )
     except subprocess.CalledProcessError as e:
-        print("❌ Gagal install requirements:", e)
+        print("Gagal install requirements:", e)
         sys.exit(1)
 
 
