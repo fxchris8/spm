@@ -230,6 +230,7 @@ export function AllMessage() {
         <Table hoverable>
           <Table.Head>
             {[
+              'No',
               'Category',
               'Job',
               'Group',
@@ -261,6 +262,9 @@ export function AllMessage() {
             ) : (
               currentItems.map((item: any, idx: number) => (
                 <Table.Row key={idx} className="bg-white">
+                  <Table.Cell className="text-left text-gray-800">
+                    {idx + 1}
+                  </Table.Cell>
                   <Table.Cell className="text-left text-gray-800">
                     {item.categorization.toUpperCase()}
                   </Table.Cell>
