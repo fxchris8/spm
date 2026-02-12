@@ -259,6 +259,10 @@ export function OutMessage() {
           <option value="KKM">KKM</option>
           <option value="MUALIM I">MUALIM I</option>
           <option value="MASINIS II">MASINIS II</option>
+          <option value="MUALIM II">MUALIM II</option>
+          <option value="MASINIS III">MASINIS III</option>
+          <option value="MUALIM III">MUALIM III</option>
+          <option value="MASINIS IV">MASINIS IV</option>
         </Select>
 
         {/* Status Filter */}
