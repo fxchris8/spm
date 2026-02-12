@@ -299,7 +299,7 @@ export function Dashboard() {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {offboardDistribution.map((entry, index) => {
+                {offboardDistribution.map((_, index) => {
                   const colors = [
                     '#ef4444',
                     '#f59e0b',

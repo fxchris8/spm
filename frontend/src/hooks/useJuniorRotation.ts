@@ -295,7 +295,27 @@ async function fetchPromotionCandidates(
 async function lockRotation(payload: {
   groupKey: string;
   job: string;
-  scheduleTable: string;
+  vessel: string;
+  categorization: string;
+  scheduleTable: {
+    currentCrew: {
+      seamancode: string;
+      name: string;
+      vessel: string;
+      position: string;
+      daysRemaining: number;
+      daysElapsed: number;
+      endDate: string;
+    };
+    replacement: {
+      seamancode: string;
+      name: string;
+      position: string;
+      lastVessel: string;
+      status: string;
+      daysSinceLastVessel: number;
+    } | null;
+  }[];
   nahkodaTable: CrewToRelieve[];
   daratTable: Record<string, ReplacementOption | null>;
   lockedSeamanCodes: string[];

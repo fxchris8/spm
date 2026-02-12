@@ -12,9 +12,9 @@ interface BargeCraneProps {
 
 export function BargeCraneSeniorRotation({
   groups,
-  vessel,
-  type,
-  part,
+  vessel: _vessel,
+  type: _type,
+  part: _part,
   job,
 }: BargeCraneProps) {
   const getJobDisplayName = (job: string): string => {
