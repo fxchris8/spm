@@ -1,6 +1,8 @@
 // Kebutuhan: fetch data dashboard seamen
 import { useQuery } from '@tanstack/react-query';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface Seaman {
   'SEAMAN CODE': string;
   'SEAFARER CODE': string;
@@ -14,8 +16,6 @@ interface Seaman {
 
 // Fetch function
 async function fetchDashboardData(): Promise<Seaman[]> {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
   const response = await fetch(`${API_BASE_URL}/dashboard-data`);
 
   if (!response.ok) {

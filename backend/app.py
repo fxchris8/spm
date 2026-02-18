@@ -2,9 +2,11 @@ import io
 import os
 import pathlib
 from datetime import datetime
+
 import pandas as pd
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
+
 from ai import (
     filter_in_vessel,
     getRecommendation,
@@ -32,16 +34,8 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from rotation import (
-    get_kkm,
-    get_masinisII,
-    get_mualimI,
-    get_nahkoda,
-    get_nganggur,
-    get_schedule,
-)
-from routes import dashboard_bp, search_bp
-
+from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
+from routes import cadangan_bp, dashboard_bp, search_bp
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -66,6 +60,7 @@ if ENV == "production":
 else:
     CORS(app=app)
 
+
 @app.after_request
 def add_cors_headers(response):
     """
@@ -75,16 +70,19 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
+
 # ============================================================================
 # REGISTER BLUEPRINTS
 # ============================================================================
 
+app.register_blueprint(cadangan_bp, url_prefix="/api")
 app.register_blueprint(dashboard_bp, url_prefix="/api")
 app.register_blueprint(search_bp, url_prefix="/api")
 
 # ============================================================================
 # BAGIAN 1: BASIC & UTILITY ENDPOINTS
 # ============================================================================
+
 
 @app.route("/")
 def index():
@@ -95,6 +93,7 @@ def index():
         str: Simple status message
     """
     return "Flask app is running!"
+
 
 # ============================================================================
 # WORD2VEC MODEL INITIALIZATION
@@ -126,6 +125,7 @@ load_word2vec_model()
 # ============================================================================
 # BAGIAN 3: CREW DATA & MUTATIONS
 # ============================================================================
+
 
 def generate_schedule(ship_names, first_assignments, start_year, end_year):
     months = [
@@ -451,33 +451,9 @@ def container_rotation_api():
 # BAGIAN 4: CADANGAN (BACKUP/RESERVE) CREW DATA
 # ============================================================================
 
-
-@app.route("/api/cadangan-KKM")
-def get_cadangan_KKM():
-    df = get_nganggur("KKM")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-nakhoda")
-def get_cadangan_nakhoda():
-    df = get_nganggur("NAKHODA")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-mualimI")
-def get_cadangan_mualimI():
-    df = get_nganggur("MUALIM I")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-masinisII")
-def get_cadangan_masinisII():
-    df = get_nganggur("MASINIS II")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
+# NOTE: Cadangan endpoints have been moved to layered architecture
+# See: routes/cadangan_route.py -> controllers/cadangan_controller.py
+#      -> services/cadangan_service.py -> repositories/cadangan_repository.py
 
 
 @app.route("/api/mutasi_filtered", methods=["GET"])

@@ -1,6 +1,8 @@
 // Kebutuhan: hook khusus untuk RotationContainer yang hanya butuh fetch data (read-only)
 import { useQuery } from '@tanstack/react-query';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export interface RotationVessel {
   id: number;
   job_title: string;
@@ -10,8 +12,6 @@ export interface RotationVessel {
   categorization: string;
   groups: Record<string, string[]>;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Fetch rotation vessels by type and categorization
 async function fetchRotationVessels(

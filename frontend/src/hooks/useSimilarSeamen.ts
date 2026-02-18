@@ -1,6 +1,8 @@
 // Kebutuhan: fetch data similar seamen berdasarkan seamanCode
 import { useQuery } from '@tanstack/react-query';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface SimilarSeaman {
   seamancode: string;
   seafarercode: string;
@@ -22,8 +24,6 @@ interface SimilarResponse {
 async function fetchSimilarSeamen(
   seamanCode: string
 ): Promise<SimilarSeaman[]> {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
   const response = await fetch(`${API_BASE_URL}/similarity/${seamanCode}`);
 
   if (!response.ok) {

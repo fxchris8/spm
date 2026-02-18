@@ -1,6 +1,8 @@
 // Kebutuhan: fetch rotation ship config, create, update, delete
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export interface RotationVessel {
   id: number;
   job_title: string;
@@ -24,8 +26,6 @@ interface ApiResponse {
   message: string;
   data?: any;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ============= FETCH FUNCTIONS =============
 

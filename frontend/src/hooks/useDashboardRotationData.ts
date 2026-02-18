@@ -1,6 +1,8 @@
 // Hook untuk fetch data rotation vessels dan locked rotations untuk dashboard
 import { useQuery } from '@tanstack/react-query';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface RotationVessel {
   id: number;
   job_title: string;
@@ -55,7 +57,6 @@ interface DashboardRotationData {
 
 // Fetch rotation vessels
 async function fetchRotationVessels(): Promise<RotationVessel[]> {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const response = await fetch(`${API_BASE_URL}/rotation-vessels`);
 
   if (!response.ok) {
@@ -70,7 +71,6 @@ async function fetchLockedRotationsForJob(
   job: string,
   vessel: string
 ): Promise<LockedRotation[]> {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const response = await fetch(
     `${API_BASE_URL}/locked-rotations?job=${job}&vessel=${vessel}`
   );
