@@ -37,10 +37,9 @@ from rotation import (
     get_masinisII,
     get_mualimI,
     get_nahkoda,
-    get_nganggur,
     get_schedule,
 )
-from routes import dashboard_bp, search_bp
+from routes import cadangan_bp, dashboard_bp, search_bp
 
 
 app = Flask(__name__)
@@ -79,6 +78,7 @@ def add_cors_headers(response):
 # REGISTER BLUEPRINTS
 # ============================================================================
 
+app.register_blueprint(cadangan_bp, url_prefix="/api")
 app.register_blueprint(dashboard_bp, url_prefix="/api")
 app.register_blueprint(search_bp, url_prefix="/api")
 
@@ -451,33 +451,9 @@ def container_rotation_api():
 # BAGIAN 4: CADANGAN (BACKUP/RESERVE) CREW DATA
 # ============================================================================
 
-
-@app.route("/api/cadangan-KKM")
-def get_cadangan_KKM():
-    df = get_nganggur("KKM")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-nakhoda")
-def get_cadangan_nakhoda():
-    df = get_nganggur("NAKHODA")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-mualimI")
-def get_cadangan_mualimI():
-    df = get_nganggur("MUALIM I")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
-
-
-@app.route("/api/cadangan-masinisII")
-def get_cadangan_masinisII():
-    df = get_nganggur("MASINIS II")
-    data = df.to_dict(orient="records")
-    return jsonify(data)
+# NOTE: Cadangan endpoints have been moved to layered architecture
+# See: routes/cadangan_route.py -> controllers/cadangan_controller.py
+#      -> services/cadangan_service.py -> repositories/cadangan_repository.py
 
 
 @app.route("/api/mutasi_filtered", methods=["GET"])
