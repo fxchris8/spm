@@ -24,7 +24,6 @@ interface SimilarResponse {
 async function fetchSimilarSeamen(
   seamanCode: string
 ): Promise<SimilarSeaman[]> {
-
   const response = await fetch(`${API_BASE_URL}/similarity/${seamanCode}`);
 
   if (!response.ok) {

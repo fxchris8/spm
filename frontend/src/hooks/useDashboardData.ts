@@ -16,7 +16,6 @@ interface Seaman {
 
 // Fetch function
 async function fetchDashboardData(): Promise<Seaman[]> {
-
   const response = await fetch(`${API_BASE_URL}/dashboard-data`);
 
   if (!response.ok) {

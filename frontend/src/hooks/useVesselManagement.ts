@@ -27,7 +27,6 @@ interface ApiResponse {
   data?: any;
 }
 
-
 // ============= FETCH FUNCTIONS =============
 
 // Fetch all rotation Vessels or filter by type
