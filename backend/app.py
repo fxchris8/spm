@@ -2,9 +2,11 @@ import io
 import os
 import pathlib
 from datetime import datetime
+
 import pandas as pd
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
+
 from ai import (
     filter_in_vessel,
     getRecommendation,
@@ -32,15 +34,8 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from rotation import (
-    get_kkm,
-    get_masinisII,
-    get_mualimI,
-    get_nahkoda,
-    get_schedule,
-)
+from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
 from routes import cadangan_bp, dashboard_bp, search_bp
-
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -65,6 +60,7 @@ if ENV == "production":
 else:
     CORS(app=app)
 
+
 @app.after_request
 def add_cors_headers(response):
     """
@@ -73,6 +69,7 @@ def add_cors_headers(response):
     """
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
+
 
 # ============================================================================
 # REGISTER BLUEPRINTS
@@ -86,6 +83,7 @@ app.register_blueprint(search_bp, url_prefix="/api")
 # BAGIAN 1: BASIC & UTILITY ENDPOINTS
 # ============================================================================
 
+
 @app.route("/")
 def index():
     """
@@ -95,6 +93,7 @@ def index():
         str: Simple status message
     """
     return "Flask app is running!"
+
 
 # ============================================================================
 # WORD2VEC MODEL INITIALIZATION
@@ -126,6 +125,7 @@ load_word2vec_model()
 # ============================================================================
 # BAGIAN 3: CREW DATA & MUTATIONS
 # ============================================================================
+
 
 def generate_schedule(ship_names, first_assignments, start_year, end_year):
     months = [
