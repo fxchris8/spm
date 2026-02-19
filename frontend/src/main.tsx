@@ -12,8 +12,8 @@ const queryClient = new QueryClient({
       staleTime: 10 * 60 * 1000, // Data fresh selama 10 menit
       gcTime: 60 * 60 * 1000, // Cache bertahan 60 menit
       refetchOnWindowFocus: false, // Jangan refetch saat switch tab
-      refetchOnMount: false, // Jangan refetch saat component mount
-      refetchOnReconnect: false, // Jangan refetch saat reconnect internet
+      refetchOnMount: true, // Refetch saat component mount
+      refetchOnReconnect: true, // Refetch saat reconnect internet
       retry: 1, // Retry 1x kalau gagal
     },
   },
