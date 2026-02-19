@@ -99,6 +99,30 @@ export function generateNextGroupKey(
 }
 
 /**
+ * Linked positions for container categorization:
+ * Nakhoda <-> Mualim I (same vessel 'D')
+ * KKM <-> Masinis II (same vessel 'E')
+ */
+const CONTAINER_LINKED_POSITIONS: Record<string, string> = {
+  nakhoda: 'mualimI',
+  mualimI: 'nakhoda',
+  KKM: 'masinisII',
+  masinisII: 'KKM',
+};
+
+/**
+ * Get the linked/paired position for a given categorization + position.
+ * Returns null if no linked position exists.
+ */
+export function getLinkedPosition(
+  categorization: string,
+  position: string
+): string | null {
+  if (categorization !== 'container') return null;
+  return CONTAINER_LINKED_POSITIONS[position] || null;
+}
+
+/**
  * Validate if a categorization + position combination is valid
  */
 export function isValidCombination(

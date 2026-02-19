@@ -4,9 +4,11 @@ import { toast } from 'sonner';
 import { CategoryPositionSelector } from './CategoryPositionSelector';
 import { GroupsEditor } from './GroupsEditor';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { SyncConfirmModal } from './SyncConfirmModal';
 import { useVesselManagement } from '../../hooks/useVesselManagement';
 import {
   getHiddenFieldsFromSelection,
+  getLinkedPosition,
   formatCategorizationDisplay,
   formatPositionDisplay,
 } from '../../utils/vesselMappingUtils';
@@ -28,6 +30,17 @@ export function VesselManagement() {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Sync modal state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<null | {
+    job_title: string;
+    vessel: string;
+    type: string;
+    part: string;
+    categorization: string;
+    groups: Record<string, string[]>;
+  }>(null);
 
   // Find existing vessel configuration based on selection
   const existingVessel = useMemo(() => {
@@ -73,6 +86,75 @@ export function VesselManagement() {
     setIsEditMode(!isEditMode);
   };
 
+  const executeSave = async (
+    payload: {
+      job_title: string;
+      vessel: string;
+      type: string;
+      part: string;
+      categorization: string;
+      groups: Record<string, string[]>;
+    },
+    alsoSyncLinked: boolean
+  ) => {
+    setIsSubmitting(true);
+    try {
+      // Save current position
+      if (existingVessel) {
+        const result = await updateVessel(existingVessel.id, payload);
+        toast.success(result.message || 'Konfigurasi berhasil diupdate!');
+      } else {
+        const result = await createVessel(payload);
+        toast.success(result.message || 'Konfigurasi berhasil dibuat!');
+      }
+
+      // If user wants to sync, save the linked position too
+      if (alsoSyncLinked && selectedCategory && selectedPosition) {
+        const linkedPosition = getLinkedPosition(
+          selectedCategory,
+          selectedPosition
+        );
+        if (linkedPosition) {
+          const linkedHiddenFields = getHiddenFieldsFromSelection(
+            selectedCategory,
+            linkedPosition
+          );
+          if (linkedHiddenFields) {
+            const linkedPayload = {
+              ...payload,
+              job_title: linkedPosition,
+              vessel: linkedHiddenFields.vessel,
+              type: linkedHiddenFields.type,
+              part: linkedHiddenFields.part,
+            };
+            const existingLinked = vessels.find(
+              v =>
+                v.categorization === selectedCategory &&
+                v.job_title === linkedPosition
+            );
+            if (existingLinked) {
+              await updateVessel(existingLinked.id, linkedPayload);
+            } else {
+              await createVessel(linkedPayload);
+            }
+            toast.success(
+              `Konfigurasi ${formatPositionDisplay(
+                linkedPosition
+              )} juga berhasil diupdate!`
+            );
+          }
+        }
+      }
+
+      setIsEditMode(false);
+    } catch (error: any) {
+      console.error('Error saving vessel:', error);
+      toast.error(`Gagal menyimpan: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!selectedCategory || !selectedPosition) {
       toast.warning('Pilih kategori dan position terlebih dahulu!');
@@ -106,34 +188,48 @@ export function VesselManagement() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        job_title: selectedPosition,
-        vessel: hiddenFields.vessel,
-        type: hiddenFields.type,
-        part: hiddenFields.part,
-        categorization: selectedCategory,
-        groups: editedGroups,
-      };
+    const payload = {
+      job_title: selectedPosition,
+      vessel: hiddenFields.vessel,
+      type: hiddenFields.type,
+      part: hiddenFields.part,
+      categorization: selectedCategory,
+      groups: editedGroups,
+    };
 
-      if (existingVessel) {
-        // Update existing
-        const result = await updateVessel(existingVessel.id, payload);
-        toast.success(result.message || 'Konfigurasi berhasil diupdate!');
-      } else {
-        // Create new
-        const result = await createVessel(payload);
-        toast.success(result.message || 'Konfigurasi berhasil dibuat!');
-      }
-
-      setIsEditMode(false);
-    } catch (error: any) {
-      console.error('Error saving vessel:', error);
-      toast.error(`Gagal menyimpan: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
+    // Check if this position has a linked pair (e.g. Nakhoda <-> Mualim I)
+    const linkedPosition = getLinkedPosition(
+      selectedCategory,
+      selectedPosition
+    );
+    if (linkedPosition) {
+      setPendingPayload(payload);
+      setShowSyncModal(true);
+      return;
     }
+
+    await executeSave(payload, false);
+  };
+
+  const handleSyncBoth = async () => {
+    setShowSyncModal(false);
+    if (pendingPayload) {
+      await executeSave(pendingPayload, true);
+      setPendingPayload(null);
+    }
+  };
+
+  const handleSyncSaveOnly = async () => {
+    setShowSyncModal(false);
+    if (pendingPayload) {
+      await executeSave(pendingPayload, false);
+      setPendingPayload(null);
+    }
+  };
+
+  const handleSyncModalClose = () => {
+    setShowSyncModal(false);
+    setPendingPayload(null);
   };
 
   const handleDeleteClick = () => {
@@ -287,6 +383,20 @@ export function VesselManagement() {
           selectedPosition || ''
         )} untuk ${formatCategorizationDisplay(selectedCategory || '')}?`}
       />
+
+      {/* Sync Confirmation Modal */}
+      {selectedCategory && selectedPosition && (
+        <SyncConfirmModal
+          show={showSyncModal}
+          currentPosition={formatPositionDisplay(selectedPosition)}
+          linkedPosition={formatPositionDisplay(
+            getLinkedPosition(selectedCategory, selectedPosition) || ''
+          )}
+          onSyncBoth={handleSyncBoth}
+          onSaveOnly={handleSyncSaveOnly}
+          onClose={handleSyncModalClose}
+        />
+      )}
     </div>
   );
 }
