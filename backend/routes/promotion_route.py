@@ -5,7 +5,7 @@ Defines Flask Blueprint for promotion candidates (kenaikan pangkat) endpoints.
 
 from flask import Blueprint
 
-from controllers.promotion_controller import (
+from controllers import (
     get_promotion_candidates_kkm_controller,
     get_promotion_candidates_masinisII_controller,
     get_promotion_candidates_masinisIII_controller,

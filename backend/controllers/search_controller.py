@@ -5,7 +5,7 @@ Handles HTTP requests for manual search functionality.
 
 from flask import jsonify, request
 
-from services.search_service import manual_search
+from services import manual_search
 
 
 def manual_search_controller():

@@ -9,7 +9,7 @@ from ai.model import (
     search_candidate,
     vessel_group_id_deck,
 )
-from repositories.search_repository import get_seamen_for_search
+from repositories import get_seamen_for_search
 
 
 def manual_search(search_params):

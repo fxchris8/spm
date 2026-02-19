@@ -7,7 +7,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 # Import service layer untuk sync
-from services.sync_service import manual_sync
+from services import manual_sync
 
 print("=" * 60)
 print("SEAMEN & MUTATIONS SCHEDULER")

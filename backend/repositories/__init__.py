@@ -12,6 +12,7 @@ from .cadangan_repository import (
 )
 from .dashboard_repository import get_seaman_by_code, get_seamen_data, get_vessels_data
 from .external_api_repository import fetch_mutations_from_api, fetch_seamen_from_api
+from .promotion_repository import get_mutations_data
 from .search_repository import get_seamen_for_search
 from .sync_repository import sync_mutations_to_database, sync_seamen_to_database
 
@@ -25,6 +26,8 @@ __all__ = [
     "get_seamen_data",
     "get_vessels_data",
     "get_seaman_by_code",
+    # Promotion Repositories
+    "get_mutations_data",
     # External API Repositories
     "fetch_seamen_from_api",
     "fetch_mutations_from_api",

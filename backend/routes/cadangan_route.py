@@ -5,7 +5,7 @@ Defines Flask Blueprint for cadangan (backup/reserve) crew endpoints.
 
 from flask import Blueprint
 
-from controllers.cadangan_controller import (
+from controllers import (
     get_cadangan_kkm_controller,
     get_cadangan_masinis_ii_controller,
     get_cadangan_mualim_i_controller,

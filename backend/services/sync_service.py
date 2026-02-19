@@ -5,11 +5,9 @@ Handles business logic for manual data synchronization.
 
 from datetime import datetime
 
-from repositories.external_api_repository import (
+from repositories import (
     fetch_mutations_from_api,
     fetch_seamen_from_api,
-)
-from repositories.sync_repository import (
     sync_mutations_to_database,
     sync_seamen_to_database,
 )

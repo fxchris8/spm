@@ -5,7 +5,7 @@ Handles HTTP request/response for dashboard endpoints.
 
 from flask import jsonify
 
-from services.dashboard_service import (
+from services import (
     get_dashboard_data,
     get_similar_seamen,
     get_vessel_stats,
