@@ -5,7 +5,8 @@ Handles business logic and data transformation for dashboard.
 
 import pandas as pd
 
-from repositories.dashboard_repository import get_seamen_data, get_vessels_data
+from models import SeamanRecord, SimilarSeamanResult, VesselStats
+from repositories import get_seaman_by_code, get_seamen_data, get_vessels_data
 
 
 def get_dashboard_data():
@@ -18,38 +19,16 @@ def get_dashboard_data():
     # Get raw data from repository
     data = get_seamen_data()
 
-    # Rename columns to match frontend expectations
-    data = data.rename(
-        columns={
-            "age": "UMUR",
-            "certificate": "CERTIFICATE",
-            "day_remains": "DAY REMAINS",
-            "last_position": "RANK",
-            "last_location": "VESSEL",
-            "name": "SEAMAN NAME",
-            "seafarercode": "SEAFARER CODE",
-            "seamancode": "SEAMAN CODE",
-        }
-    )
+    # Rename columns using mapping defined in SeamanRecord model
+    data = data.rename(columns=SeamanRecord.COLUMN_MAP)
 
-    # Filter only required columns (DAY REMAINS DIFF removed, only needed for similarity)
-    data = data[
-        [
-            "SEAMAN CODE",
-            "SEAFARER CODE",
-            "SEAMAN NAME",
-            "RANK",
-            "VESSEL",
-            "UMUR",
-            "CERTIFICATE",
-            "DAY REMAINS",
-        ]
-    ]
+    # Filter only display columns defined in SeamanRecord model
+    data = data[SeamanRecord.DISPLAY_COLUMNS]
 
     return data
 
 
-def get_vessel_stats():
+def get_vessel_stats() -> dict:
     """
     Get vessel statistics by category (container, manalagi, bc).
 
@@ -77,16 +56,17 @@ def get_vessel_stats():
             elif categorization == "bc":
                 bc_ships.update(group_ships)
 
-    stats = {
-        "container": len(container_ships),
-        "manalagi": len(manalagi_ships),
-        "bc": len(bc_ships),
-    }
+    # Build typed model then serialize to dict
+    stats = VesselStats(
+        container=len(container_ships),
+        manalagi=len(manalagi_ships),
+        bc=len(bc_ships),
+    )
 
-    return stats
+    return stats.to_dict()
 
 
-def get_similar_seamen(target_seaman_code):
+def get_similar_seamen(target_seaman_code) -> dict:
     """
     Get top 5 similar seamen based on rank and certificate using Word2Vec.
 
@@ -101,7 +81,6 @@ def get_similar_seamen(target_seaman_code):
         from sklearn.metrics.pairwise import cosine_similarity
 
         from ai.model import load_word2vec_model, word2vec_model
-        from repositories.dashboard_repository import get_seaman_by_code
 
         # Load Word2Vec model if not loaded
         if word2vec_model is None:
@@ -109,15 +88,17 @@ def get_similar_seamen(target_seaman_code):
             from ai.model import word2vec_model
 
             if word2vec_model is None:
-                return {"status": "error", "message": "Word2Vec model belum dimuat"}
+                return SimilarSeamanResult(
+                    status="error", message="Word2Vec model belum dimuat"
+                ).to_dict()
 
         # Get target seaman
         target_seaman = get_seaman_by_code(target_seaman_code)
         if not target_seaman:
-            return {
-                "status": "error",
-                "message": f"Seaman dengan kode {target_seaman_code} tidak ditemukan",
-            }
+            return SimilarSeamanResult(
+                status="error",
+                message=f"Seaman dengan kode {target_seaman_code} tidak ditemukan",
+            ).to_dict()
 
         rank = target_seaman["last_position"]
         certificate = target_seaman["certificate"]
@@ -189,8 +170,8 @@ def get_similar_seamen(target_seaman_code):
         result = top_5.to_dict(orient="records")
 
         print(f"[SIMILARITY] Found {len(result)} similar seamen")
-        return {"status": "success", "data": result}
+        return SimilarSeamanResult(status="success", data=result).to_dict()
 
     except Exception as e:
         print(f"[SIMILARITY ERROR] {str(e)}")
-        return {"status": "error", "message": str(e)}
+        return SimilarSeamanResult(status="error", message=str(e)).to_dict()

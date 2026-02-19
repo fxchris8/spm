@@ -5,7 +5,7 @@ Defines URL routes for search functionality.
 
 from flask import Blueprint
 
-from controllers.search_controller import manual_search_controller
+from controllers import manual_search_controller
 
 search_bp = Blueprint("search", __name__)
 

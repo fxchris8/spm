@@ -5,7 +5,7 @@ Handles HTTP request/response for promotion candidates (kenaikan pangkat) endpoi
 
 from flask import jsonify
 
-from services.promotion_service import (
+from services import (
     get_promotion_candidates_kkm,
     get_promotion_candidates_masinisII,
     get_promotion_candidates_masinisIII,

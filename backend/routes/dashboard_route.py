@@ -5,12 +5,12 @@ Defines Flask Blueprint for dashboard endpoints.
 
 from flask import Blueprint
 
-from controllers.dashboard_controller import (
+from controllers import (
     get_dashboard_data_controller,
     get_similarity_controller,
     get_vessel_stats_controller,
+    manual_sync_controller,
 )
-from controllers.sync_controller import manual_sync_controller
 
 # Create Blueprint
 dashboard_bp = Blueprint("dashboard", __name__)

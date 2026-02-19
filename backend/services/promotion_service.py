@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from repositories.promotion_repository import get_mutations_data, get_seamen_data
+from repositories import get_mutations_data, get_seamen_data
 
 
 def get_promotion_candidates_nakhoda() -> list:

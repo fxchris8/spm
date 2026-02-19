@@ -5,7 +5,7 @@ Handles HTTP requests for manual data synchronization.
 
 from flask import jsonify
 
-from services.sync_service import manual_sync
+from services import manual_sync
 
 
 def manual_sync_controller():

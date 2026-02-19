@@ -11,6 +11,16 @@ from .cadangan_service import (
     get_cadangan_nakhoda_data,
 )
 from .dashboard_service import get_dashboard_data, get_similar_seamen, get_vessel_stats
+from .promotion_service import (
+    get_promotion_candidates_kkm,
+    get_promotion_candidates_masinisII,
+    get_promotion_candidates_masinisIII,
+    get_promotion_candidates_masinisIV,
+    get_promotion_candidates_mualimI,
+    get_promotion_candidates_mualimII,
+    get_promotion_candidates_mualimIII,
+    get_promotion_candidates_nakhoda,
+)
 from .search_service import manual_search
 from .sync_service import manual_sync
 
@@ -24,6 +34,15 @@ __all__ = [
     "get_dashboard_data",
     "get_vessel_stats",
     "get_similar_seamen",
+    # Promotion Services
+    "get_promotion_candidates_nakhoda",
+    "get_promotion_candidates_kkm",
+    "get_promotion_candidates_mualimI",
+    "get_promotion_candidates_masinisII",
+    "get_promotion_candidates_mualimII",
+    "get_promotion_candidates_masinisIII",
+    "get_promotion_candidates_mualimIII",
+    "get_promotion_candidates_masinisIV",
     # Search Services
     "manual_search",
     # Sync Services

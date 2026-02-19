@@ -5,7 +5,7 @@ Handles HTTP request/response for cadangan (backup/reserve) crew endpoints.
 
 from flask import jsonify
 
-from services.cadangan_service import (
+from services import (
     get_cadangan_kkm_data,
     get_cadangan_masinis_ii_data,
     get_cadangan_mualim_i_data,

@@ -3,7 +3,7 @@ Cadangan Service
 Handles business logic for cadangan (backup/reserve) crew data.
 """
 
-from repositories.cadangan_repository import (
+from repositories import (
     get_cadangan_kkm,
     get_cadangan_masinis_ii,
     get_cadangan_mualim_i,
