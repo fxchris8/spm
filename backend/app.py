@@ -102,26 +102,6 @@ def index():
 
 load_word2vec_model()
 
-# ============================================================================
-# BAGIAN 2: DASHBOARD & DATA FETCHING
-# ============================================================================
-
-# NOTE: Dashboard data endpoint has been moved to layered architecture
-# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
-#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
-
-# NOTE: Vessel stats endpoint has been moved to layered architecture
-# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
-#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
-
-# NOTE: Manual sync endpoint has been moved to layered architecture
-# See: routes/dashboard_route.py -> controllers/sync_controller.py
-#      -> services/sync_service.py -> repositories/sync_repository.py
-
-# NOTE: Similarity endpoint has been moved to layered architecture
-# See: routes/dashboard_route.py -> controllers/dashboard_controller.py
-#      -> services/dashboard_service.py -> repositories/dashboard_repository.py
-
 
 # ============================================================================
 # BAGIAN 3: CREW DATA & MUTATIONS
