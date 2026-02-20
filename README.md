@@ -164,13 +164,20 @@ cp .env.example .env
 Jalankan script-script berikut secara berurutan:
 
 ```bash
-# 1. Setup database (membuat tabel-tabel)
+# 1. Setup database (membuat tabel-tabel, termasuk tabel users untuk autentikasi)
 python scripts/schema.py
 # Opsi: python scripts/schema.py --drop (untuk drop & recreate semua tabel)
 
 # 2. Seeding data awal (mengisi data ke database)
 python scripts/seeder.py
 # Opsi: python scripts/seeder.py --fresh (untuk hapus data lama & insert data baru)
+
+# Seeder juga mendukung menjalankan per-bagian:
+python scripts/seeder.py users     # Hanya seed user autentikasi
+python scripts/seeder.py junior    # Hanya seed rotation junior
+python scripts/seeder.py senior    # Hanya seed rotation senior
+python scripts/seeder.py manalagi  # Hanya seed rotation manalagi
+python scripts/seeder.py bc        # Hanya seed rotation barge crane
 
 # 3. Jalankan scheduler (background task untuk sync data berkala)
 python -m scripts.scheduler
@@ -188,6 +195,15 @@ python app.py
   - Gunakan `--drop` untuk drop dan recreate semua tabel (hati-hati, data akan hilang!)
 - `seeder.py` - Mengisi data awal untuk testing/development
   - Gunakan `--fresh` untuk menghapus data lama dan insert data baru
+  - Mendukung selective seeding per bagian (users, junior, senior, manalagi, bc)
+  - **User default setelah seeding:**
+
+    | Username  | Password      | Role      | Akses                |
+    | :-------- | :------------ | :-------- | :------------------- |
+    | `admin`   | `adminSPIL`   | `ADMIN`   | ✅ Full access       |
+    | `crewing` | `crewingSPIL` | `CREWING` | ✅ Full access       |
+    | `user`    | `userSPIL`    | `USER`    | ❌ Diblokir frontend |
+
 - `scheduler.py` - Background scheduler untuk sync data dari API Pusat ke database
   - **Mode otomatis** (default): `python -m scripts.scheduler` - Sync otomatis setiap hari pukul 00:01
   - **Mode manual**: `python -m scripts.scheduler --manual` - Sync sekali langsung tanpa schedule
@@ -253,6 +269,9 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=spm
 
+# Authentication (JWT)
+SECRET_KEY=your_secret_key_here   # Ganti dengan string acak yang panjang dan aman
+
 # Email
 EMAIL_SENDER=your-email@example.com
 EMAIL_PASSWORD=your_app_password
@@ -262,6 +281,10 @@ EMAIL_RECIPIENTS=recipient@example.com
 API_BASE_URL_PUSAT=https://api-pusat.example.com
 API_BASE_URL_IT=https://api-it.example.com
 ```
+
+> [!IMPORTANT]
+> `SECRET_KEY` wajib diisi sebelum menjalankan aplikasi. Gunakan string acak yang panjang.
+> Contoh generate: `python -c "import secrets; print(secrets.token_hex(32))"`
 
 ### Frontend (.env di frontend/)
 
