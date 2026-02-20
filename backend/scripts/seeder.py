@@ -10,6 +10,49 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import connection
+from services.auth_service import register_user
+
+
+def seed_users():
+    """
+    Seed initial users for authentication.
+    """
+    print("\n" + "=" * 70)
+    print("SEEDING USERS")
+    print("=" * 70 + "\n")
+
+    users = [
+        {
+            "username": "admin",
+            "email": "admin@spil.co.id",
+            "password": "adminSPIL",
+            "role": "ADMIN",
+        },
+        {
+            "username": "crewing",
+            "email": "crewing@spil.co.id",
+            "password": "crewingSPIL",
+            "role": "CREWING",
+        },
+        {
+            "username": "user",
+            "email": "user@spil.co.id",
+            "password": "userSPIL",
+            "role": "USER",
+        },
+    ]
+
+    for u in users:
+        try:
+            result = register_user(u["username"], u["email"], u["password"], u["role"])
+            if "error" in result:
+                print(f"  [FAILED]  [{u['role']}] {u['username']}: {result['error']}")
+            else:
+                print(
+                    f"  [SUCCESS] [{u['role']}] {u['username']} | password: {u['password']}"
+                )
+        except Exception as e:
+            print(f"  [ERROR]   [{u['role']}] {u['username']}: {e}")
 
 
 def seed_rotation_junior_data():
@@ -596,11 +639,22 @@ def clear_rotation_data():
 if __name__ == "__main__":
     import sys
 
+    SEEDERS = {
+        "users": seed_users,
+        "junior": seed_rotation_junior_data,
+        "senior": seed_rotation_senior_data,
+        "manalagi": seed_rotation_manalagi_senior_data,
+        "bc": seed_rotation_barge_crane_senior_data,
+    }
+
+    # Filter out flags like --fresh from positional args
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+
     print("\n" + "=" * 35)
     print("ROTATION DATA SEEDER")
     print("=" * 35)
 
-    # Check for --fresh flag
+    # Check for --fresh flag (only applies to rotation data)
     if "--fresh" in sys.argv:
         print("\n[WARNING] FRESH SEED MODE: Clearing existing data first...")
         confirm = input(
@@ -611,12 +665,23 @@ if __name__ == "__main__":
             sys.exit(0)
         clear_rotation_data()
 
-    # Run seeding
+    # If specific seeders are requested
+    if args:
+        invalid = [a for a in args if a not in SEEDERS]
+        if invalid:
+            print(f"\n[ERROR] Unknown seeder(s): {', '.join(invalid)}")
+            print(f"Available: {', '.join(SEEDERS.keys())}")
+            sys.exit(1)
+
+        selected = args
+    else:
+        # Run all by default
+        selected = list(SEEDERS.keys())
+
+    # Run selected seeders
     try:
-        seed_rotation_junior_data()
-        seed_rotation_senior_data()
-        seed_rotation_manalagi_senior_data()
-        seed_rotation_barge_crane_senior_data()
+        for name in selected:
+            SEEDERS[name]()
 
     except Exception as e:
         print("\n" + "[FAILED]" * 35)

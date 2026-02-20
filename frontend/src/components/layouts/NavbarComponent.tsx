@@ -2,13 +2,20 @@
 
 import { Button, Navbar, Avatar, Dropdown } from 'flowbite-react';
 import { HiLogout } from 'react-icons/hi';
+import { useAuth } from '../../context/AuthContext';
 
 export function NavbarComponent() {
+  const { user, logout } = useAuth();
+
   const handleLogout = () => {
-    // logout logic
-    alert('Logout Clicked');
-    // console.log('Logout clicked');
+    logout();
   };
+
+  const username = user?.username || 'User';
+  const email = user?.email || 'user@example.com';
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    username
+  )}&background=dc2626&color=fff`;
 
   return (
     <Navbar fluid className="bg-red-800 shadow-lg border-red-950">
@@ -34,18 +41,12 @@ export function NavbarComponent() {
           <Dropdown
             arrowIcon={false}
             inline
-            label={
-              <Avatar
-                alt="User"
-                img="https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff"
-                rounded
-              />
-            }
+            label={<Avatar alt="User" img={avatarUrl} rounded />}
           >
             <Dropdown.Header>
-              <span className="block text-sm font-semibold">Admin</span>
+              <span className="block text-sm font-semibold">{username}</span>
               <span className="block truncate text-sm text-gray-500">
-                admin@spil.com
+                {email}
               </span>
             </Dropdown.Header>
             <Dropdown.Item icon={HiLogout} onClick={handleLogout}>

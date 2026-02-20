@@ -64,9 +64,9 @@ class SimilarSeamanResult:
     Used as the return type of get_similar_seamen().
     """
 
-    status: str                        # "success" or "error"
+    status: str  # "success" or "error"
     data: List[Any] = field(default_factory=list)
-    message: str = ""                  # populated on error
+    message: str = ""  # populated on error
 
     def to_dict(self) -> dict:
         result = {"status": self.status}

@@ -37,3 +37,5 @@ types-requests==2.32.0.20240914
 dotenv
 sqlalchemy
 psycopg2-binary
+PyJWT
+bcrypt
