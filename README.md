@@ -262,15 +262,15 @@ npm run dev
 ### Backend (.env di backend/)
 
 ```env
+# Authentication (JWT)
+JWT_SECRET_KEY=your_secret_key_here 
+
 # Database
 DB_HOST=localhost         # atau 'database' untuk Docker
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=spm
-
-# Authentication (JWT)
-SECRET_KEY=your_secret_key_here   # Ganti dengan string acak yang panjang dan aman
 
 # Email
 EMAIL_SENDER=your-email@example.com
@@ -283,7 +283,7 @@ API_BASE_URL_IT=https://api-it.example.com
 ```
 
 > [!IMPORTANT]
-> `SECRET_KEY` wajib diisi sebelum menjalankan aplikasi. Gunakan string acak yang panjang.
+> `JWT_SECRET_KEY` wajib diisi sebelum menjalankan aplikasi. Gunakan string acak yang panjang.
 > Contoh generate: `python -c "import secrets; print(secrets.token_hex(32))"`
 
 ### Frontend (.env di frontend/)
