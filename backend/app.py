@@ -1917,8 +1917,7 @@ def api_change_schedule_rotation():
                 400,
             )
 
-        if not stage:
-            return jsonify({"error": "Missing required field: stage"}), 400
+        # NOTE: stage is optional (v1 may not send it, v2 will send it)
 
         # 1. Auto-accept expired rotations first
         auto_accept_result = auto_accept_expired_rotations()
