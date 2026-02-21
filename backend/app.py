@@ -5,8 +5,6 @@ from datetime import datetime
 
 import pandas as pd
 from flask import Flask, jsonify, request, send_file
-from flask_cors import CORS
-
 from ai import (
     filter_in_vessel,
     getRecommendation,
@@ -35,55 +33,27 @@ from database.connection import (
     update_rotation_vessel,
 )
 from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
+from middlewares import init_cors
 from routes import auth_bp, cadangan_bp, dashboard_bp, promotion_bp, search_bp
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# ============================================================================
-# CORS CONFIGURATION
-# ============================================================================
-
-ENV = os.environ.get("FLASK_ENV", "development")
-
-ALLOWED_ORIGINS = [
-    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id
-    r"https?://spil\.co\.id(:\d+)?",  # Main spil.co.id domain
-]
-if ENV == "production":
-    CORS(
-        app=app,
-        resources={
-            r"/api/*": {"origins": ALLOWED_ORIGINS, "supports_credentials": True}
-        },
-    )
-else:
-    # Development: allow localhost with credentials so HttpOnly cookies work
-    CORS(
-        app=app,
-        resources={r"/api/*": {"origins": "http://localhost:5173", "supports_credentials": True}},
-    )
-
-
-@app.after_request
-def add_cors_headers(response):
-    """
-    Add CORS headers to all responses.
-    Required for Private Network Access (PNA) in modern browsers.
-    """
-    response.headers["Access-Control-Allow-Private-Network"] = "true"
-    return response
+init_cors(app)
+load_word2vec_model()
 
 
 # ============================================================================
 # REGISTER BLUEPRINTS
 # ============================================================================
 
+
 app.register_blueprint(cadangan_bp, url_prefix="/api")
 app.register_blueprint(dashboard_bp, url_prefix="/api")
 app.register_blueprint(promotion_bp, url_prefix="/api")
 app.register_blueprint(search_bp, url_prefix="/api")
 app.register_blueprint(auth_bp, url_prefix="/api")
+
 
 # ============================================================================
 # BAGIAN 1: BASIC & UTILITY ENDPOINTS
@@ -99,13 +69,6 @@ def index():
         str: Simple status message
     """
     return "Flask app is running!"
-
-
-# ============================================================================
-# WORD2VEC MODEL INITIALIZATION
-# ============================================================================
-
-load_word2vec_model()
 
 
 # ============================================================================
@@ -181,53 +144,6 @@ def generate_schedule(ship_names, first_assignments, start_year, end_year):
                 schedule.iloc[ship_idx - 1, k] = crew[crew_idx]
 
     return schedule
-
-
-def generate_crew_backup_pairs(ship_names, first_assignments):
-    crew = [f"C{i+1}" for i in range(len(ship_names) + 1)]
-    backup_pairs = []
-
-    # Determine backup pairs based on first assignment and transaction logic
-    for i in range(len(ship_names) + 1):
-        main_crew = crew[i]  # Crew utama sesuai urutan
-        backup_crew = crew[(i - 1) % len(crew)]  # Backup mengikuti aturan rotasi mundur
-
-        # Mengatasi kasus rotasi C1 digantikan oleh C7
-        if i == 0:
-            backup_crew = crew[-1]  # C1 digantikan oleh C7
-
-        backup_pairs.append({"main": main_crew, "backup": backup_crew})
-
-    return backup_pairs
-
-
-def color_map(val):
-    """Mengembalikan style CSS berdasarkan nilai sel."""
-    color_dict = {
-        "A": "blue",
-        "B": "red",
-        "C": "green",
-        "D": "orange",
-        "E": "purple",
-        "F": "brown",
-        "G": "yellow",
-        "H": "pink",
-        "I": "cyan",
-        "J": "magenta",
-        "K": "lime",
-        "L": "teal",
-        "M": "indigo",
-        "N": "gold",
-        "O": "silver",
-    }
-
-    # Jika nilai sel ada di kamus, kembalikan background-color
-    # Sekaligus atur warna tulisan (color) agar terlihat kontras
-    if val in color_dict:
-        return f"background-color: {color_dict[val]}; color: white;"
-    else:
-        # Jika nilai sel tidak ada di kamus, biarkan tanpa warna
-        return ""
 
 
 def df_to_json(df: pd.DataFrame):
