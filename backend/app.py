@@ -58,7 +58,11 @@ if ENV == "production":
         },
     )
 else:
-    CORS(app=app)
+    # Development: allow localhost with credentials so HttpOnly cookies work
+    CORS(
+        app=app,
+        resources={r"/api/*": {"origins": "http://localhost:5173", "supports_credentials": True}},
+    )
 
 
 @app.after_request
