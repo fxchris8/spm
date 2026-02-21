@@ -4,6 +4,15 @@ Contains business logic layer for the application.
 Services process data from repositories and prepare it for controllers.
 """
 
+from .auth_service import (
+    check_password,
+    generate_token,
+    get_current_user,
+    hash_password,
+    login_user,
+    logout_user,
+    register_user,
+)
 from .cadangan_service import (
     get_cadangan_kkm_data,
     get_cadangan_masinis_ii_data,
@@ -25,6 +34,14 @@ from .search_service import manual_search
 from .sync_service import manual_sync
 
 __all__ = [
+    # Auth Services
+    "login_user",
+    "logout_user",
+    "register_user",
+    "hash_password",
+    "check_password",
+    "generate_token",
+    "get_current_user",
     # Cadangan Services
     "get_cadangan_kkm_data",
     "get_cadangan_nakhoda_data",

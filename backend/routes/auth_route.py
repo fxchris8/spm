@@ -3,6 +3,7 @@ from flask import Blueprint
 from controllers.auth_controller import (
     login_controller,
     logout_controller,
+    me_controller,
     register_controller,
 )
 
@@ -22,3 +23,8 @@ def register():
 @auth_bp.route("/auth/logout", methods=["POST"])
 def logout():
     return logout_controller()
+
+
+@auth_bp.route("/auth/me", methods=["GET"])
+def me():
+    return me_controller()

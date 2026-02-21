@@ -4,6 +4,12 @@ Contains HTTP request/response handlers.
 Controllers receive requests, call services, and return responses.
 """
 
+from .auth_controller import (
+    login_controller,
+    logout_controller,
+    register_controller,
+    me_controller,
+)
 from .cadangan_controller import (
     get_cadangan_kkm_controller,
     get_cadangan_masinis_ii_controller,
@@ -29,6 +35,11 @@ from .search_controller import manual_search_controller
 from .sync_controller import manual_sync_controller
 
 __all__ = [
+    # Auth Controllers
+    "login_controller",
+    "logout_controller",
+    "register_controller",
+    "me_controller",
     # Cadangan Controllers
     "get_cadangan_kkm_controller",
     "get_cadangan_nakhoda_controller",

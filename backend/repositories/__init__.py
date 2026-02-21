@@ -15,8 +15,13 @@ from .external_api_repository import fetch_mutations_from_api, fetch_seamen_from
 from .promotion_repository import get_mutations_data
 from .search_repository import get_seamen_for_search
 from .sync_repository import sync_mutations_to_database, sync_seamen_to_database
+from .user_repository import create_user, get_user_by_id, get_user_by_username
 
 __all__ = [
+    # Auth / User Repositories
+    "get_user_by_username",
+    "get_user_by_id",
+    "create_user",
     # Cadangan Repositories
     "get_cadangan_kkm",
     "get_cadangan_nakhoda",

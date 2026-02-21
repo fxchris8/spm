@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from database.connection import engine
+from database.database import engine
 
 
 def get_user_by_username(username):
@@ -21,6 +21,27 @@ def get_user_by_username(username):
             return result
     except Exception as e:
         print(f"[ERROR] Failed to fetch user {username}: {e}")
+        raise e
+
+
+def get_user_by_id(user_id):
+    """
+    Fetch user by id (UUID) from the database.
+    """
+    try:
+        query = text(
+            """
+            SELECT id, username, email, role, is_active
+            FROM users
+            WHERE id = :user_id
+        """
+        )
+
+        with engine.connect() as conn:
+            result = conn.execute(query, {"user_id": user_id}).mappings().first()
+            return result
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch user by id {user_id}: {e}")
         raise e
 
 
