@@ -25,6 +25,7 @@ export function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // needed for HttpOnly cookie to be set by browser
         body: JSON.stringify({ username, password }),
       });
 
@@ -38,7 +39,7 @@ export function Login() {
           );
           return;
         }
-        login(data.token, data.user);
+        login(data.user);
         toast.success('Login berhasil');
         navigate('/');
       } else {
