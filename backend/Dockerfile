@@ -18,7 +18,7 @@ RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 # Environment variables
 ENV FLASK_APP=app
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_ENV=development
+ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
 # Copy the rest of the backend code
