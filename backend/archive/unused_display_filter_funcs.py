@@ -62,3 +62,47 @@ def prioritize_nakhoda_ant2(df):
 def filter_group_2(df, group_id):
     filtered_df2 = df[df["VESSEL GROUP ID"] == group_id].copy()
     return filtered_df2
+
+
+def generate_crew_backup_pairs(ship_names, first_assignments):
+    crew = [f"C{i+1}" for i in range(len(ship_names) + 1)]
+    backup_pairs = []
+
+    # Determine backup pairs based on first assignment and transaction logic
+    for i in range(len(ship_names) + 1):
+        main_crew = crew[i]  # Crew utama sesuai urutan
+        backup_crew = crew[(i - 1) % len(crew)]  # Backup mengikuti aturan rotasi mundur
+
+        # Mengatasi kasus rotasi C1 digantikan oleh C7
+        if i == 0:
+            backup_crew = crew[-1]  # C1 digantikan oleh C7
+
+        backup_pairs.append({"main": main_crew, "backup": backup_crew})
+
+    return backup_pairs
+
+
+def color_map(val):
+    """Mengembalikan style CSS berdasarkan nilai sel."""
+    color_dict = {
+        "A": "blue",
+        "B": "red",
+        "C": "green",
+        "D": "orange",
+        "E": "purple",
+        "F": "brown",
+        "G": "yellow",
+        "H": "pink",
+        "I": "cyan",
+        "J": "magenta",
+        "K": "lime",
+        "L": "teal",
+        "M": "indigo",
+        "N": "gold",
+        "O": "silver",
+    }
+
+    if val in color_dict:
+        return f"background-color: {color_dict[val]}; color: white;"
+    else:
+        return ""
