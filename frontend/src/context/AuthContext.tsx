@@ -23,7 +23,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
