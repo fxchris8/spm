@@ -284,6 +284,26 @@ CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_d
 CREATE INDEX IF NOT EXISTS idx_rotation_tanggal ON rotation_submissions (tanggal);
 """
 
+# Table: users
+CREATE_TABLE_USERS = """
+-- Table: users
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'USER',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for users
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+"""
+
 # ============================================================================
 # INITIALIZATION FUNCTIONS
 # ============================================================================
@@ -292,7 +312,7 @@ CREATE INDEX IF NOT EXISTS idx_rotation_tanggal ON rotation_submissions (tanggal
 def create_database():
     """Create database if not exists"""
     try:
-        print("\n[1/9] Creating database...")
+        print("\n[1/10] Creating database...")
         engine = create_engine(
             POSTGRES_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT"
         )
@@ -332,11 +352,12 @@ def create_tables():
             ("vessels_groups", CREATE_TABLE_VESSELS_GROUPS),
             ("vessels_ships", CREATE_TABLE_VESSELS_SHIPS),
             ("rotation_submissions", CREATE_TABLE_ROTATION_SUBMISSIONS),
+            ("users", CREATE_TABLE_USERS),
         ]
 
         with engine.connect() as conn:
             for idx, (table_name, sql) in enumerate(tables, start=2):
-                print(f"\n[{idx}/9] Creating table: {table_name}...")
+                print(f"\n[{idx}/10] Creating table: {table_name}...")
                 conn.execute(text(sql))
                 conn.commit()
                 print(f"[SUCCES] Table '{table_name}' created successfully")
@@ -352,7 +373,7 @@ def create_tables():
 def verify_database():
     """Verify all tables are created"""
     try:
-        print("\n[10/9] Verifying database setup...")
+        print("\n[11/10] Verifying database setup...")
         engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
         expected_tables = [
@@ -364,6 +385,7 @@ def verify_database():
             "vessels_groups",
             "vessels_ships",
             "rotation_submissions",
+            "users",
         ]
 
         with engine.connect() as conn:
