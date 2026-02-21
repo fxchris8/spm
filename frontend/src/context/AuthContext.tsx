@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   useEffect,
@@ -8,77 +9,81 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Define User type
 interface User {
-  id: number;
+  id: string;
   username: string;
-  email: string;
+  email?: string;
   role: string;
 }
 
-// Define Context type
+// Define Context type — token is no longer exposed to the frontend (stored in HttpOnly cookie)
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Check if token is expired
-const isTokenExpired = (token: string): boolean => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiry = payload.exp * 1000; // convert to ms
-    return Date.now() > expiry;
-  } catch (e) {
-    return true;
-  }
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // true until /me check finishes
   const navigate = useNavigate();
 
-  // Load from local storage on mount
+  // On mount: restore session by hitting /api/auth/me (reads HttpOnly cookie)
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const restoreSession = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: 'GET',
+          credentials: 'include', // send cookie automatically
+        });
 
-    if (storedToken && storedUser) {
-      if (isTokenExpired(storedToken)) {
-        console.log('Token expired on load');
-        logout();
-      } else {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Session restore failed:', err);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+
+    restoreSession();
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
+  const login = (newUser: User) => {
+    // Token is set as HttpOnly cookie by the backend — we only store user info in state
     setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-
-    toast.info('Logged out successfully');
-    navigate('/login');
-  };
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // send cookie so backend can clear it
+      });
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } finally {
+      setUser(null);
+      toast.info('Logged out successfully');
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Idle Timer Logic (30 mins = 1800000 ms)
   useEffect(() => {
-    if (!token) return;
+    if (!user) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -108,14 +113,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearTimeout(timeoutId);
       events.forEach(event => window.removeEventListener(event, resetTimer));
     };
-  }, [token]); // Re-run if token changes (user logs in/out)
+  }, [user, logout]); // Re-run if user or logout changes
 
   const value = {
     user,
-    token,
     login,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: !!user,
+    isLoading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

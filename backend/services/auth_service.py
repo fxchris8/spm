@@ -96,6 +96,36 @@ def register_user(username, email, password, role="USER"):
 def logout_user():
     """
     Logout user (Placeholder for blacklist logic if needed).
-    For stateless JWT, we just return success.
+    For stateless JWT, cookie is cleared by the controller.
     """
     return {"message": "Successfully logged out"}, 200
+
+
+def get_current_user(token: str):
+    """
+    Decode JWT token and return user info dict (including email from DB).
+    Returns None if token is invalid or expired.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+
+        # Fetch full user data from DB to include email
+        from repositories.user_repository import get_user_by_id
+        user = get_user_by_id(user_id)
+
+        if not user:
+            return None
+
+        return {
+            "id": str(user["id"]),
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+        }
+    except jwt.ExpiredSignatureError:
+        print("[AUTH] Token expired")
+        return None
+    except jwt.InvalidTokenError:
+        print("[AUTH] Invalid token")
+        return None

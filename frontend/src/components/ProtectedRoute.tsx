@@ -5,7 +5,12 @@ import { toast } from 'sonner';
 const ALLOWED_ROLES = ['ADMIN', 'CREWING'];
 
 export function ProtectedRoute() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // Wait for session restore before deciding to redirect
+  if (isLoading) {
+    return null; // or a loading spinner
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

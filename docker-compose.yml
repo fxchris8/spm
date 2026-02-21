@@ -109,11 +109,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: ${BUILD_TARGET:-development}
+      target: ${BUILD_TARGET:-production}
     container_name: spm-frontend
     ports:
-      - "8047:5173" # Development mode
-      # - "8047:80"   # Production mode (uncomment if using production target)
+      - "8047:5173"
+      # - "8047:80"
     volumes:
       - ./frontend:/app
       - /app/node_modules
