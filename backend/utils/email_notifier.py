@@ -22,12 +22,12 @@ RECIPIENT_EMAILS = os.getenv(
     "division1@company.com,division2@company.com,division3@company.com",
 ).split(",")
 
-print("=" * 60)
-print("EMAIL NOTIFIER MODULE")
-print("=" * 60)
-print(f"Sender: {SENDER_EMAIL}")
-print(f"Recipients: {len(RECIPIENT_EMAILS)} divisions")
-print("=" * 60)
+# print("=" * 60)
+# print("EMAIL NOTIFIER MODULE")
+# print("=" * 60)
+# print(f"Sender: {SENDER_EMAIL}")
+# print(f"Recipients: {len(RECIPIENT_EMAILS)} divisions")
+# print("=" * 60)
 
 
 def send_rotation_change_notification(
@@ -51,9 +51,9 @@ def send_rotation_change_notification(
     try:
         # Validate email configuration
         if not SENDER_PASSWORD:
-            print(
-                "WARNING - EMAIL_PASSWORD not configured, skipping email notification"
-            )
+            # print(
+            #     "WARNING - EMAIL_PASSWORD not configured, skipping email notification"
+            # )
             return {
                 "success": False,
                 "message": "Email password not configured",
@@ -342,11 +342,11 @@ Harap tidak membalas email ini.
                     server.send_message(msg)
 
                 sent_count += 1
-                print(f"DONE - Email sent to {recipient}")
+                # print(f"DONE - Email sent to {recipient}")
 
             except Exception as e:
                 failed_recipients.append(recipient)
-                print(f"FAIL - Failed to send email to {recipient}: {str(e)}")
+                # print(f"FAIL - Failed to send email to {recipient}: {str(e)}")
 
         # Return result
         if sent_count > 0:
@@ -367,7 +367,7 @@ Harap tidak membalas email ini.
             }
 
     except Exception as e:
-        print(f"FAIL - Error sending rotation change notification: {str(e)}")
+        # print(f"FAIL - Error sending rotation change notification: {str(e)}")
         return {
             "success": False,
             "message": f"Error sending notification: {str(e)}",

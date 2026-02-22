@@ -21,9 +21,9 @@ def get_seamen_for_search():
         with get_db_connection() as conn:
             query = "SELECT * FROM seamen"
             df = pd.read_sql_query(text(query), conn)
-            print(f"DONE - Fetched {len(df)} seamen records for search")
+            # print(f"DONE - Fetched {len(df)} seamen records for search")
             return df
 
     except Exception as e:
-        print(f"FAIL - Error fetching seamen for search: {str(e)}")
+        # print(f"FAIL - Error fetching seamen for search: {str(e)}")
         raise Exception(f"Failed to fetch seamen data: {str(e)}")

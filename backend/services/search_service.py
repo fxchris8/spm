@@ -23,7 +23,7 @@ def manual_search(search_params):
         List of recommended seamen with their details
     """
     try:
-        print(f"[MANUAL SEARCH] Starting search with params: {search_params}")
+        # print(f"[MANUAL SEARCH] Starting search with params: {search_params}")
 
         # Fetch data from database
         df = get_seamen_for_search()
@@ -43,18 +43,18 @@ def manual_search(search_params):
         vessel_name = search_params["VESSEL"]
         age_range = (int(search_params["LB"]), int(search_params["UB"]))
 
-        print(f"[MANUAL SEARCH] Searching candidates in vessel: {vessel_name}")
+        # print(f"[MANUAL SEARCH] Searching candidates in vessel: {vessel_name}")
 
         # Search candidates based on criteria
         filtered_candidates = search_candidate(df, bagian, vessel_name, age_range)
 
         if filtered_candidates.empty:
-            print("[MANUAL SEARCH] No candidates found")
+            # print("[MANUAL SEARCH] No candidates found")
             return []
 
-        print(
-            f"[MANUAL SEARCH] Found {len(filtered_candidates)} candidates, getting recommendations..."
-        )
+        # print(
+        #     f"[MANUAL SEARCH] Found {len(filtered_candidates)} candidates, getting recommendations..."
+        # )
 
         # Get AI recommendations
         recommendations = getRecommendation(
@@ -85,9 +85,9 @@ def manual_search(search_params):
             ]
         ].to_dict(orient="records")
 
-        print(f"[MANUAL SEARCH] Returning {len(result)} recommendations")
+        # print(f"[MANUAL SEARCH] Returning {len(result)} recommendations")
         return result
 
     except Exception as e:
-        print(f"[MANUAL SEARCH ERROR] {str(e)}")
+        # print(f"[MANUAL SEARCH ERROR] {str(e)}")
         raise Exception(f"Failed to perform manual search: {str(e)}")

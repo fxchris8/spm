@@ -20,7 +20,7 @@ def get_seamen_data():
 
     with get_db_connection() as conn:
         df = pd.read_sql_query(text(query), conn)
-        print(f"DONE - Fetched {len(df)} seamen records from database")
+        # print(f"DONE - Fetched {len(df)} seamen records from database")
         return df
 
 
@@ -89,7 +89,7 @@ def get_vessels_data():
         # Convert to list
         vessels = list(vessels_map.values())
 
-        print(f"DONE - Fetched {len(vessels)} rotation vessels from database")
+        # print(f"DONE - Fetched {len(vessels)} rotation vessels from database")
         return vessels
 
 
@@ -113,8 +113,8 @@ def get_seaman_by_code(seaman_code):
             # Convert to dict
             columns = result.keys()
             seaman_data = dict(zip(columns, row))
-            print(f"DONE - Found seaman with code {seaman_code}")
+            # print(f"DONE - Found seaman with code {seaman_code}")
             return seaman_data
 
-        print(f"WARN - No seaman found with code {seaman_code}")
+        # print(f"WARN - No seaman found with code {seaman_code}")
         return None
