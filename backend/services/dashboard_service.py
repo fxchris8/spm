@@ -103,7 +103,7 @@ def get_similar_seamen(target_seaman_code) -> dict:
         rank = target_seaman["last_position"]
         certificate = target_seaman["certificate"]
 
-        print(f"[SIMILARITY] Finding similar seamen for {rank} - {certificate}")
+        # print(f"[SIMILARITY] Finding similar seamen for {rank} - {certificate}")
 
         # Get all seamen except target
         all_seamen = get_seamen_data()
@@ -169,9 +169,9 @@ def get_similar_seamen(target_seaman_code) -> dict:
         # Convert to dict
         result = top_5.to_dict(orient="records")
 
-        print(f"[SIMILARITY] Found {len(result)} similar seamen")
+        # print(f"[SIMILARITY] Found {len(result)} similar seamen")
         return SimilarSeamanResult(status="success", data=result).to_dict()
 
     except Exception as e:
-        print(f"[SIMILARITY ERROR] {str(e)}")
+        # print(f"[SIMILARITY ERROR] {str(e)}")
         return SimilarSeamanResult(status="error", message=str(e)).to_dict()

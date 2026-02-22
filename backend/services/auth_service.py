@@ -124,8 +124,8 @@ def get_current_user(token: str):
             "role": user["role"],
         }
     except jwt.ExpiredSignatureError:
-        print("[AUTH] Token expired")
+        # print("[AUTH] Token expired")
         return None
     except jwt.InvalidTokenError:
-        print("[AUTH] Invalid token")
+        # print("[AUTH] Invalid token")
         return None

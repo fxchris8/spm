@@ -45,7 +45,7 @@ def login_controller():
 
         return response
     except Exception as e:
-        print(f"[ERROR] Login failed: {e}")
+        # print(f"[ERROR] Login failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
 
@@ -76,7 +76,7 @@ def register_controller():
             201,
         )
     except Exception as e:
-        print(f"[ERROR] Register failed: {e}")
+        # print(f"[ERROR] Register failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
 
@@ -96,7 +96,7 @@ def logout_controller():
         )
         return response
     except Exception as e:
-        print(f"[ERROR] Logout failed: {e}")
+        # print(f"[ERROR] Logout failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
 
@@ -116,5 +116,5 @@ def me_controller():
 
         return jsonify({"user": user}), 200
     except Exception as e:
-        print(f"[ERROR] Me endpoint failed: {e}")
+        # print(f"[ERROR] Me endpoint failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500

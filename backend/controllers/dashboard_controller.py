@@ -44,7 +44,7 @@ def get_vessel_stats_controller():
         return jsonify(stats), 200
 
     except Exception as e:
-        print(f"[VESSEL STATS ERROR] {str(e)}")
+        # print(f"[VESSEL STATS ERROR] {str(e)}")
         return (
             jsonify(
                 {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
@@ -68,7 +68,7 @@ def get_similarity_controller(seaman_code):
         return jsonify(result), 200
 
     except Exception as e:
-        print(f"[SIMILARITY CONTROLLER ERROR] {str(e)}")
+        # print(f"[SIMILARITY CONTROLLER ERROR] {str(e)}")
         return (
             jsonify(
                 {
