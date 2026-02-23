@@ -167,7 +167,7 @@ def container_rotation_api():
         job_raw = request.args.get("job", default="NAKHODA")
 
         # LOGGING untuk debugging
-        print(f"[DEBUG] Query parameter 'job' yang diterima: '{job_raw}'")
+        # print(f"[DEBUG] Query parameter 'job' yang diterima: '{job_raw}'")
 
         # Mapping konsisten
         job_mapping = {
@@ -195,7 +195,7 @@ def container_rotation_api():
         job = job_mapping[job_raw_upper]
 
         # LOGGING
-        print(f"[DEBUG] Job setelah mapping: '{job}'")
+        # print(f"[DEBUG] Job setelah mapping: '{job}'")
 
         # Ambil data dari request body
         data = request.get_json()
@@ -215,13 +215,13 @@ def container_rotation_api():
         part = data.get("part")
 
         # LOGGING
-        print(f"[DEBUG] Memanggil get_schedule dengan job='{job}'")
+        # print(f"[DEBUG] Memanggil get_schedule dengan job='{job}'")
 
         # Dapatkan DataFrame schedule dengan parameter job
         schedule_df = get_schedule(selected_group, cadangan, type_vessel, part, job)
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
-        print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
+        # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
 
         if job == "NAKHODA":
             crew_df = get_nahkoda(selected_group, cadangan, type_vessel, part)
@@ -234,7 +234,7 @@ def container_rotation_api():
         else:
             return jsonify({"error": f"Fungsi untuk job {job} belum tersedia"}), 400
 
-        print(f"[DEBUG] Crew DataFrame shape: {crew_df.shape}")
+        # print(f"[DEBUG] Crew DataFrame shape: {crew_df.shape}")
 
         # Konversi ke JSON
         schedule_json = df_to_json(schedule_df)
@@ -243,7 +243,7 @@ def container_rotation_api():
         # Jika ada cadangan2 (reliever data)
         darat_json = None
         if cadangan2:
-            print(f"[DEBUG] Memproses cadangan2 (reliever) untuk job='{job}'")
+            # print(f"[DEBUG] Memproses cadangan2 (reliever) untuk job='{job}'")
 
             # Parameter "ONE" akan membuat fungsi menghasilkan index Z0, Z1, Z2...
             if job == "NAKHODA":
@@ -262,12 +262,13 @@ def container_rotation_api():
                 )
 
             darat_json = df_to_json(darat_df)
-            print(f"[DEBUG] Darat DataFrame shape: {darat_df.shape}")
+            # print(f"[DEBUG] Darat DataFrame shape: {darat_df.shape}")
             if not darat_df.empty:
-                print(f"[DEBUG] Reliever Index pertama: {darat_df.iloc[0]['Index']}")
+                # print(f"[DEBUG] Reliever Index pertama: {darat_df.iloc[0]['Index']}")
+                pass
 
         # RESPONSE - TETAP GUNAKAN KEY "nahkoda"
-        print(f"[DEBUG] Mengirim response dengan job='{job}'")
+        # print(f"[DEBUG] Mengirim response dengan job='{job}'")
 
         return jsonify(
             {
@@ -309,7 +310,7 @@ def get_mutasi_filtered():
         # Remove empty strings dari set
         locked_codes = {code.strip() for code in locked_codes if code.strip()}
 
-        print(f"[DEBUG] Locked codes received: {locked_codes}")  # Debugging
+        # print(f"[DEBUG] Locked codes received: {locked_codes}")  # Debugging
 
         job_mapping = {
             "NAKHODA": "NAKHODA",
@@ -352,7 +353,7 @@ def get_mutasi_filtered():
         ]["seamancode"].unique()
 
         # **FILTER OUT LOCKED CODES DI SINI**
-        print(f"[DEBUG] Before filtering: {len(seamancode_terfilter)} seamen")
+        # print(f"[DEBUG] Before filtering: {len(seamancode_terfilter)} seamen")
 
         # Convert seamancode_terfilter to strings untuk konsistensi
         seamancode_terfilter = [str(code).strip() for code in seamancode_terfilter]
@@ -362,7 +363,7 @@ def get_mutasi_filtered():
             code for code in seamancode_terfilter if code not in locked_codes
         ]
 
-        print(f"[DEBUG] After filtering: {len(seamancode_terfilter)} seamen")
+        # print(f"[DEBUG] After filtering: {len(seamancode_terfilter)} seamen")
 
         # Filter df_history berdasarkan seamancode yang sudah difilter
         df_mutasi_filtered = df_history[
@@ -389,12 +390,13 @@ def get_mutasi_filtered():
                     .dropna()
                     .unique()
                     .tolist(),
-                }
+                },
+                include_groups=False,
             )
             .to_dict()
         )
 
-        print(f"[DEBUG] Final result count: {len(mutasi_dict_filtered)}")
+        # print(f"[DEBUG] Final result count: {len(mutasi_dict_filtered)}")
 
         # Kirim response JSON
         return jsonify({"status": "success", "data": mutasi_dict_filtered})
