@@ -20,11 +20,6 @@ if not DATABASE_URL:
 
 engine = create_engine(DATABASE_URL, poolclass=NullPool, echo=False)
 
-print("=" * 60)
-print("DATABASE CONNECTION MODULE")
-print("=" * 60)
-
-
 # ============================================================================
 # BAGIAN 1: FETCH DATA DARI SUPABASE (Untuk Frontend/app.py)
 # ============================================================================
