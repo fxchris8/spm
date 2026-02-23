@@ -274,11 +274,11 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
 
     while month_index < len(bulan_list):
         month = bulan_list[month_index]
-        print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
+        # print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
         transaction = False
 
         if not available_nahkoda:
-            print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
+            # print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
             available_nahkoda = used_nahkoda
             used_nahkoda = []
 
@@ -286,7 +286,7 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
             if pd.isna(schedule.at[kapal, month]) and not transaction:
                 if available_nahkoda:
                     nakhoda = available_nahkoda.pop(0)
-                    print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
+                    # print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
 
                     for j in range(durasi_penugasan):
                         if month_index + j < len(bulan_list):
@@ -301,8 +301,8 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
         if transaction:
             month_index += 1
 
-    print(filtered_df_nahkoda)
-    print(f"\nJadwal akhir untuk {job}:")  # ← Print job
+    # print(filtered_df_nahkoda)
+    # print(f"\nJadwal akhir untuk {job}:")  # ← Print job
 
     pd.set_option("display.max_rows", None)
     pd.set_option("display.max_columns", None)

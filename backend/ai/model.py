@@ -145,7 +145,7 @@ def get_vessel_group_id(df, vessel_name):
 
     vessel_row = df[df["last_location"] == vessel_name]
 
-    print("vessel row hasil", vessel_row)
+    # print("vessel row hasil", vessel_row)
     if not vessel_row.empty:
         return vessel_row.iloc[0]["VESSEL GROUP ID"]
     else:
@@ -181,7 +181,7 @@ def getRecommendation(
 
     # Inisialisasi filtered_df
     filtered_df = df.copy()
-    print("INI VESSEL NAMEEEEEEEEEE", vessel_name)
+    # print("INI VESSEL NAMEEEEEEEEEE", vessel_name)
     vessel_group_id = get_vessel_group_id(filtered_df, vessel_name)
     filtered_df = filtered_df[(df["VESSEL GROUP ID"] == vessel_group_id)]
 
@@ -189,7 +189,7 @@ def getRecommendation(
     filtered_df = filtered_df[
         (filtered_df["age"] >= age_range[0]) & (filtered_df["age"] <= age_range[1])
     ].copy()
-    print(filtered_df)
+    # print(filtered_df)
 
     # Menggabungkan fitur RANK dan CERTIFICATE untuk perhitungan similarity
     filtered_df["combined_features"] = (
@@ -311,10 +311,10 @@ def search_candidate(df, bagian, vessel_name, age_range):
     # Periksa apakah 'VESSEL GROUP ID' ada di DataFrame
     if "VESSEL GROUP ID" in df.columns:
         vessel_group_id = get_vessel_group_id(df, vessel_name)
-        print("bagian ", bagian)
-        print("vessel group id ", vessel_group_id)
-        print("age 0 ", age_range[0])
-        print("age 1 ", age_range[1])
+        # print("bagian ", bagian)
+        # print("vessel group id ", vessel_group_id)
+        # print("age 0 ", age_range[0])
+        # print("age 1 ", age_range[1])
 
         if vessel_group_id is None:
             # Return empty DataFrame with VESSEL GROUP ID column to prevent KeyError
@@ -579,8 +579,14 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         for vessel in vessels:
             vessel_to_group[vessel] = group_id
 
+    # Pastikan bekerja pada salinan mandiri agar tidak memicu SettingWithCopyWarning
+    dataframe = dataframe.copy()
+
+    # KODE LAMA
+    # dataframe.loc[:, "VESSEL GROUP ID"] = (   
+    
     # Tambahkan kolom baru berdasarkan mapping
-    dataframe.loc[:, "VESSEL GROUP ID"] = (
+    dataframe["VESSEL GROUP ID"] = (
         dataframe["last_location"].map(vessel_to_group).fillna("UNKNOWN")
     )
 
