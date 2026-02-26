@@ -31,11 +31,11 @@ def login_user(username, password):
     # Check if password matches
     if check_password(password, stored_password):
         # 3. Generate Token
-        token = generate_token(user["id"], user["username"], user["role"])
+        token = generate_token(str(user["id"]), user["username"], user["role"])
         return {
             "token": token,
             "user": {
-                "id": user["id"],
+                "id": str(user["id"]),
                 "username": user["username"],
                 "email": user["email"],
                 "role": user["role"],
