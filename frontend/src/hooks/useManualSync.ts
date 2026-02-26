@@ -11,7 +11,7 @@ export function useManualSync() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/manual-sync`, {
+      const response = await fetch(`${API_BASE_URL}/manual-sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
