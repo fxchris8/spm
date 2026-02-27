@@ -1,6 +1,7 @@
 # Fungsi-fungsi ini dipindahkan dari app.py karena tidak digunakan di manapun.
 # Dipindahkan pada: 2026-02-21
 
+
 # kode 1
 def prepare_display_df(df):
     display_df = df[

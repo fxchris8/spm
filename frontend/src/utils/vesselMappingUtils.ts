@@ -132,8 +132,10 @@ export function getLinkedPosition(
   categorization: string,
   position: string
 ): string | null {
-  if (categorization === 'container') return CONTAINER_LINKED_POSITIONS[position] || null;
-  if (categorization === 'manalagi') return MANALAGI_LINKED_POSITIONS[position] || null;
+  if (categorization === 'container')
+    return CONTAINER_LINKED_POSITIONS[position] || null;
+  if (categorization === 'manalagi')
+    return MANALAGI_LINKED_POSITIONS[position] || null;
   return null;
 }
 

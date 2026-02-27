@@ -544,7 +544,12 @@ def seed_rotation_manalagi_senior_data():
     }
 
     # Insert all manalagi configs
-    configs = [nakhoda_manalagi_data, kkm_manalagi_data, mualimI_manalagi_data, masinisII_manalagi_data]
+    configs = [
+        nakhoda_manalagi_data,
+        kkm_manalagi_data,
+        mualimI_manalagi_data,
+        masinisII_manalagi_data,
+    ]
 
     for config in configs:
         try:

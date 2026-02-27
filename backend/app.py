@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 from flask import Flask, jsonify, request, send_file
+
 from ai import (
     filter_in_vessel,
     getRecommendation,
@@ -32,8 +33,8 @@ from database.connection import (
     update_rotation_status_change,
     update_rotation_vessel,
 )
-from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
 from middlewares import init_cors
+from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
 from routes import auth_bp, cadangan_bp, dashboard_bp, promotion_bp, search_bp
 
 app = Flask(__name__)
@@ -1725,9 +1726,7 @@ def api_vessel_categories():
         kelompok = build_kelompok()
         # Hanya kembalikan kategori yang dikelola DB (bukan mt/tb/tk/others)
         managed_categories = {
-            k: v
-            for k, v in kelompok.items()
-            if k not in ("mt", "tb", "tk", "others")
+            k: v for k, v in kelompok.items() if k not in ("mt", "tb", "tk", "others")
         }
         return jsonify(managed_categories), 200
 

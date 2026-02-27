@@ -535,7 +535,9 @@ export function useCadanganData(
       return data.filter((item: any) => {
         const hist = item.history || item.vessels || '';
         const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(manalagiVessels).some((v: string) => histStr.includes(v));
+        return Array.from(manalagiVessels).some((v: string) =>
+          histStr.includes(v)
+        );
       });
     },
     enabled: enabled && !!groupKey, // Only fetch when group is selected
@@ -576,7 +578,9 @@ export function usePromotionCandidates(
       return data.filter((item: any) => {
         const hist = item.history || item.vessels || '';
         const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(manalagiVessels).some((v: string) => histStr.includes(v));
+        return Array.from(manalagiVessels).some((v: string) =>
+          histStr.includes(v)
+        );
       });
     },
     enabled: enabled && !!groupKey, // Only fetch when group is selected

@@ -226,6 +226,7 @@ def search_candidate(df, bagian, vessel_name, age_range):
 def filter_in_vessel(dataframe, group_name, kelompok=None):
     if kelompok is None:
         from repositories.vessel_repository import build_kelompok
+
         kelompok = build_kelompok()
 
     if group_name not in kelompok:
