@@ -745,19 +745,21 @@ export function SeniorRotation({
 
                   {/* POTENTIAL PROMOTION */}
                   {(() => {
+                    const lastTwoGroups = new Set(
+                      Object.keys(groups).slice(-2)
+                    );
+
                     const isKKMorMasinisII =
                       job === 'KKM' || job === 'masinisII';
                     const showForKKMorMasinisII =
                       isKKMorMasinisII &&
-                      (selectedGroup === 'container_rotation6' ||
-                        selectedGroup === 'container_rotation7');
+                      lastTwoGroups.has(selectedGroup ?? '');
 
                     const isNahkodaOrMualimI =
                       job === 'nakhoda' || job === 'mualimI';
                     const showForNahkodaOrMualimI =
                       isNahkodaOrMualimI &&
-                      (selectedGroup === 'container_rotation7' ||
-                        selectedGroup === 'container_rotation8');
+                      lastTwoGroups.has(selectedGroup ?? '');
 
                     return (
                       (showForKKMorMasinisII || showForNahkodaOrMualimI) && (
