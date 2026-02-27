@@ -148,10 +148,8 @@ KELOMPOK = {
         "DARAT",
         "DARAT BIASA",
         "DARAT STAND-BY",
-        "Stand by Crew",
         "PENDING CUTI",
         "PENDING GAJI",
-        "PENDING CUTI",
     ],
 }
 
