@@ -113,7 +113,12 @@ KELOMPOK = {
         "TB. YUSHIN MARU",
     ],
     "tk": ["TK. BETA SATU", "TK. DELTA DUA"],
-    "others": ["DARAT", "Stand by Crew", "PENDING GAJI CUTI", "PENDING GAJI"],
+    "others": ["DARAT",
+        "DARAT BIASA",
+        "DARAT STAND-BY",
+        "PENDING CUTI",
+        "PENDING GAJI",
+        "PENDING GAJI CUTI",],
 }
 
 # Memuat model Word2Vec secara global

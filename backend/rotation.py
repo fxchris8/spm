@@ -150,6 +150,7 @@ KELOMPOK = {
         "DARAT STAND-BY",
         "PENDING CUTI",
         "PENDING GAJI",
+        "PENDING GAJI CUTI",
     ],
 }
 
