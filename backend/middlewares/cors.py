@@ -3,7 +3,7 @@ import os
 from flask_cors import CORS
 
 ALLOWED_ORIGINS = [
-    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id
+    r"https?://.*\.spil\.co\.id(:\d+)?",  # All subdomains of spil.co.id (incl. pe.spil.co.id)
     r"https?://spil\.co\.id(:\d+)?",  # Main spil.co.id domain
 ]
 
@@ -11,7 +11,7 @@ ALLOWED_ORIGINS = [
 def init_cors(app):
     """
     Initialize CORS for the Flask app.
-    - Production : hanya izinkan domain spil.co.id
+    - Production : hanya izinkan domain spil.co.id dan subdomainnya
     - Development: izinkan localhost:5173 dengan credentials (HttpOnly cookies)
     """
     ENV = os.environ.get("FLASK_ENV", "development")
@@ -20,7 +20,10 @@ def init_cors(app):
         CORS(
             app=app,
             resources={
-                r"/api/*": {"origins": ALLOWED_ORIGINS, "supports_credentials": True}
+                r"/spm-backend/api/*": {
+                    "origins": ALLOWED_ORIGINS,
+                    "supports_credentials": True,
+                }
             },
         )
     else:
