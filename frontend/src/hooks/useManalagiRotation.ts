@@ -1,6 +1,6 @@
 // src/hooks/useSeniorRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MANALAGI_VESSELS, CONTAINER_VESSELS } from '../constants/vessels';
+import { useVesselCategories } from './useVesselCategories';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -281,6 +281,7 @@ export function useMutasiData(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
+  const { containerVessels, manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'mutasi-data', job, groupKey, lockedCadanganCodes],
     queryFn: async () => {
@@ -313,7 +314,7 @@ export function useMutasiData(
 
               if (type === 'senior' || type === 'junior') {
                 // Untuk container: SKIP jika last vessel adalah manalagi
-                if (MANALAGI_VESSELS.has(lastVessel)) {
+                if (manalagiVessels.has(lastVessel)) {
                   // console.log(
                   //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
                   // );
@@ -321,7 +322,7 @@ export function useMutasiData(
                 }
               } else if (type === 'manalagi') {
                 // Untuk manalagi: SKIP jika last vessel adalah container
-                if (CONTAINER_VESSELS.has(lastVessel)) {
+                if (containerVessels.has(lastVessel)) {
                   // console.log(
                   //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
                   // );
@@ -330,7 +331,7 @@ export function useMutasiData(
 
                 // New Condition: Minimal harus ada 1 history di kapal Manalagi
                 const hasManalagiHistory = vlist.some((v: string) =>
-                  MANALAGI_VESSELS.has(v)
+                  manalagiVessels.has(v)
                 );
                 if (!hasManalagiHistory) {
                   return null;
@@ -380,6 +381,7 @@ export function usePotentialPromotion(
   groups: Record<string, string[]>,
   enabled: boolean = true
 ) {
+  const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'potential-promotion', job, groupKey],
     queryFn: async () => {
@@ -495,7 +497,7 @@ export function usePotentialPromotion(
             allowed.has(r.seamancode) &&
             !lockedCodes.includes(r.seamancode) &&
             // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi (fuzzy match di string history)
-            Array.from(MANALAGI_VESSELS).some(v =>
+            Array.from(manalagiVessels).some((v: string) =>
               String(r.history || '').includes(v)
             )
         )
@@ -524,6 +526,7 @@ export function useCadanganData(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
+  const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: ['manalagi', 'cadangan-data', job, groupKey, lockedCadanganCodes],
     queryFn: async () => {
@@ -532,7 +535,7 @@ export function useCadanganData(
       return data.filter((item: any) => {
         const hist = item.history || item.vessels || '';
         const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(MANALAGI_VESSELS).some(v => histStr.includes(v));
+        return Array.from(manalagiVessels).some((v: string) => histStr.includes(v));
       });
     },
     enabled: enabled && !!groupKey, // Only fetch when group is selected
@@ -554,6 +557,7 @@ export function usePromotionCandidates(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
+  const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: [
       'manalagi',
@@ -572,7 +576,7 @@ export function usePromotionCandidates(
       return data.filter((item: any) => {
         const hist = item.history || item.vessels || '';
         const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(MANALAGI_VESSELS).some(v => histStr.includes(v));
+        return Array.from(manalagiVessels).some((v: string) => histStr.includes(v));
       });
     },
     enabled: enabled && !!groupKey, // Only fetch when group is selected
