@@ -185,15 +185,20 @@ export function GroupsEditor({
                 <h4 className="font-bold text-gray-900 text-lg">
                   {formatGroupName(groupKey)}
                 </h4>
-                {isEditMode && (
-                  <Button
-                    size="xs"
-                    color="failure"
-                    onClick={() => handleRemoveGroup(groupKey)}
-                  >
-                    Hapus
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                    {ships.length} kapal
+                  </span>
+                  {isEditMode && (
+                    <Button
+                      size="xs"
+                      color="failure"
+                      onClick={() => handleRemoveGroup(groupKey)}
+                    >
+                      Hapus
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Add Ship Input (Edit Mode Only) */}
