@@ -344,7 +344,7 @@ Harap tidak membalas email ini.
                 sent_count += 1
                 # print(f"DONE - Email sent to {recipient}")
 
-            except Exception as e:
+            except Exception:
                 failed_recipients.append(recipient)
                 # print(f"FAIL - Failed to send email to {recipient}: {str(e)}")
 

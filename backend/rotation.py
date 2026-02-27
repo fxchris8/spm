@@ -34,126 +34,9 @@ def add_first_rotation_date_column(df):
 # ============================================================================
 # BAGIAN 2: VESSEL GROUP CONFIGURATIONS
 # ============================================================================
-
-
-KELOMPOK = {
-    "container": [
-        "KM. ORIENTAL EMERALD",
-        "KM. ORIENTAL RUBY",
-        "KM. ORIENTAL SILVER",
-        "KM. ORIENTAL GOLD",
-        "KM. ORIENTAL JADE",
-        "KM. ARMADA SEJATI",
-        "KM. ORIENTAL DIAMOND",
-        "KM. LUZON",
-        "KM. BALI AYU",
-        "KM. VERIZON",
-        "KM. ORIENTAL GALAXY",
-        "KM. HIJAU SAMUDRA",
-        "KM. ARMADA PERMATA",
-        "KM. ORIENTAL SAMUDERA",
-        "KM. ORIENTAL PACIFIC",
-        "KM. PULAU NUNUKAN",
-        "KM. TELUK FLAMINGGO",
-        "KM. TELUK BERAU",
-        "KM. TELUK BINTUNI",
-        "KM. PULAU LAYANG",
-        "KM. PULAU WETAR",
-        "KM. PULAU HOKI",
-        "KM. SPIL HANA",
-        "KM. SPIL HASYA",
-        "KM. SPIL HAPSRI",
-        "KM. SPIL HAYU",
-        "KM. HIJAU JELITA",
-        "KM. HIJAU SEJUK",
-        "KM. ARMADA SEJATI",
-        "KM. ARMADA SERASI",
-        "KM. ARMADA SEGARA",
-        "KM. ARMADA SENADA",
-        "KM. HIJAU SEGAR",
-        "KM. TITANIUM",
-        "KM. VERTIKAL",
-        "KM. SPIL RENATA",
-        "KM. SPIL RATNA",
-        "KM. SPIL RUMI",
-        "KM. PEKAN BERAU",
-        "KM. SPIL RAHAYU",
-        "KM. SPIL RETNO",
-        "KM. MINAS BARU",
-        "KM. PEKAN SAMPIT",
-        "KM. SELILI BARU",
-        "KM. DERAJAT",
-        "KM. MULIANIM",
-        "KM. PRATIWI RAYA",
-        "KM. MAGELLAN",
-        "KM. PAHALA",
-        "KM. PEKAN RIAU",
-        "KM. PEKAN FAJAR",
-        "KM. PEKAN BERAU",
-        "KM. FORTUNE",
-        "KM. PRATIWI SATU",
-        "KM. BALI AYU",
-        "KM. BALI GIANYAR",
-        "KM. BALI KUTA",
-        "KM. BALI SANUR",
-        "KM. AKASHIA",
-        "KM. KAPPA",
-    ],
-    "manalagi": [
-        "KM. MANALAGI ASTA",
-        "KM. MANALAGI ASTI",
-        "KM. MANALAGI DASA",
-        "KM. MANALAGI ENZI",
-        "KM. MANALAGI HITA",
-        "KM. MANALAGI SAMBA",
-        "KM. MANALAGI TARA",
-        "KM. MANALAGI TISYA",
-        "KM. MANALAGI VIRA",
-        "KM. MANALAGI WANDA",
-        "KM. MANALAGI YASA",
-        "KM. XYS SATU",
-    ],
-    "bc": [
-        "BC. ANGSA LAUT",
-        "BC. BALIKPAPAN RAYA",
-        "BC. BANJARMASIN RAYA",
-        "BC. BAYA",
-        "BC. BELAWAN RAYA",
-        "BC. EPSILON",
-        "BC. GAJAH LAUT",
-        "BC. GAJAH MADA",
-        "BC. KAIMANA INDAH",
-        "BC. MURO 5",
-        "BC. SAMARINDA RAYA",
-        "BC. SHORYU BARU",
-        "BC. SURABAYA RAYA",
-        "BC. TARAKAN RAYA",
-        "BC. TENYO MARU",
-    ],
-    "mt": ["MT. GLOBAL", "MT. PANTAI LAMONG"],
-    "tb": [
-        "TB. ALPHA",
-        "TB. CAPUNG I",
-        "TB. CAPUNG II",
-        "TB. CAPUNG III",
-        "TB. GAMMA SATU",
-        "TB. MANGGA RAYA",
-        "TB. SPIL BOAT",
-        "TB. TOYO",
-        "TB. YITNA YUWANA",
-        "TB. YUSHIN MARU",
-    ],
-    "tk": ["TK. BETA SATU", "TK. DELTA DUA"],
-    "others": [
-        "DARAT",
-        "DARAT BIASA",
-        "DARAT STAND-BY",
-        "Stand by Crew",
-        "PENDING CUTI",
-        "PENDING GAJI",
-        "PENDING CUTI",
-    ],
-}
+# KELOMPOK tidak lagi di-hardcode di sini.
+# Data diambil dari database via repositories/vessel_repository.py
+# sehingga konsisten dengan konfigurasi yang dikelola melalui Vessel Management UI.
 
 
 # Fungsi untuk mengonversi bulan dan tahun menjadi indeks bulan_list
@@ -183,7 +66,7 @@ def get_month_index(month_name, year):
 def get_nganggur(job):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
-    filtered_cadangan = filter_in_vessel(local_df, "others", KELOMPOK)
+    filtered_cadangan = filter_in_vessel(local_df, "others")
     filtered_cadangan = filtered_cadangan[(filtered_cadangan["last_position"] == job)]
     filtered_cadangan = filtered_cadangan.sort_values(by="last_location")
 
@@ -199,7 +82,7 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
     """Tambahkan parameter job dengan default NAKHODA"""
     local_df = get_seamen_as_data()
 
-    filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
+    filtered_df = filter_in_vessel(local_df, type)
     filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
     # Filter berdasarkan job (bukan hardcoded "NAKHODA")
@@ -372,7 +255,7 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
+        filtered_df = filter_in_vessel(local_df, type)
         filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
         filtered_df_nahkoda = filtered_df[
@@ -452,7 +335,7 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
+        filtered_df = filter_in_vessel(local_df, type)
         filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
         filtered_df_nahkoda = filtered_df[
@@ -532,7 +415,7 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
+        filtered_df = filter_in_vessel(local_df, type)
         filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
         filtered_df_nahkoda = filtered_df[
@@ -612,7 +495,7 @@ def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type, KELOMPOK)
+        filtered_df = filter_in_vessel(local_df, type)
         filtered_df = vessel_group_id_deck(filtered_df, type, part)
 
         filtered_df_nahkoda = filtered_df[

@@ -112,6 +112,7 @@ def get_current_user(token: str):
 
         # Fetch full user data from DB to include email
         from repositories.user_repository import get_user_by_id
+
         user = get_user_by_id(user_id)
 
         if not user:

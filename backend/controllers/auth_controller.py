@@ -2,7 +2,7 @@ import os
 
 from flask import jsonify, make_response, request
 
-from services import get_current_user, login_user, logout_user, register_user
+from services import get_current_user, login_user, register_user
 
 IS_PRODUCTION = os.environ.get("FLASK_ENV", "development") == "production"
 
@@ -31,7 +31,9 @@ def login_controller():
         user = result.get("user")
 
         # Build response — return user info but NOT the token
-        response = make_response(jsonify({"message": "Login successful", "user": user}), 200)
+        response = make_response(
+            jsonify({"message": "Login successful", "user": user}), 200
+        )
 
         # Set HttpOnly cookie (not accessible via JS)
         response.set_cookie(
@@ -44,7 +46,7 @@ def login_controller():
         )
 
         return response
-    except Exception as e:
+    except Exception:
         # print(f"[ERROR] Login failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
@@ -75,7 +77,7 @@ def register_controller():
             jsonify({"message": "User created successfully", "username": username}),
             201,
         )
-    except Exception as e:
+    except Exception:
         # print(f"[ERROR] Register failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
@@ -95,7 +97,7 @@ def logout_controller():
             max_age=0,  # Immediately expire
         )
         return response
-    except Exception as e:
+    except Exception:
         # print(f"[ERROR] Logout failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500
 
@@ -115,6 +117,6 @@ def me_controller():
             return jsonify({"message": "Invalid or expired token"}), 401
 
         return jsonify({"user": user}), 200
-    except Exception as e:
+    except Exception:
         # print(f"[ERROR] Me endpoint failed: {e}")
         return jsonify({"message": "Internal Server Error"}), 500

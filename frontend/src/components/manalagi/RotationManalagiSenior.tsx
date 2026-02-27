@@ -8,7 +8,7 @@ import { useRotationVessels } from '../../hooks/useRotationVessels';
 import { useMemo } from 'react';
 
 // Urutan tabs untuk manalagi
-const MANALAGI_ORDER = ['nakhoda', 'KKM'];
+const MANALAGI_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
 
 export function RotationManalagiSenior() {
   const { vessels, loading, error } = useRotationVessels('senior', 'manalagi');

@@ -7,8 +7,8 @@ Controllers receive requests, call services, and return responses.
 from .auth_controller import (
     login_controller,
     logout_controller,
-    register_controller,
     me_controller,
+    register_controller,
 )
 from .cadangan_controller import (
     get_cadangan_kkm_controller,

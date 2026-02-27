@@ -11,7 +11,9 @@ interface Seaman {
   VESSEL: string;
   UMUR: number;
   CERTIFICATE: string;
+  'ACTUAL START DATE': string | null;
   'DAY REMAINS': number;
+  'ACTUAL END DATE': string | null;
 }
 
 // Fetch function

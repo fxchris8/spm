@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CONTAINER_VESSELS, MANALAGI_VESSELS } from '../constants/vessels';
+import { useVesselCategories } from './useVesselCategories';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -285,6 +285,7 @@ export function useMutasiData(
   lockedCadanganCodes: string[],
   enabled: boolean = true
 ) {
+  const { containerVessels, manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: ['mutasi-data', job, type, groupKey, lockedCadanganCodes],
     queryFn: async () => {
@@ -317,7 +318,7 @@ export function useMutasiData(
 
               if (type === 'senior' || type === 'junior') {
                 // Untuk container: SKIP jika last vessel adalah manalagi
-                if (MANALAGI_VESSELS.has(lastVessel)) {
+                if (manalagiVessels.has(lastVessel)) {
                   // console.log(
                   //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
                   // );
@@ -325,7 +326,7 @@ export function useMutasiData(
                 }
               } else if (type === 'manalagi') {
                 // Untuk manalagi: SKIP jika last vessel adalah container
-                if (CONTAINER_VESSELS.has(lastVessel)) {
+                if (containerVessels.has(lastVessel)) {
                   // console.log(
                   // //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
                   // );
