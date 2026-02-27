@@ -1710,6 +1710,31 @@ def api_delete_rotation_vessel(vessel_id):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/vessel-categories", methods=["GET"])
+def api_vessel_categories():
+    """
+    GET - Flat ship lists per categorization, dipakai frontend untuk
+    mengklasifikasikan kapal (container/manalagi/bc).
+
+    Returns:
+        dict: { "container": [...], "manalagi": [...], "bc": [...] }
+    """
+    try:
+        from repositories.vessel_repository import build_kelompok
+
+        kelompok = build_kelompok()
+        # Hanya kembalikan kategori yang dikelola DB (bukan mt/tb/tk/others)
+        managed_categories = {
+            k: v
+            for k, v in kelompok.items()
+            if k not in ("mt", "tb", "tk", "others")
+        }
+        return jsonify(managed_categories), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================================
 # BAGIAN 11: CHANGE SCHEDULE ROTATION (TIM PUSAT)
 # ============================================================================
