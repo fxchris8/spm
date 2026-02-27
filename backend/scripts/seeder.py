@@ -523,8 +523,28 @@ def seed_rotation_manalagi_senior_data():
         },
     }
 
+    # ============ MUALIM I (Manalagi) ============
+    mualimI_manalagi_data = {
+        "job_title": "mualimI",
+        "vessel": "F",
+        "rotation_type": "senior",
+        "categorization": "manalagi",
+        "part": "deck",
+        "groups": nakhoda_manalagi_data["groups"],
+    }
+
+    # ============ MASINIS II (Manalagi) ============
+    masinisII_manalagi_data = {
+        "job_title": "masinisII",
+        "vessel": "G",
+        "rotation_type": "senior",
+        "categorization": "manalagi",
+        "part": "engine",
+        "groups": kkm_manalagi_data["groups"],
+    }
+
     # Insert all manalagi configs
-    configs = [nakhoda_manalagi_data, kkm_manalagi_data]
+    configs = [nakhoda_manalagi_data, kkm_manalagi_data, mualimI_manalagi_data, masinisII_manalagi_data]
 
     for config in configs:
         try:
