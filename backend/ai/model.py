@@ -5,122 +5,6 @@ import pandas as pd
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 
-KELOMPOK = {
-    "container": [
-        "KM. ORIENTAL EMERALD",
-        "KM. ORIENTAL RUBY",
-        "KM. ORIENTAL SILVER",
-        "KM. ORIENTAL GOLD",
-        "KM. ORIENTAL JADE",
-        "KM. ARMADA SEJATI",
-        "KM. ORIENTAL DIAMOND",
-        "KM. LUZON",
-        "KM. BALI AYU",
-        "KM. VERIZON",
-        "KM. ORIENTAL GALAXY",
-        "KM. HIJAU SAMUDRA",
-        "KM. ARMADA PERMATA",
-        "KM. ORIENTAL SAMUDERA",
-        "KM. ORIENTAL PACIFIC",
-        "KM. PULAU NUNUKAN",
-        "KM. TELUK FLAMINGGO",
-        "KM. TELUK BERAU",
-        "KM. TELUK BINTUNI",
-        "KM. PULAU LAYANG",
-        "KM. PULAU WETAR",
-        "KM. PULAU HOKI",
-        "KM. SPIL HANA",
-        "KM. SPIL HASYA",
-        "KM. SPIL HAPSRI",
-        "KM. SPIL HAYU",
-        "KM. HIJAU JELITA",
-        "KM. HIJAU SEJUK",
-        "KM. ARMADA SEJATI",
-        "KM. ARMADA SERASI",
-        "KM. ARMADA SEGARA",
-        "KM. ARMADA SENADA",
-        "KM. HIJAU SEGAR",
-        "KM. TITANIUM",
-        "KM. VERTIKAL",
-        "KM. SPIL RENATA",
-        "KM. SPIL RATNA",
-        "KM. SPIL RUMI",
-        "KM. PEKAN BERAU",
-        "KM. SPIL RAHAYU",
-        "KM. SPIL RETNO",
-        "KM. MINAS BARU",
-        "KM. PEKAN SAMPIT",
-        "KM. SELILI BARU",
-        "KM. DERAJAT",
-        "KM. MULIANIM",
-        "KM. PRATIWI RAYA",
-        "KM. MAGELLAN",
-        "KM. PAHALA",
-        "KM. PEKAN RIAU",
-        "KM. PEKAN FAJAR",
-        "KM. PEKAN BERAU",
-        "KM. FORTUNE",
-        "KM. PRATIWI SATU",
-        "KM. BALI AYU",
-        "KM. BALI GIANYAR",
-        "KM. BALI KUTA",
-        "KM. BALI SANUR",
-        "KM. AKASHIA",
-        "KM. KAPPA",
-    ],
-    "manalagi": [
-        "KM. MANALAGI ASTA",
-        "KM. MANALAGI ASTI",
-        "KM. MANALAGI DASA",
-        "KM. MANALAGI ENZI",
-        "KM. MANALAGI HITA",
-        "KM. MANALAGI SAMBA",
-        "KM. MANALAGI TARA",
-        "KM. MANALAGI TISYA",
-        "KM. MANALAGI VIRA",
-        "KM. MANALAGI WANDA",
-        "KM. MANALAGI YASA",
-        "KM. XYS SATU",
-    ],
-    "bc": [
-        "BC. ANGSA LAUT",
-        "BC. BALIKPAPAN RAYA",
-        "BC. BANJARMASIN RAYA",
-        "BC. BAYA",
-        "BC. BELAWAN RAYA",
-        "BC. EPSILON",
-        "BC. GAJAH LAUT",
-        "BC. GAJAH MADA",
-        "BC. KAIMANA INDAH",
-        "BC. MURO 5",
-        "BC. SAMARINDA RAYA",
-        "BC. SHORYU BARU",
-        "BC. SURABAYA RAYA",
-        "BC. TARAKAN RAYA",
-        "BC. TENYO MARU",
-    ],
-    "mt": ["MT. GLOBAL", "MT. PANTAI LAMONG"],
-    "tb": [
-        "TB. ALPHA",
-        "TB. CAPUNG I",
-        "TB. CAPUNG II",
-        "TB. CAPUNG III",
-        "TB. GAMMA SATU",
-        "TB. MANGGA RAYA",
-        "TB. SPIL BOAT",
-        "TB. TOYO",
-        "TB. YITNA YUWANA",
-        "TB. YUSHIN MARU",
-    ],
-    "tk": ["TK. BETA SATU", "TK. DELTA DUA"],
-    "others": ["DARAT",
-        "DARAT BIASA",
-        "DARAT STAND-BY",
-        "PENDING CUTI",
-        "PENDING GAJI",
-        "PENDING GAJI CUTI",],
-}
-
 # Memuat model Word2Vec secara global
 word2vec_model = None
 
@@ -339,268 +223,73 @@ def search_candidate(df, bagian, vessel_name, age_range):
     return filtered_data
 
 
-def filter_in_vessel(dataframe, group_name, kelompok=KELOMPOK):
+def filter_in_vessel(dataframe, group_name, kelompok=None):
+    if kelompok is None:
+        from repositories.vessel_repository import build_kelompok
+        kelompok = build_kelompok()
+
     if group_name not in kelompok:
         raise ValueError(f"Group '{group_name}' tidak ditemukan dalam kelompok.")
 
-    # Ambil daftar VESSEL untuk group tertentu
     vessel_list = kelompok[group_name]
-
-    # Filter DataFrame berdasarkan kolom 'VESSEL'
     filtered_df = dataframe[dataframe["last_location"].isin(vessel_list)]
-
     return filtered_df
 
 
 def vessel_group_id_deck(dataframe, vessel, type=None):
     """
-    Menambahkan kolom 'VESSEL GROUP ID' ke dalam DataFrame berdasarkan tipe pengelompokan.
+    Menambahkan kolom 'VESSEL GROUP ID' ke dalam DataFrame berdasarkan konfigurasi
+    dari database (vessel management).
+
+    Group ID diformat sebagai {prefix}{nomor}, contoh: D1, D2, E1, F1, G2, dst.
+    Prefix diambil dari field 'vessel' di DB:
+        container + deck   → 'D'
+        container + engine → 'E'
+        manalagi  + deck   → 'F'
+        manalagi  + engine → 'G'
 
     Parameters:
-        dataframe (pd.DataFrame): DataFrame input yang memiliki kolom 'VESSEL'.
-        type (str): Jenis pengelompokan, bisa 'deck' atau 'engine'.
+        dataframe (pd.DataFrame): DataFrame input dengan kolom 'last_location'.
+        vessel (str): Kategorisasi kapal, e.g. 'container', 'manalagi'.
+        type (str): Jenis pengelompokan, 'deck' atau 'engine'.
 
     Returns:
         pd.DataFrame: DataFrame dengan kolom tambahan 'VESSEL GROUP ID'.
     """
-    # Definisi grup untuk deck dan engine
-    CONTAINER_DECK = {
-        "container_rotation1": [
-            "KM. ORIENTAL EMERALD",
-            "KM. ORIENTAL RUBY",
-            "KM. ORIENTAL SILVER",
-            "KM. ORIENTAL GOLD",
-            "KM. ORIENTAL JADE",
-            "KM. ORIENTAL DIAMOND",
-        ],
-        "container_rotation2": [
-            "KM. LUZON",
-            "KM. VERIZON",
-            "KM. ORIENTAL GALAXY",
-            "KM. HIJAU SAMUDRA",
-            "KM. ARMADA PERMATA",
-        ],
-        "container_rotation3": [
-            "KM. ORIENTAL SAMUDERA",
-            "KM. ORIENTAL PACIFIC",
-            "KM. PULAU NUNUKAN",
-            "KM. TELUK FLAMINGGO",
-            "KM. TELUK BERAU",
-            "KM. TELUK BINTUNI",
-        ],
-        "container_rotation4": [
-            "KM. PULAU LAYANG",
-            "KM. PULAU WETAR",
-            "KM. PULAU HOKI",
-            "KM. SPIL HANA",
-            "KM. SPIL HASYA",
-            "KM. SPIL HAPSRI",
-            "KM. SPIL HAYU",
-        ],
-        "container_rotation5": [
-            "KM. HIJAU JELITA",
-            "KM. HIJAU SEJUK",
-            "KM. ARMADA SEJATI",
-            "KM. ARMADA SERASI",
-            "KM. ARMADA SEGARA",
-            "KM. ARMADA SENADA",
-            "KM. HIJAU SEGAR",
-            "KM. TITANIUM",
-            "KM. VERTIKAL",
-        ],
-        "container_rotation6": [
-            "KM. SPIL RENATA",
-            "KM. SPIL RATNA",
-            "KM. SPIL RUMI",
-            "KM. PEKAN BERAU",
-            "KM SPIL RAHAYU",
-            "KM. SPIL RETNO",
-            "KM. MINAS BARU",
-            "KM PEKAN SAMPIT",
-            "KM. SELILI BARU",
-        ],
-        "container_rotation7": [
-            "KM. DERAJAT",
-            "KM. MULIANIM",
-            "KM. PRATIWI RAYA",
-            "KM. MAGELLAN",
-            "KM. PAHALA",
-            "KM. PEKAN RIAU",
-            "KM. PEKAN FAJAR",
-            "KM. FORTUNE",
-        ],
-        "container_rotation8": [
-            "KM. PRATIWI SATU",
-            "KM. BALI SANUR",
-            "KM. BALI KUTA",
-            "KM. BALI GIANYAR",
-            "KM. BALI AYU",
-            "KM. AKASHIA",
-            "KM KAPPA",
-        ],
-    }
+    from repositories.vessel_repository import get_vessel_config_from_db
 
-    CONTAINER_ENGINE = {
-        "container_rotation1": [
-            "KM. ORIENTAL GOLD",
-            "KM. ORIENTAL EMERALD",
-            "KM. ORIENTAL GALAXY",
-            "KM. ORIENTAL RUBY",
-            "KM. ORIENTAL SILVER",
-            "KM. ORIENTAL JADE",
-            "KM. VERIZON",
-            "KM. LUZON",
-            "KM. ORIENTAL DIAMOND",
-        ],
-        "container_rotation2": [
-            "KM. SPIL HAPSRI",
-            "KM. ARMADA PERMATA",
-            "KM. HIJAU SAMUDRA",
-            "KM. SPIL HASYA",
-            "KM. ARMADA SEJATI",
-            "KM. SPIL HAYU",
-            "KM. SPIL HANA",
-            "KM. HIJAU SEJUK",
-            "KM. HIJAU JELITA",
-        ],
-        "container_rotation3": [
-            "KM. ORIENTAL PACIFIC",
-            "KM. ORIENTAL SAMUDERA",
-            "KM. ARMADA SEGARA",
-            "KM. ARMADA SENADA",
-            "KM. ARMADA SERASI",
-            "KM. SPIL RATNA",
-            "KM. SPIL RUMI",
-            "KM. PULAU NUNUKAN",
-        ],
-        "container_rotation4": [
-            "KM. PULAU HOKI",
-            "KM. TELUK BINTUNI",
-            "KM. TELUK FLAMINGGO",
-            "KM. PULAU LAYANG",
-            "KM. TELUK BERAU",
-            "KM. SPIL RENATA",
-            "KM. PULAU WETAR",
-            "KM SPIL RAHAYU",
-            "KM. SPIL RETNO",
-        ],
-        "container_rotation5": [
-            "KM. MINAS BARU",
-            "KM. SELILI BARU",
-            "KM. VERTIKAL",
-            "KM. HIJAU SEGAR",
-            "KM. PEKAN RIAU",
-            "KM. PEKAN BERAU",
-            "KM. PEKAN FAJAR",
-            "KM. PEKAN SAMPIT",
-            "KM. TITANIUM",
-        ],
-        "container_rotation6": [
-            "KM. PRATIWI RAYA",
-            "KM. PRATIWI SATU",
-            "KM. BALI AYU",
-            "KM. BALI GIANYAR",
-            "KM. BALI SANUR",
-            "KM. BALI KUTA",
-        ],
-        "container_rotation7": [
-            "KM. MAGELLAN",
-            "KM. MULIANIM",
-            "KM. PAHALA",
-            "KM. FORTUNE",
-            "KM. AKASHIA",
-            "KM. DERAJAT",
-        ],
-    }
-
-    MANALAGI_DECK = {
-        "manalagi_rotation1": [
-            "KM. MANALAGI PRITA",
-            "KM. MANALAGI ASTA",
-            "KM. MANALAGI ASTI",
-            "KM. MANALAGI DASA",
-            "KM. MANALAGI ENZI",
-            "KM. MANALAGI TARA",
-            "KM. MANALAGI WANDA",
-        ],
-        "manalagi_rotation2": [
-            "KM. MANALAGI TISYA",
-            "KM. MANALAGI SAMBA",
-            "KM. MANALAGI HITA",
-            "KM. MANALAGI VIRA",
-            "KM. MANALAGI YASA",
-            "KM. XYS SATU",
-        ],
-    }
-
-    MANALAGI_ENGINE = {
-        "manalagi_rotation1": [
-            "KM. MANALAGI ASTA",
-            "KM. MANALAGI ASTI",
-            "KM. MANALAGI SAMBA",
-            "KM. MANALAGI YASA",
-            "KM. XYS SATU",
-            "KM. MANALAGI WANDA",
-        ],
-        "manalagi_rotation2": [
-            "KM. MANALAGI TISYA",
-            "KM. MANALAGI PRITA",
-            "KM. MANALAGI DASA",
-            "KM. MANALAGI HITA",
-            "KM. MANALAGI ENZI",
-            "KM. MANALAGI TARA",
-            "KM. MANALAGI VIRA",
-        ],
-    }
-
-    # Jika jenis kapal bukan 'container' atau 'manalagi', langsung isi dengan '1'
+    # Hanya container dan manalagi yang memiliki grup rotasi di DB
     if vessel not in ["container", "manalagi"]:
         dataframe = dataframe.copy()
         dataframe["VESSEL GROUP ID"] = "1"
         return dataframe
 
-    # Pilih grup berdasarkan tipe
-    if type == "deck" and vessel == "container":
-        groups = CONTAINER_DECK
-        prefix = "D"
-    elif type == "engine" and vessel == "container":
-        groups = CONTAINER_ENGINE
-        prefix = "E"
-    elif type == "deck" and vessel == "manalagi":
-        groups = MANALAGI_DECK
-        prefix = "F"
-    elif type == "engine" and vessel == "manalagi":
-        groups = MANALAGI_ENGINE
-        prefix = "G"
-    else:
+    if type not in ["deck", "engine"]:
         raise ValueError("Parameter 'type' harus bernilai 'deck' atau 'engine'")
 
-    # Buat mapping VESSEL ke VESSEL GROUP ID
+    prefix, groups = get_vessel_config_from_db(vessel, type)
+
+    if not groups:
+        dataframe = dataframe.copy()
+        dataframe["VESSEL GROUP ID"] = "UNKNOWN"
+        return dataframe
+
+    # Buat mapping nama kapal → VESSEL GROUP ID
     vessel_to_group = {}
-    for idx, (group_name, vessels) in enumerate(groups.items(), start=1):
-        group_id = (
-            f"{prefix}{idx}"  # Format group ID seperti D1, D2, ... atau E1, E2, ...
-        )
-        for vessel in vessels:
-            vessel_to_group[vessel] = group_id
+    for idx, (_, ships) in enumerate(groups.items(), start=1):
+        group_id = f"{prefix}{idx}"
+        for ship in ships:
+            vessel_to_group[ship] = group_id
 
-    # Pastikan bekerja pada salinan mandiri agar tidak memicu SettingWithCopyWarning
     dataframe = dataframe.copy()
-
-    # KODE LAMA
-    # dataframe.loc[:, "VESSEL GROUP ID"] = (   
-    
-    # Tambahkan kolom baru berdasarkan mapping
     dataframe["VESSEL GROUP ID"] = (
         dataframe["last_location"].map(vessel_to_group).fillna("UNKNOWN")
     )
 
-    # Menyisipkan kolom 'VESSEL GROUP ID' setelah kolom 'VESSEL'
+    # Sisipkan kolom 'VESSEL GROUP ID' tepat setelah 'last_location'
     cols = dataframe.columns.tolist()
-    vessel_idx = cols.index("last_location")  # Dapatkan indeks kolom 'VESSEL'
-    cols.insert(
-        vessel_idx + 1, cols.pop(cols.index("VESSEL GROUP ID"))
-    )  # Pindahkan 'VESSEL GROUP ID' setelah 'VESSEL'
+    vessel_idx = cols.index("last_location")
+    cols.insert(vessel_idx + 1, cols.pop(cols.index("VESSEL GROUP ID")))
     dataframe = dataframe[cols]
 
     return dataframe
