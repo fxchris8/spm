@@ -30,6 +30,8 @@ export function getHiddenFieldsFromSelection(
     // Manalagi mappings
     manalagi_nakhoda: { type: 'senior', part: 'deck', vessel: 'F' },
     manalagi_KKM: { type: 'senior', part: 'engine', vessel: 'G' },
+    manalagi_mualimI: { type: 'senior', part: 'deck', vessel: 'F' },
+    manalagi_masinisII: { type: 'senior', part: 'engine', vessel: 'G' },
 
     // BC (Barge-Crane) mappings
     bc_nakhoda: { type: 'senior', part: 'deck', vessel: 'F' },
@@ -111,6 +113,18 @@ const CONTAINER_LINKED_POSITIONS: Record<string, string> = {
 };
 
 /**
+ * Linked positions for manalagi categorization:
+ * Nakhoda <-> Mualim I (same vessel 'F')
+ * KKM <-> Masinis II (same vessel 'G')
+ */
+const MANALAGI_LINKED_POSITIONS: Record<string, string> = {
+  nakhoda: 'mualimI',
+  mualimI: 'nakhoda',
+  KKM: 'masinisII',
+  masinisII: 'KKM',
+};
+
+/**
  * Get the linked/paired position for a given categorization + position.
  * Returns null if no linked position exists.
  */
@@ -118,8 +132,9 @@ export function getLinkedPosition(
   categorization: string,
   position: string
 ): string | null {
-  if (categorization !== 'container') return null;
-  return CONTAINER_LINKED_POSITIONS[position] || null;
+  if (categorization === 'container') return CONTAINER_LINKED_POSITIONS[position] || null;
+  if (categorization === 'manalagi') return MANALAGI_LINKED_POSITIONS[position] || null;
+  return null;
 }
 
 /**

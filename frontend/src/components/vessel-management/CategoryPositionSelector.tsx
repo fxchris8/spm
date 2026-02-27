@@ -15,9 +15,11 @@ interface CategoryPositionSelectorProps {
   disabled?: boolean;
 }
 
-// Categories that only support Nahkoda and KKM positions
-const LIMITED_CATEGORIES = ['manalagi', 'bc'];
-const ALLOWED_POSITIONS_FOR_LIMITED = ['nakhoda', 'kkm'];
+// Allowed positions per category (undefined = all positions allowed)
+const ALLOWED_POSITIONS_BY_CATEGORY: Record<string, string[]> = {
+  manalagi: ['nakhoda', 'KKM', 'mualimI', 'masinisII'],
+  bc: ['nakhoda', 'KKM'],
+};
 
 export function CategoryPositionSelector({
   selectedCategory,
@@ -35,8 +37,9 @@ export function CategoryPositionSelector({
     position: string
   ): boolean => {
     if (!category) return false;
-    if (!LIMITED_CATEGORIES.includes(category.toLowerCase())) return false;
-    return !ALLOWED_POSITIONS_FOR_LIMITED.includes(position.toLowerCase());
+    const allowed = ALLOWED_POSITIONS_BY_CATEGORY[category.toLowerCase()];
+    if (!allowed) return false;
+    return !allowed.includes(position);
   };
 
   return (
