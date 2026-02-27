@@ -2,6 +2,7 @@ import os
 
 from flask_cors import CORS
 
+
 def init_cors(app):
     ENV = os.environ.get("FLASK_ENV", "development")
 
