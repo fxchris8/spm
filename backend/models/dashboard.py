@@ -23,6 +23,8 @@ class SeamanRecord:
         "name": "SEAMAN NAME",
         "seafarercode": "SEAFARER CODE",
         "seamancode": "SEAMAN CODE",
+        "start_date": "ACTUAL START DATE",
+        "end_date": "ACTUAL END DATE",
     }
 
     # Ordered list of columns to include in the API response
@@ -34,7 +36,9 @@ class SeamanRecord:
         "VESSEL",
         "UMUR",
         "CERTIFICATE",
+        "ACTUAL START DATE",
         "DAY REMAINS",
+        "ACTUAL END DATE",
     ]
 
 

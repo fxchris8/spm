@@ -30,6 +30,7 @@ import { useDashboardData } from '../../hooks/useDashboardData';
 import { useSimilarSeamen } from '../../hooks/useSimilarSeamen';
 import { useManualSync } from '../../hooks/useManualSync';
 import { RotationSummary } from './RotationSummary';
+import { formatDateIndo } from '../../utils/dateUtils';
 
 export function Dashboard() {
   const { seamenData, loading, refetch } = useDashboardData();
@@ -346,7 +347,9 @@ export function Dashboard() {
               'VESSEL',
               'AGE',
               'CERTIFICATE',
+              'ACTUAL START DATE',
               'DAY REMAINS',
+              'ACTUAL END DATE',
               'SIMILARITY',
             ].map(header => (
               <Table.HeadCell key={header} className="bg-gray-800 text-white">
@@ -360,9 +363,11 @@ export function Dashboard() {
                 <Table.Cell className="text-left text-gray-800">
                   {idx + 1}
                 </Table.Cell>
-                {Object.values(item).map((value, i) => (
+                {Object.entries(item).map(([key, value], i) => (
                   <Table.Cell key={i} className="text-left text-gray-800">
-                    {value}
+                    {key.includes('DATE')
+                      ? formatDateIndo(value as string | null)
+                      : value}
                   </Table.Cell>
                 ))}
                 <Table.Cell>
