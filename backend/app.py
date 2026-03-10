@@ -366,14 +366,25 @@ def get_mutasi_filtered():
 
         # print(f"[DEBUG] After filtering: {len(seamancode_terfilter)} seamen")
 
-        # Filter df_history berdasarkan seamancode yang sudah difilter
-        df_mutasi_filtered = df_history[
-            df_history["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
-        ]
+        # Base DataFrame dari seamen valid (termasuk yang tidak punya history mutasi)
+        df_base = (
+            df_seamen[
+                df_seamen["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
+            ][["seamancode", "name", "last_location"]]
+            .drop_duplicates(subset=["seamancode"])
+            .copy()
+        )
+        df_base["seamancode"] = df_base["seamancode"].astype(str).str.strip()
 
-        # Merge untuk mendapatkan nama
-        df_mutasi_filtered = df_mutasi_filtered.merge(
-            df_seamen[["seamancode", "name", "last_location"]].drop_duplicates(),
+        # Filter df_history berdasarkan seamancode yang sudah difilter
+        df_history_filtered = df_history[
+            df_history["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
+        ].copy()
+        df_history_filtered["seamancode"] = df_history_filtered["seamancode"].astype(str).str.strip()
+
+        # LEFT JOIN dari base seamen ke history → seaman tanpa history tetap muncul
+        df_mutasi_filtered = df_base.merge(
+            df_history_filtered[["seamancode", "fromvesselname"]],
             on="seamancode",
             how="left",
         )
