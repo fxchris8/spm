@@ -707,7 +707,7 @@ export function ManalagiSeniorRotation({
                                 </td>
                                 <td className="px-4 py-3">{item.name}</td>
                                 <td className="px-4 py-3 text-xs">
-                                  {item.vessels}
+                                  {item.vessels || '----- [BELUM ADA DATA MUTASI] -----'}
                                 </td>
                                 <td className="px-4 py-3">
                                   {item.last_location}
