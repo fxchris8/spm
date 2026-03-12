@@ -17,65 +17,73 @@ from services import (
 )
 
 
-def get_promotion_candidates_nakhoda_controller():
+def get_promotion_candidates_nakhoda_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     try:
-        result = get_promotion_candidates_nakhoda()
+        result = get_promotion_candidates_nakhoda(forecast_month, categorization)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_kkm_controller():
+def get_promotion_candidates_kkm_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     try:
-        result = get_promotion_candidates_kkm()
+        result = get_promotion_candidates_kkm(forecast_month, categorization)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_mualimI_controller():
+def get_promotion_candidates_mualimI_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     try:
-        result = get_promotion_candidates_mualimI()
+        result = get_promotion_candidates_mualimI(forecast_month, categorization)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_masinisII_controller():
+def get_promotion_candidates_masinisII_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     try:
-        result = get_promotion_candidates_masinisII()
+        result = get_promotion_candidates_masinisII(forecast_month, categorization)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_mualimII_controller():
+def get_promotion_candidates_mualimII_controller(forecast_month: int = 1):
     try:
-        result = get_promotion_candidates_mualimII()
+        result = get_promotion_candidates_mualimII(forecast_month)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_masinisIII_controller():
+def get_promotion_candidates_masinisIII_controller(forecast_month: int = 1):
     try:
-        result = get_promotion_candidates_masinisIII()
+        result = get_promotion_candidates_masinisIII(forecast_month)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_mualimIII_controller():
+def get_promotion_candidates_mualimIII_controller(forecast_month: int = 1):
     try:
-        result = get_promotion_candidates_mualimIII()
+        result = get_promotion_candidates_mualimIII(forecast_month)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_promotion_candidates_masinisIV_controller():
+def get_promotion_candidates_masinisIV_controller(forecast_month: int = 1):
     try:
-        result = get_promotion_candidates_masinisIV()
+        result = get_promotion_candidates_masinisIV(forecast_month)
         return jsonify({"status": "success", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
