@@ -8,7 +8,7 @@ import os
 import bcrypt
 import jwt
 
-from repositories.user_repository import create_user, get_user_by_username
+from repositories.user_repository import create_user, get_user_by_id, get_user_by_username
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 
@@ -68,8 +68,7 @@ def generate_token(user_id, username, role):
         "user_id": user_id,
         "username": username,
         "role": role,
-        "exp": datetime.datetime.utcnow()
-        + datetime.timedelta(hours=6),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=6),
         "iat": datetime.datetime.utcnow(),
     }
 
