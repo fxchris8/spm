@@ -214,12 +214,20 @@ def container_rotation_api():
         cadangan2 = data.get("cadangan2", [])
         type_vessel = data.get("categorization")
         part = data.get("part")
+        forecast_month = int(data.get("forecast_month", 1))
 
         # LOGGING
-        # print(f"[DEBUG] Memanggil get_schedule dengan job='{job}'")
+        # print(f"[DEBUG] Memanggil get_schedule dengan job='{job}', forecast_month={forecast_month}")
 
-        # Dapatkan DataFrame schedule dengan parameter job
-        schedule_df = get_schedule(selected_group, cadangan, type_vessel, part, job)
+        # Dapatkan DataFrame schedule dengan parameter job dan month_offset
+        schedule_df = get_schedule(
+            selected_group,
+            cadangan,
+            type_vessel,
+            part,
+            job,
+            month_offset=forecast_month,
+        )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
         # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
@@ -334,6 +342,9 @@ def get_mutasi_filtered():
                 400,
             )
 
+        # Ambil forecast_month dari query string (default=1 = behaviour normal)
+        forecast_month = request.args.get("forecast_month", 1, type=int)
+
         # Load from Supabase instead of Excel
         df_history = get_mutations_as_data()
         df_seamen = get_seamen_as_data()
@@ -347,11 +358,28 @@ def get_mutasi_filtered():
             "DARAT STAND-BY",
         ]
 
-        # Ambil seamancode berdasarkan job
-        seamancode_terfilter = df_seamen[
+        # Pool 1: crew dengan status DARAT/PENDING (selalu dimasukkan)
+        status_codes = df_seamen[
             (df_seamen["last_location"].isin(lokasi_filter))
             & (df_seamen["last_position"] == job)
         ]["seamancode"].unique()
+
+        if forecast_month >= 2:
+            # Pool 2: crew di kapal dengan end_date dalam rentang forecast
+            today = pd.Timestamp.now(tz="UTC").normalize()
+            range_end = (today + pd.DateOffset(months=forecast_month)).replace(day=1)
+            df_seamen["end_date"] = pd.to_datetime(
+                df_seamen["end_date"], errors="coerce", utc=True
+            )
+            vessel_codes = df_seamen[
+                (df_seamen["last_position"] == job)
+                & (~df_seamen["last_location"].isin(lokasi_filter))
+                & (df_seamen["end_date"] >= today)
+                & (df_seamen["end_date"] <= range_end)
+            ]["seamancode"].unique()
+            seamancode_terfilter = list(set(list(status_codes) + list(vessel_codes)))
+        else:
+            seamancode_terfilter = status_codes
 
         # **FILTER OUT LOCKED CODES DI SINI**
         # print(f"[DEBUG] Before filtering: {len(seamancode_terfilter)} seamen")
@@ -369,7 +397,10 @@ def get_mutasi_filtered():
         # Base DataFrame dari seamen valid (termasuk yang tidak punya history mutasi)
         df_base = (
             df_seamen[
-                df_seamen["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
+                df_seamen["seamancode"]
+                .astype(str)
+                .str.strip()
+                .isin(seamancode_terfilter)
             ][["seamancode", "name", "last_location"]]
             .drop_duplicates(subset=["seamancode"])
             .copy()
@@ -380,7 +411,9 @@ def get_mutasi_filtered():
         df_history_filtered = df_history[
             df_history["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
         ].copy()
-        df_history_filtered["seamancode"] = df_history_filtered["seamancode"].astype(str).str.strip()
+        df_history_filtered["seamancode"] = (
+            df_history_filtered["seamancode"].astype(str).str.strip()
+        )
 
         # LEFT JOIN dari base seamen ke history → seaman tanpa history tetap muncul
         df_mutasi_filtered = df_base.merge(
@@ -594,9 +627,29 @@ def filter_history():
     ]
 
     try:
+        # Ambil forecast_month dari query string (default=1 = behaviour normal)
+        forecast_month = request.args.get("forecast_month", 1, type=int)
+
         # Ganti Excel dengan fetch dari database
         df_history = get_mutations_as_data()  # Ini fungsi yang sudah ada
         df_seamen = get_seamen_as_data()  # Untuk ambil nama
+
+        # Untuk forecast mode: filter seamen yang end_date-nya dalam rentang
+        if forecast_month >= 2:
+            today = pd.Timestamp.now(tz="UTC").normalize()
+            range_end = (today + pd.DateOffset(months=forecast_month)).replace(day=1)
+            df_seamen_work = df_seamen.copy()
+            df_seamen_work["end_date"] = pd.to_datetime(
+                df_seamen_work["end_date"], errors="coerce", utc=True
+            )
+            forecast_seaman_codes = df_seamen_work[
+                (~df_seamen_work["last_location"].isin(allowed_status))
+                & (df_seamen_work["end_date"] >= today)
+                & (df_seamen_work["end_date"] <= range_end)
+            ]["seamancode"].unique()
+            df_history = df_history[
+                df_history["seamancode"].isin(forecast_seaman_codes)
+            ]
 
         # Merge untuk dapat nama
         df = df_history.merge(
@@ -678,6 +731,7 @@ def api_get_locked_rotations():
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        forecast_month = request.args.get("forecast_month", 1, type=int)
 
         if not job:
             return (
@@ -687,7 +741,11 @@ def api_get_locked_rotations():
 
         # Fetch dari database menggunakan fungsi di database.py
         # vessel is optional - if provided, filter by both job and vessel
-        locked_data = get_locked_rotations(job=job, vessel=vessel if vessel else None)
+        locked_data = get_locked_rotations(
+            job=job,
+            vessel=vessel if vessel else None,
+            forecast_month=forecast_month,
+        )
 
         return jsonify({"status": "success", "data": locked_data})
 
@@ -731,6 +789,7 @@ def api_save_locked_rotation():
         darat_table = data.get("daratTable")
         locked_seaman_codes = data["lockedSeamanCodes"]
         locked_by = data.get("lockedBy")  # Optional: user info
+        forecast_month = int(data.get("forecastMonth", 1))
 
         # Validasi seaman codes adalah list
         if not isinstance(locked_seaman_codes, list):
@@ -752,6 +811,7 @@ def api_save_locked_rotation():
             locked_seaman_codes=locked_seaman_codes,
             locked_by=locked_by,
             categorization=categorization,
+            forecast_month=forecast_month,
         )
 
         return jsonify(
@@ -769,6 +829,7 @@ def api_unlock_rotation(group_key):
     try:
         job = request.args.get("job", "").upper()
         vessel = request.args.get("vessel", "").upper()
+        forecast_month = request.args.get("forecast_month", 1, type=int)
 
         if not job:
             return (
@@ -783,7 +844,9 @@ def api_unlock_rotation(group_key):
             )
 
         # Unlock menggunakan fungsi di database.py
-        result = unlock_rotation(group_key=group_key, job=job, vessel=vessel)
+        result = unlock_rotation(
+            group_key=group_key, job=job, vessel=vessel, forecast_month=forecast_month
+        )
 
         if result["success"]:
             return jsonify({"status": "success", "message": result["message"]})
@@ -1735,11 +1798,9 @@ def api_vessel_categories():
         from repositories.vessel_repository import build_kelompok
 
         kelompok = build_kelompok()
-        # Hanya kembalikan kategori yang dikelola DB (bukan mt/tb/tk/others)
-        managed_categories = {
-            k: v for k, v in kelompok.items() if k not in ("mt", "tb", "tk", "others")
-        }
-        return jsonify(managed_categories), 200
+        # Kembalikan semua kategori kecuali "others" (status darat, bukan kapal)
+        categories = {k: v for k, v in kelompok.items() if k != "others"}
+        return jsonify(categories), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -3,6 +3,9 @@ import {
   BC_VESSELS,
   CONTAINER_VESSELS,
   MANALAGI_VESSELS,
+  MT_VESSELS,
+  TB_VESSELS,
+  TK_VESSELS,
 } from '../constants/vessels';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -36,5 +39,8 @@ export function useVesselCategories() {
       data?.manalagi ?? Array.from(MANALAGI_VESSELS)
     ),
     bcVessels: new Set<string>(data?.bc ?? Array.from(BC_VESSELS)),
+    mtVessels: new Set<string>(data?.mt ?? Array.from(MT_VESSELS)),
+    tbVessels: new Set<string>(data?.tb ?? Array.from(TB_VESSELS)),
+    tkVessels: new Set<string>(data?.tk ?? Array.from(TK_VESSELS)),
   };
 }

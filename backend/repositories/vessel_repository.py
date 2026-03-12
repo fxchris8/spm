@@ -1,17 +1,9 @@
 """
-Vessel Repository
-Handles data access for vessel group configuration.
-
-Provides helpers to build KELOMPOK (flat ship lists per category) and
-vessel group mappings from the database, replacing hardcoded data in
-rotation.py and ai/model.py.
+Module ini menangani akses data konfigurasi grup kapal dari database,
+termasuk pembangunan KELOMPOK dan mapping vessel group untuk rotasi kapal.
 """
 
 from database.connection import get_rotation_vessels
-
-# ============================================================================
-# STATIC ENTRIES — tidak masuk vessel management (belum/tidak perlu dikelola UI)
-# ============================================================================
 
 _STATIC_KELOMPOK = {
     "mt": ["MT. GLOBAL", "MT. PANTAI LAMONG"],
@@ -39,11 +31,6 @@ _STATIC_KELOMPOK = {
 }
 
 
-# ============================================================================
-# PUBLIC FUNCTIONS
-# ============================================================================
-
-
 def build_kelompok() -> dict:
     """
     Build KELOMPOK dict dari DB (container/manalagi/bc) digabung dengan
@@ -64,9 +51,7 @@ def build_kelompok() -> dict:
                 db_kelompok[cat] = set()
             for ships in v["groups"].values():
                 db_kelompok[cat].update(ships)
-        # Convert set ke sorted list
         db_kelompok = {cat: sorted(ships) for cat, ships in db_kelompok.items()}
-        # DB entries (container/manalagi/bc) + static entries (mt/tb/tk/others)
         return {**db_kelompok, **_STATIC_KELOMPOK}
     except Exception as e:
         print(f"WARN - Could not load kelompok from DB, using static only: {e}")

@@ -1,6 +1,6 @@
 """
-Dashboard Models
-Defines data structures used across the dashboard feature.
+Module ini mendefinisikan struktur data (model) yang digunakan pada fitur dashboard,
+meliputi data pelaut, statistik kapal, dan hasil pencarian kemiripan pelaut.
 """
 
 from dataclasses import dataclass, field
@@ -13,7 +13,6 @@ class SeamanRecord:
     Column names follow the frontend naming convention.
     """
 
-    # Column mapping from DB → frontend display name
     COLUMN_MAP: dict = {
         "age": "UMUR",
         "certificate": "CERTIFICATE",
@@ -27,7 +26,6 @@ class SeamanRecord:
         "end_date": "ACTUAL END DATE",
     }
 
-    # Ordered list of columns to include in the API response
     DISPLAY_COLUMNS: list = [
         "SEAMAN CODE",
         "SEAFARER CODE",
@@ -68,9 +66,9 @@ class SimilarSeamanResult:
     Used as the return type of get_similar_seamen().
     """
 
-    status: str  # "success" or "error"
+    status: str
     data: List[Any] = field(default_factory=list)
-    message: str = ""  # populated on error
+    message: str = ""
 
     def to_dict(self) -> dict:
         result = {"status": self.status}

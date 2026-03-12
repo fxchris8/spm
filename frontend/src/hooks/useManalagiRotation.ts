@@ -30,83 +30,24 @@ interface LockedRotation {
 
 // ============= FETCH FUNCTIONS =============
 
-// Fetch locked rotations for a specific job and vessel
-async function fetchLockedRotations(
-  job: string,
-  vessel: string
-): Promise<Record<string, LockedRotation>> {
-  const response = await fetch(
-    `${API_BASE_URL}/locked-rotations?job=${job}&vessel=${vessel}`
-  );
-  const data = await response.json();
-
-  if (data.status === 'success') {
-    const locksMap: Record<string, LockedRotation> = {};
-
-    data.data.forEach((item: any) => {
-      const allLockedCodes = item.locked_seaman_codes || [];
-      const nahkodaData = item.crew_data?.data || [];
-      const daratData = item.reliever_data?.data || [];
-
-      const cadanganCodes = nahkodaData
-        .map((row: any) => {
-          const code = String(
-            row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
-          ).trim();
-          return code;
-        })
-        .filter((code: string) => code !== '');
-
-      const relieverCodes = daratData
-        .map((row: any) => {
-          const code = String(
-            row.seamancode ||
-              row.SEAMANCODE ||
-              row.Seamancode ||
-              row.SeamanCode ||
-              row.seaman_code ||
-              row.SEAMAN_CODE ||
-              ''
-          ).trim();
-          return code;
-        })
-        .filter((code: string) => code !== '');
-
-      locksMap[item.group_key] = {
-        groupKey: item.group_key,
-        job: item.job,
-        scheduleTable: item.schedule_data,
-        nahkodaTable: item.crew_data,
-        daratTable: item.reliever_data,
-        lockedSeamanCodes: allLockedCodes,
-        lockedCadanganCodes: cadanganCodes,
-        lockedRelieverCodes: relieverCodes,
-        lockedAt: item.locked_at,
-      };
-    });
-
-    return locksMap;
-  }
-
-  return {};
-}
-
 // Fetch cadangan data for a specific group
 async function fetchCadanganData(
   job: string,
   _groupKey: string,
-  lockedCadanganCodes: string[]
+  lockedCadanganCodes: string[],
+  forecastMonth: number = 1,
+  categorization?: string
 ): Promise<any[]> {
   // Build query params
   const params = new URLSearchParams();
   if (lockedCadanganCodes.length > 0) {
     params.append('locked_codes', lockedCadanganCodes.join(','));
+  }
+  if (forecastMonth !== 1) {
+    params.append('forecast_month', String(forecastMonth));
+  }
+  if (categorization) {
+    params.append('categorization', categorization);
   }
 
   const url = `${API_BASE_URL}/cadangan-${job}${
@@ -134,11 +75,19 @@ async function fetchCadanganData(
 async function fetchPromotionCandidates(
   job: string,
   _groupKey: string,
-  lockedCadanganCodes: string[]
+  lockedCadanganCodes: string[],
+  forecastMonth: number = 1,
+  categorization?: string
 ): Promise<any[]> {
   const params = new URLSearchParams();
   if (lockedCadanganCodes.length > 0) {
     params.append('locked_codes', lockedCadanganCodes.join(','));
+  }
+  if (forecastMonth !== 1) {
+    params.append('forecast_month', String(forecastMonth));
+  }
+  if (categorization) {
+    params.append('categorization', categorization);
   }
 
   if (job === 'KKM') {
@@ -181,6 +130,7 @@ async function generateSchedule(payload: {
   darat: string[];
   part: string;
   categorization?: string; // container, manalagi, bc
+  forecastMonth?: number;
 }): Promise<GroupDataResponse> {
   // console.log('Generating schedule with payload MANALAGI:', payload);
   // Buat selected_group digabung dengan vessel
@@ -198,6 +148,7 @@ async function generateSchedule(payload: {
     type: payload.type,
     part: payload.part,
     categorization: payload.categorization,
+    forecast_month: payload.forecastMonth ?? 1,
   };
 
   const response = await fetch(
@@ -236,14 +187,18 @@ async function lockRotation(payload: any): Promise<any> {
 async function unlockRotation(
   groupKey: string,
   job: string,
-  vessel: string
+  vessel: string,
+  forecastMonth: number = 1
 ): Promise<any> {
+  const params = new URLSearchParams({ job, vessel });
+  if (forecastMonth !== 1)
+    params.append('forecast_month', String(forecastMonth));
+
   const response = await fetch(
-    `${API_BASE_URL}/locked-rotations/${groupKey}?job=${job}&vessel=${vessel}`,
+    `${API_BASE_URL}/locked-rotations/${groupKey}?${params.toString()}`,
     {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupKey, job, vessel }),
     }
   );
 
@@ -257,10 +212,73 @@ async function unlockRotation(
 // ============= CUSTOM HOOKS =============
 
 // Hook untuk locked rotations (load once per job and vessel)
-export function useLockedRotations(job: string, vessel: string) {
+export function useLockedRotations(
+  job: string,
+  vessel: string,
+  forecastMonth: number = 1
+) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['manalagi', 'locked-rotations', job, vessel],
-    queryFn: () => fetchLockedRotations(job, vessel),
+    queryKey: ['manalagi', 'locked-rotations', job, vessel, forecastMonth],
+    queryFn: async () => {
+      const params = new URLSearchParams({ job, vessel });
+      if (forecastMonth !== 1)
+        params.append('forecast_month', String(forecastMonth));
+      const response = await fetch(
+        `${API_BASE_URL}/locked-rotations?${params.toString()}`
+      );
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        const locksMap: Record<string, LockedRotation> = {};
+        data.data.forEach((item: any) => {
+          const allLockedCodes = item.locked_seaman_codes || [];
+          const nahkodaData = item.crew_data?.data || [];
+          const daratData = item.reliever_data?.data || [];
+
+          const cadanganCodes = nahkodaData
+            .map((row: any) =>
+              String(
+                row.seamancode ||
+                  row.SEAMANCODE ||
+                  row.Seamancode ||
+                  row.SeamanCode ||
+                  row.seaman_code ||
+                  row.SEAMAN_CODE ||
+                  ''
+              ).trim()
+            )
+            .filter((code: string) => code !== '');
+
+          const relieverCodes = daratData
+            .map((row: any) =>
+              String(
+                row.seamancode ||
+                  row.SEAMANCODE ||
+                  row.Seamancode ||
+                  row.SeamanCode ||
+                  row.seaman_code ||
+                  row.SEAMAN_CODE ||
+                  ''
+              ).trim()
+            )
+            .filter((code: string) => code !== '');
+
+          locksMap[item.group_key] = {
+            groupKey: item.group_key,
+            job: item.job,
+            scheduleTable: item.schedule_data,
+            nahkodaTable: item.crew_data,
+            daratTable: item.reliever_data,
+            lockedSeamanCodes: allLockedCodes,
+            lockedCadanganCodes: cadanganCodes,
+            lockedRelieverCodes: relieverCodes,
+            lockedAt: item.locked_at,
+          };
+        });
+        return locksMap;
+      }
+      return {};
+    },
     staleTime: 5 * 60 * 1000, // Fresh 5 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
   });
@@ -279,11 +297,26 @@ export function useMutasiData(
   groupKey: string | null,
   groups: Record<string, string[]>,
   lockedCadanganCodes: string[],
-  enabled: boolean = true
+  enabled: boolean = true,
+  forecastMonth: number = 1
 ) {
-  const { containerVessels, manalagiVessels } = useVesselCategories();
+  const {
+    containerVessels,
+    manalagiVessels,
+    bcVessels,
+    mtVessels,
+    tbVessels,
+    tkVessels,
+  } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['manalagi', 'mutasi-data', job, groupKey, lockedCadanganCodes],
+    queryKey: [
+      'manalagi',
+      'mutasi-data',
+      job,
+      groupKey,
+      lockedCadanganCodes,
+      forecastMonth,
+    ],
     queryFn: async () => {
       if (!groupKey) return [];
 
@@ -292,6 +325,9 @@ export function useMutasiData(
 
       if (lockedCadanganCodes.length > 0) {
         params.append('locked_codes', lockedCadanganCodes.join(','));
+      }
+      if (forecastMonth !== 1) {
+        params.append('forecast_month', String(forecastMonth));
       }
 
       const response = await fetch(
@@ -312,22 +348,15 @@ export function useMutasiData(
             if (vlist.length > 0) {
               const lastVessel = vlist[vlist.length - 1]; // Vessel terakhir di array
 
+              const isNonFleet =
+                bcVessels.has(lastVessel) ||
+                mtVessels.has(lastVessel) ||
+                tbVessels.has(lastVessel) ||
+                tkVessels.has(lastVessel);
               if (type === 'senior' || type === 'junior') {
-                // Untuk container: SKIP jika last vessel adalah manalagi
-                if (manalagiVessels.has(lastVessel)) {
-                  // console.log(
-                  //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Manalagi)`
-                  // );
-                  return null; // Skip seaman ini
-                }
+                if (manalagiVessels.has(lastVessel) || isNonFleet) return null;
               } else if (type === 'manalagi') {
-                // Untuk manalagi: SKIP jika last vessel adalah container
-                if (containerVessels.has(lastVessel)) {
-                  // console.log(
-                  //   `❌ Skipping ${seamancode} - last vessel: ${lastVessel} (Container)`
-                  // );
-                  return null; // Skip seaman ini
-                }
+                if (containerVessels.has(lastVessel) || isNonFleet) return null;
 
                 // New Condition: Minimal harus ada 1 history di kapal Manalagi
                 const hasManalagiHistory = vlist.some((v: string) =>
@@ -379,11 +408,12 @@ export function usePotentialPromotion(
   job: string,
   groupKey: string | null,
   groups: Record<string, string[]>,
-  enabled: boolean = true
+  enabled: boolean = true,
+  forecastMonth: number = 1
 ) {
   const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['manalagi', 'potential-promotion', job, groupKey],
+    queryKey: ['manalagi', 'potential-promotion', job, groupKey, forecastMonth],
     queryFn: async () => {
       if (!groupKey) return [];
 
@@ -524,22 +554,28 @@ export function useCadanganData(
   job: string,
   groupKey: string | null,
   lockedCadanganCodes: string[],
-  enabled: boolean = true
+  enabled: boolean = true,
+  forecastMonth: number = 1,
+  categorization?: string
 ) {
-  const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['manalagi', 'cadangan-data', job, groupKey, lockedCadanganCodes],
-    queryFn: async () => {
-      const data = await fetchCadanganData(job, groupKey!, lockedCadanganCodes);
-      // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi
-      return data.filter((item: any) => {
-        const hist = item.history || item.vessels || '';
-        const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(manalagiVessels).some((v: string) =>
-          histStr.includes(v)
-        );
-      });
-    },
+    queryKey: [
+      'manalagi',
+      'cadangan-data',
+      job,
+      groupKey,
+      lockedCadanganCodes,
+      forecastMonth,
+      categorization,
+    ],
+    queryFn: () =>
+      fetchCadanganData(
+        job,
+        groupKey!,
+        lockedCadanganCodes,
+        forecastMonth,
+        categorization
+      ),
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
@@ -557,9 +593,10 @@ export function usePromotionCandidates(
   job: string,
   groupKey: string | null,
   lockedCadanganCodes: string[],
-  enabled: boolean = true
+  enabled: boolean = true,
+  forecastMonth: number = 1,
+  categorization?: string
 ) {
-  const { manalagiVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: [
       'manalagi',
@@ -567,22 +604,17 @@ export function usePromotionCandidates(
       job,
       groupKey,
       lockedCadanganCodes,
+      forecastMonth,
+      categorization,
     ],
-    queryFn: async () => {
-      const data = await fetchPromotionCandidates(
+    queryFn: () =>
+      fetchPromotionCandidates(
         job,
         groupKey!,
-        lockedCadanganCodes
-      );
-      // ✅ FILTER: Minimal harus ada 1 history di kapal Manalagi
-      return data.filter((item: any) => {
-        const hist = item.history || item.vessels || '';
-        const histStr = Array.isArray(hist) ? hist.join(' ') : String(hist);
-        return Array.from(manalagiVessels).some((v: string) =>
-          histStr.includes(v)
-        );
-      });
-    },
+        lockedCadanganCodes,
+        forecastMonth,
+        categorization
+      ),
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
@@ -646,11 +678,13 @@ export function useLockRotation() {
       groupKey,
       job,
       vessel,
+      forecastMonth = 1,
     }: {
       groupKey: string;
       job: string;
       vessel: string;
-    }) => unlockRotation(groupKey, job, vessel),
+      forecastMonth?: number;
+    }) => unlockRotation(groupKey, job, vessel, forecastMonth),
     onSuccess: (_, variables) => {
       // Invalidate locked rotations query
       queryClient.invalidateQueries({

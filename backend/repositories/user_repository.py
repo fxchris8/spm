@@ -1,3 +1,8 @@
+"""
+Module ini menangani operasi database untuk manajemen pengguna,
+meliputi pencarian dan pembuatan akun pengguna.
+"""
+
 from sqlalchemy import text
 
 from database.database import engine
@@ -20,7 +25,6 @@ def get_user_by_username(username):
             result = conn.execute(query, {"username": username}).mappings().first()
             return result
     except Exception as e:
-        # print(f"[ERROR] Failed to fetch user {username}: {e}")
         raise e
 
 
@@ -41,7 +45,6 @@ def get_user_by_id(user_id):
             result = conn.execute(query, {"user_id": user_id}).mappings().first()
             return result
     except Exception as e:
-        # print(f"[ERROR] Failed to fetch user by id {user_id}: {e}")
         raise e
 
 
@@ -76,5 +79,4 @@ def create_user(username, email, password_hash, role="USER", is_active=True):
             conn.commit()
             return result
     except Exception as e:
-        # print(f"[ERROR] Failed to create user {username}: {e}")
         raise e

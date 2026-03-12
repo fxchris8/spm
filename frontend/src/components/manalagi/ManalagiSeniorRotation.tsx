@@ -64,6 +64,7 @@ export function ManalagiSeniorRotation({
   const [error, setError] = useState<string>('');
   const [showOnlyMatchMutasi, setShowOnlyMatchMutasi] = useState(false);
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
+  const [forecastMonth, setForecastMonth] = useState<1 | 2>(1);
 
   // Modal states
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -71,20 +72,33 @@ export function ManalagiSeniorRotation({
 
   const queryClient = useQueryClient();
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
-  const { lockedRotations } = useLockedRotations(job, vessel);
+  const { lockedRotations } = useLockedRotations(job, vessel, forecastMonth);
+  // Always fetch fm=1 locks for cross-month awareness (React Query caches, no extra request when already on fm=1)
+  const { lockedRotations: lockedRotationsFm1 } = useLockedRotations(
+    job,
+    vessel,
+    1
+  );
 
-  // Calculate locked codes from all rotations
+  // Calculate locked codes: current fm + fm=1 main crew (excluded from pool to prevent double-locking)
   const lockedCadanganCodes = useMemo(() => {
-    return Object.values(lockedRotations)
+    const currentCodes = Object.values(lockedRotations)
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
       .flatMap(lock => lock.lockedCadanganCodes || []);
-  }, [lockedRotations, job]);
+    if (forecastMonth >= 2) {
+      const fm1MainCodes = Object.values(lockedRotationsFm1)
+        .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
+        .flatMap(lock => lock.lockedCadanganCodes || []);
+      return [...new Set([...currentCodes, ...fm1MainCodes])];
+    }
+    return currentCodes;
+  }, [lockedRotations, lockedRotationsFm1, job, forecastMonth]);
 
-  // Calculate locked reliever codes (from daratTable) - should NOT be excluded, just marked
+  // Calculate locked reliever codes: current fm (other groups) + fm=1 relievers (shown with marker, NOT excluded)
   const lockedRelieverCodes = useMemo(() => {
-    return Object.values(lockedRotations)
+    const currentFmCodes = Object.values(lockedRotations)
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
-      .filter(lock => lock.groupKey !== selectedGroup) // Exclude current group
+      .filter(lock => lock.groupKey !== selectedGroup)
       .flatMap(lock => {
         if (lock.daratTable && lock.daratTable.data) {
           return lock.daratTable.data.map((row: any) =>
@@ -99,7 +113,14 @@ export function ManalagiSeniorRotation({
         }
         return [];
       });
-  }, [lockedRotations, job, selectedGroup]);
+    if (forecastMonth >= 2) {
+      const fm1RelieverCodes = Object.values(lockedRotationsFm1)
+        .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
+        .flatMap(lock => lock.lockedRelieverCodes || []);
+      return [...new Set([...currentFmCodes, ...fm1RelieverCodes])];
+    }
+    return currentFmCodes;
+  }, [lockedRotations, lockedRotationsFm1, job, selectedGroup, forecastMonth]);
 
   // Check if all groups are locked for current job
   const areAllGroupsLocked = useMemo(() => {
@@ -118,7 +139,9 @@ export function ManalagiSeniorRotation({
     job,
     selectedGroup,
     lockedCadanganCodes,
-    !!selectedGroup
+    !!selectedGroup,
+    forecastMonth,
+    categorization
   );
 
   // Lazy load promotion candidates
@@ -127,7 +150,9 @@ export function ManalagiSeniorRotation({
       job,
       selectedGroup,
       lockedCadanganCodes,
-      !!selectedGroup
+      !!selectedGroup,
+      forecastMonth,
+      categorization
     );
 
   // Lazy load mutasi data
@@ -137,12 +162,19 @@ export function ManalagiSeniorRotation({
     selectedGroup,
     groups,
     lockedCadanganCodes,
-    !!selectedGroup
+    !!selectedGroup,
+    forecastMonth
   );
 
   // Lazy load potential promotion
   const { potentialData: potentialRawData, loading: loadingPotential } =
-    usePotentialPromotion(job, selectedGroup, groups, !!selectedGroup);
+    usePotentialPromotion(
+      job,
+      selectedGroup,
+      groups,
+      !!selectedGroup,
+      forecastMonth
+    );
 
   // Mutations
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();
@@ -178,6 +210,16 @@ export function ManalagiSeniorRotation({
     setSelectedOptional([]);
     setError('');
   }, [job]);
+
+  // Reset state saat ganti forecast month tab
+  useEffect(() => {
+    setSelectedGroup(null);
+    setScheduleTable(null);
+    setNahkodaTable(null);
+    setDaratTable(null);
+    setSelectedStandby([]);
+    setSelectedOptional([]);
+  }, [forecastMonth]);
 
   // Check if current group is locked
   useEffect(() => {
@@ -297,6 +339,7 @@ export function ManalagiSeniorRotation({
         nahkodaTable,
         daratTable,
         lockedSeamanCodes,
+        forecastMonth,
       });
 
       setIsCurrentGroupLocked(true);
@@ -339,6 +382,7 @@ export function ManalagiSeniorRotation({
         groupKey: selectedGroup,
         job,
         vessel,
+        forecastMonth,
       });
 
       toast.success(`Rotasi untuk ${selectedGroup} berhasil di-unlock!`);
@@ -387,6 +431,7 @@ export function ManalagiSeniorRotation({
         type: type,
         part: part,
         categorization: categorization,
+        forecastMonth,
       });
 
       if (result.error) {
@@ -478,6 +523,13 @@ export function ManalagiSeniorRotation({
     });
   };
 
+  // Get forecast month label (e.g. "April 2026")
+  const getForecastMonthLabel = (offset: number) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + offset);
+    return date.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  };
+
   // Get job display name
   const getJobDisplayName = (job: string): string => {
     switch (job) {
@@ -552,32 +604,37 @@ export function ManalagiSeniorRotation({
               1. All groups locked AND not yet submitted (first submit)
               2. All groups locked AND has pending changes (resubmit after CHANGE)
             */}
-            {areAllGroupsLocked && (!isSubmitted || hasChanges) && (
-              <Button
-                color="success"
-                onClick={handleSubmitAllRotations}
-                disabled={loadingSubmit}
-              >
-                {loadingSubmit ? (
-                  <>
-                    <Spinner size="sm" light className="mr-2" />
-                    Submitting...
-                  </>
-                ) : hasChanges ? (
-                  `Kirim Perubahan (${changesCount})`
-                ) : (
-                  `Kirim Rotasi`
-                )}
-              </Button>
-            )}
+            {forecastMonth === 1 &&
+              areAllGroupsLocked &&
+              (!isSubmitted || hasChanges) && (
+                <Button
+                  color="success"
+                  onClick={handleSubmitAllRotations}
+                  disabled={loadingSubmit}
+                >
+                  {loadingSubmit ? (
+                    <>
+                      <Spinner size="sm" light className="mr-2" />
+                      Submitting...
+                    </>
+                  ) : hasChanges ? (
+                    `Kirim Perubahan (${changesCount})`
+                  ) : (
+                    `Kirim Rotasi`
+                  )}
+                </Button>
+              )}
 
             {/* Show submitted status - only when submitted and no pending changes */}
-            {areAllGroupsLocked && isSubmitted && !hasChanges && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-                <HiLockClosed className="h-5 w-5" />
-                <span className="font-medium">Terkirim</span>
-              </div>
-            )}
+            {forecastMonth === 1 &&
+              areAllGroupsLocked &&
+              isSubmitted &&
+              !hasChanges && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+                  <HiLockClosed className="h-5 w-5" />
+                  <span className="font-medium">Terkirim</span>
+                </div>
+              )}
           </div>
           <p className="text-gray-600">
             Generate dan kelola jadwal rotasi MANALAGI {getJobDisplayName(job)}
@@ -591,7 +648,7 @@ export function ManalagiSeniorRotation({
         )}
 
         {/* Pending Changes Alert */}
-        {hasChanges && affectedGroups.length > 0 && (
+        {forecastMonth === 1 && hasChanges && affectedGroups.length > 0 && (
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-1">
@@ -613,11 +670,32 @@ export function ManalagiSeniorRotation({
           </div>
         )}
 
+        {/* Forecast Month Tabs */}
+        <div className="flex items-center gap-1 mb-6 bg-red-50 border border-red-100 rounded-full p-1 w-fit">
+          {([1, 2] as const).map(month => (
+            <button
+              key={month}
+              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                forecastMonth === month
+                  ? 'bg-red-500 text-white shadow-sm'
+                  : 'text-red-400 hover:text-red-600'
+              }`}
+              onClick={() => {
+                if (forecastMonth !== month) setForecastMonth(month);
+              }}
+            >
+              {month === 1 ? 'Bulan Depan' : `${month} Bulan Depan`} (
+              {getForecastMonthLabel(month)})
+            </button>
+          ))}
+        </div>
+
         {/* Card for group selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {Object.entries(groups).map(([groupKey, ships]) => {
             const isLocked = !!lockedRotations[groupKey];
-            const hasPendingChange = affectedGroups.includes(groupKey);
+            const hasPendingChange =
+              forecastMonth === 1 && affectedGroups.includes(groupKey);
 
             return (
               <div key={groupKey} className="relative">
@@ -691,7 +769,7 @@ export function ManalagiSeniorRotation({
                             <tr>
                               <th className="px-4 py-3">Seaman Code</th>
                               <th className="px-4 py-3">Name</th>
-                              <th className="px-4 py-3">Vessels</th>
+                              <th className="px-4 py-3">History Vessels</th>
                               <th className="px-4 py-3">Last Location</th>
                               <th className="px-4 py-3">Match Count</th>
                             </tr>
@@ -707,7 +785,8 @@ export function ManalagiSeniorRotation({
                                 </td>
                                 <td className="px-4 py-3">{item.name}</td>
                                 <td className="px-4 py-3 text-xs">
-                                  {item.vessels || '----- [BELUM ADA DATA MUTASI] -----'}
+                                  {item.vessels ||
+                                    '----- [BELUM ADA DATA MUTASI] -----'}
                                 </td>
                                 <td className="px-4 py-3">
                                   {item.last_location}

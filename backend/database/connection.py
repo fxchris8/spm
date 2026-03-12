@@ -160,7 +160,9 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
 # ============================================================================
 
 
-def get_locked_rotations(job=None, vessel=None, categorization=None):
+def get_locked_rotations(
+    job=None, vessel=None, categorization=None, forecast_month=None
+):
     try:
         params = {}
         conditions = ["is_active = TRUE"]
@@ -176,6 +178,10 @@ def get_locked_rotations(job=None, vessel=None, categorization=None):
         if categorization:
             conditions.append("categorization = :categorization")
             params["categorization"] = categorization
+
+        if forecast_month is not None:
+            conditions.append("COALESCE(forecast_month, 1) = :forecast_month")
+            params["forecast_month"] = forecast_month
 
         query = f"""
             SELECT id, group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
@@ -234,6 +240,7 @@ def save_locked_rotation(
     locked_seaman_codes,
     locked_by=None,
     categorization=None,
+    forecast_month=1,
 ):
     try:
         # Convert dict to JSON string (untuk TEXT column)
@@ -241,20 +248,21 @@ def save_locked_rotation(
         crew_json = json.dumps(crew_data)
         reliever_json = json.dumps(reliever_data) if reliever_data else None
 
-        # First, deactivate any existing active lock for this group+job+vessel
+        # First, deactivate any existing active lock for this group+job+vessel+forecast_month
         deactivate_query = """
             UPDATE locked_rotation_schedules
             SET is_active = FALSE, unlocked_at = NOW()
-            WHERE group_key = :group_key AND job = :job AND vessel = :vessel AND is_active = TRUE
+            WHERE group_key = :group_key AND job = :job AND vessel = :vessel
+              AND COALESCE(forecast_month, 1) = :forecast_month AND is_active = TRUE
         """
 
         # Then insert new lock
         insert_query = """
             INSERT INTO locked_rotation_schedules
             (group_key, job, vessel, categorization, schedule_data, crew_data, reliever_data,
-             locked_seaman_codes, locked_by, is_active, locked_at)
+             locked_seaman_codes, locked_by, is_active, locked_at, forecast_month)
             VALUES (:group_key, :job, :vessel, :categorization, :schedule_data, :crew_data, :reliever_data,
-                    :locked_seaman_codes, :locked_by, TRUE, NOW())
+                    :locked_seaman_codes, :locked_by, TRUE, NOW(), :forecast_month)
             RETURNING id
         """
 
@@ -262,7 +270,12 @@ def save_locked_rotation(
             # Deactivate existing
             conn.execute(
                 text(deactivate_query),
-                {"group_key": group_key, "job": job, "vessel": vessel},
+                {
+                    "group_key": group_key,
+                    "job": job,
+                    "vessel": vessel,
+                    "forecast_month": forecast_month,
+                },
             )
 
             # Insert new (dengan JSON string, bukan JSONB)
@@ -278,6 +291,7 @@ def save_locked_rotation(
                     "reliever_data": reliever_json,  # JSON string or None
                     "locked_seaman_codes": locked_seaman_codes,
                     "locked_by": locked_by,
+                    "forecast_month": forecast_month,
                 },
             )
 
@@ -285,7 +299,7 @@ def save_locked_rotation(
             new_id = result.fetchone()[0]
 
         print(
-            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}, cat {categorization}) with ID {new_id}"
+            f"DONE - Saved locked rotation for {group_key} ({job}, vessel {vessel}, cat {categorization}, forecast_month {forecast_month}) with ID {new_id}"
         )
         return {
             "success": True,
@@ -298,18 +312,25 @@ def save_locked_rotation(
         raise Exception(f"Failed to save locked rotation: {str(e)}")
 
 
-def unlock_rotation(group_key, job, vessel):
+def unlock_rotation(group_key, job, vessel, forecast_month=1):
     try:
         query = """
             UPDATE locked_rotation_schedules
             SET is_active = FALSE, unlocked_at = NOW()
-            WHERE group_key = :group_key AND job = :job AND vessel = :vessel AND is_active = TRUE
+            WHERE group_key = :group_key AND job = :job AND vessel = :vessel
+              AND COALESCE(forecast_month, 1) = :forecast_month AND is_active = TRUE
             RETURNING id
         """
 
         with engine.connect() as conn:
             result = conn.execute(
-                text(query), {"group_key": group_key, "job": job, "vessel": vessel}
+                text(query),
+                {
+                    "group_key": group_key,
+                    "job": job,
+                    "vessel": vessel,
+                    "forecast_month": forecast_month,
+                },
             )
             conn.commit()
 

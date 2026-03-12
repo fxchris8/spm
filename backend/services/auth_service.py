@@ -1,10 +1,18 @@
+"""
+Module ini menyediakan layanan autentikasi, termasuk login, registrasi, generate JWT token, dan verifikasi user.
+"""
+
 import datetime
 import os
 
 import bcrypt
 import jwt
 
-from repositories.user_repository import create_user, get_user_by_username
+from repositories.user_repository import (
+    create_user,
+    get_user_by_id,
+    get_user_by_username,
+)
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 
@@ -13,7 +21,6 @@ def login_user(username, password):
     """
     Authenticate user and return JWT token if successful.
     """
-    # 1. Get user from DB
     user = get_user_by_username(username)
 
     if not user:
@@ -22,15 +29,9 @@ def login_user(username, password):
     if not user["is_active"]:
         return {"error": "Account is inactive"}, 401
 
-    # 2. Verify Password
-    # Stored password should be a hash.
-    # Note: If existing users have plain text passwords, this will fail.
-    # We assume 'password' column stores bcrypt hash string.
     stored_password = user["password"]
 
-    # Check if password matches
     if check_password(password, stored_password):
-        # 3. Generate Token
         token = generate_token(str(user["id"]), user["username"], user["role"])
         return {
             "token": token,
@@ -71,8 +72,7 @@ def generate_token(user_id, username, role):
         "user_id": user_id,
         "username": username,
         "role": role,
-        "exp": datetime.datetime.utcnow()
-        + datetime.timedelta(hours=6),  # Token expires in 6 hours
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=6),
         "iat": datetime.datetime.utcnow(),
     }
 
@@ -84,7 +84,6 @@ def register_user(username, email, password, role="USER"):
     """
     Register user service (helper for seeding).
     """
-    # Check if user already exists
     existing_user = get_user_by_username(username)
     if existing_user:
         return {"error": "Username already exists"}
@@ -110,9 +109,6 @@ def get_current_user(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
 
-        # Fetch full user data from DB to include email
-        from repositories.user_repository import get_user_by_id
-
         user = get_user_by_id(user_id)
 
         if not user:
@@ -125,8 +121,6 @@ def get_current_user(token: str):
             "role": user["role"],
         }
     except jwt.ExpiredSignatureError:
-        # print("[AUTH] Token expired")
         return None
     except jwt.InvalidTokenError:
-        # print("[AUTH] Invalid token")
         return None

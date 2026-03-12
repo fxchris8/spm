@@ -1,6 +1,5 @@
 """
-Search Service
-Handles business logic for manual search and AI recommendations.
+Module ini menyediakan business logic untuk pencarian manual dan rekomendasi AI terhadap kandidat seamen.
 """
 
 from ai.model import (
@@ -23,11 +22,9 @@ def manual_search(search_params):
         List of recommended seamen with their details
     """
     try:
-        # Fetch data from database
         df = get_seamen_for_search()
 
-        # Apply vessel type filters
-        type_ = search_params["TYPE"].lower()  # Convert to lowercase for KELOMPOK
+        type_ = search_params["TYPE"].lower()
         part = search_params.get("PART")
 
         df = filter_in_vessel(df, type_)
@@ -36,18 +33,15 @@ def manual_search(search_params):
         else:
             df = vessel_group_id_deck(df, type_)
 
-        # Extract search parameters
         bagian = search_params["BAGIAN"]
         vessel_name = search_params["VESSEL"]
         age_range = (int(search_params["LB"]), int(search_params["UB"]))
 
-        # Search candidates based on criteria
         filtered_candidates = search_candidate(df, bagian, vessel_name, age_range)
 
         if filtered_candidates.empty:
             return []
 
-        # Get AI recommendations
         recommendations = getRecommendation(
             df,
             search_params,
@@ -58,7 +52,6 @@ def manual_search(search_params):
             age_range,
         )
 
-        # Format result with required fields
         result = recommendations[
             [
                 "seamancode",
