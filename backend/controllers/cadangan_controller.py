@@ -13,7 +13,7 @@ from services import (
 )
 
 
-def get_cadangan_kkm_controller():
+def get_cadangan_kkm_controller(forecast_month: int = 1, categorization: str | None = None):
     """
     Controller for GET /api/cadangan-KKM endpoint.
 
@@ -21,13 +21,13 @@ def get_cadangan_kkm_controller():
         JSON: Cadangan crew data for KKM
     """
     try:
-        data = get_cadangan_kkm_data()
+        data = get_cadangan_kkm_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_cadangan_nakhoda_controller():
+def get_cadangan_nakhoda_controller(forecast_month: int = 1, categorization: str | None = None):
     """
     Controller for GET /api/cadangan-nakhoda endpoint.
 
@@ -35,13 +35,13 @@ def get_cadangan_nakhoda_controller():
         JSON: Cadangan crew data for NAKHODA
     """
     try:
-        data = get_cadangan_nakhoda_data()
+        data = get_cadangan_nakhoda_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_cadangan_mualim_i_controller():
+def get_cadangan_mualim_i_controller(forecast_month: int = 1, categorization: str | None = None):
     """
     Controller for GET /api/cadangan-mualimI endpoint.
 
@@ -49,13 +49,13 @@ def get_cadangan_mualim_i_controller():
         JSON: Cadangan crew data for MUALIM I
     """
     try:
-        data = get_cadangan_mualim_i_data()
+        data = get_cadangan_mualim_i_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def get_cadangan_masinis_ii_controller():
+def get_cadangan_masinis_ii_controller(forecast_month: int = 1, categorization: str | None = None):
     """
     Controller for GET /api/cadangan-masinisII endpoint.
 
@@ -63,7 +63,7 @@ def get_cadangan_masinis_ii_controller():
         JSON: Cadangan crew data for MASINIS II
     """
     try:
-        data = get_cadangan_masinis_ii_data()
+        data = get_cadangan_masinis_ii_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
