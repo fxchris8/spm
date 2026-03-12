@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
     job VARCHAR(50),
     vessel VARCHAR(50),
     categorization VARCHAR(100),
+    forecast_month INTEGER DEFAULT 1,
     schedule_data TEXT,
     crew_data TEXT,
     reliever_data TEXT,
