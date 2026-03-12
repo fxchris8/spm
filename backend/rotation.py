@@ -78,8 +78,8 @@ def get_nganggur(job):
 # ============================================================================
 
 
-def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA"):
-    """Tambahkan parameter job dengan default NAKHODA"""
+def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA", month_offset: int = 1):
+    """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
 
     filtered_df = filter_in_vessel(local_df, type)
@@ -102,9 +102,9 @@ def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA")
     # Daftar kapal unik
     kapal_list = filtered_df_nahkoda["last_location"].dropna().unique()
 
-    # Ambil bulan sekarang + 1
+    # Ambil bulan target berdasarkan month_offset (1 = bulan depan, 2 = 2 bulan ke depan, dst)
     today = pd.Timestamp.today()
-    min_start_date = (today + pd.DateOffset(months=1)).replace(day=1)
+    min_start_date = (today + pd.DateOffset(months=month_offset)).replace(day=1)
     min_start_month = min_start_date.strftime("%B")
     min_start_year = min_start_date.year
 
