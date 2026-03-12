@@ -73,19 +73,28 @@ export function ManalagiSeniorRotation({
   const queryClient = useQueryClient();
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
   const { lockedRotations } = useLockedRotations(job, vessel, forecastMonth);
+  // Always fetch fm=1 locks for cross-month awareness (React Query caches, no extra request when already on fm=1)
+  const { lockedRotations: lockedRotationsFm1 } = useLockedRotations(job, vessel, 1);
 
-  // Calculate locked codes from all rotations
+  // Calculate locked codes: current fm + fm=1 main crew (excluded from pool to prevent double-locking)
   const lockedCadanganCodes = useMemo(() => {
-    return Object.values(lockedRotations)
+    const currentCodes = Object.values(lockedRotations)
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
       .flatMap(lock => lock.lockedCadanganCodes || []);
-  }, [lockedRotations, job]);
+    if (forecastMonth >= 2) {
+      const fm1MainCodes = Object.values(lockedRotationsFm1)
+        .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
+        .flatMap(lock => lock.lockedCadanganCodes || []);
+      return [...new Set([...currentCodes, ...fm1MainCodes])];
+    }
+    return currentCodes;
+  }, [lockedRotations, lockedRotationsFm1, job, forecastMonth]);
 
-  // Calculate locked reliever codes (from daratTable) - should NOT be excluded, just marked
+  // Calculate locked reliever codes: current fm (other groups) + fm=1 relievers (shown with marker, NOT excluded)
   const lockedRelieverCodes = useMemo(() => {
-    return Object.values(lockedRotations)
+    const currentFmCodes = Object.values(lockedRotations)
       .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
-      .filter(lock => lock.groupKey !== selectedGroup) // Exclude current group
+      .filter(lock => lock.groupKey !== selectedGroup)
       .flatMap(lock => {
         if (lock.daratTable && lock.daratTable.data) {
           return lock.daratTable.data.map((row: any) =>
@@ -100,7 +109,14 @@ export function ManalagiSeniorRotation({
         }
         return [];
       });
-  }, [lockedRotations, job, selectedGroup]);
+    if (forecastMonth >= 2) {
+      const fm1RelieverCodes = Object.values(lockedRotationsFm1)
+        .filter(lock => lock.job?.toUpperCase() === job.toUpperCase())
+        .flatMap(lock => lock.lockedRelieverCodes || []);
+      return [...new Set([...currentFmCodes, ...fm1RelieverCodes])];
+    }
+    return currentFmCodes;
+  }, [lockedRotations, lockedRotationsFm1, job, selectedGroup, forecastMonth]);
 
   // Check if all groups are locked for current job
   const areAllGroupsLocked = useMemo(() => {
