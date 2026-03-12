@@ -1,3 +1,8 @@
+"""
+Module ini menangani autentikasi pengguna, meliputi login, register, logout,
+dan pengecekan sesi aktif. Token JWT disimpan sebagai HttpOnly cookie.
+"""
+
 import os
 
 from flask import jsonify, make_response, request
@@ -30,25 +35,22 @@ def login_controller():
         token = result.get("token")
         user = result.get("user")
 
-        # Build response — return user info but NOT the token
         response = make_response(
             jsonify({"message": "Login successful", "user": user}), 200
         )
 
-        # Set HttpOnly cookie (not accessible via JS)
         response.set_cookie(
             "token",
             token,
             httponly=True,
             samesite="Lax",
-            secure=IS_PRODUCTION,  # True in production (HTTPS only)
-            max_age=6 * 60 * 60,  # 6 hours, matches JWT expiry
+            secure=IS_PRODUCTION,
+            max_age=6 * 60 * 60,
         )
 
         return response
-    except Exception:
-        # print(f"[ERROR] Login failed: {e}")
-        return jsonify({"message": "Internal Server Error"}), 500
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def register_controller():
@@ -72,14 +74,12 @@ def register_controller():
         if "error" in result:
             return jsonify(result), 400
 
-        # Convert result row to dict if needed (SQLAlchemy Row)
         return (
             jsonify({"message": "User created successfully", "username": username}),
             201,
         )
-    except Exception:
-        # print(f"[ERROR] Register failed: {e}")
-        return jsonify({"message": "Internal Server Error"}), 500
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def logout_controller():
@@ -94,12 +94,11 @@ def logout_controller():
             httponly=True,
             samesite="Lax",
             secure=IS_PRODUCTION,
-            max_age=0,  # Immediately expire
+            max_age=0,
         )
         return response
-    except Exception:
-        # print(f"[ERROR] Logout failed: {e}")
-        return jsonify({"message": "Internal Server Error"}), 500
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def me_controller():
@@ -117,6 +116,5 @@ def me_controller():
             return jsonify({"message": "Invalid or expired token"}), 401
 
         return jsonify({"user": user}), 200
-    except Exception:
-        # print(f"[ERROR] Me endpoint failed: {e}")
-        return jsonify({"message": "Internal Server Error"}), 500
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

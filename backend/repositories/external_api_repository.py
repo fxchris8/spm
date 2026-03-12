@@ -1,6 +1,6 @@
 """
-External API Repository
-Handles fetching data from external API (API Pusat).
+Module ini menangani pengambilan data dari API eksternal (API Pusat),
+meliputi data seamen dan data mutasi pelaut.
 """
 
 import json

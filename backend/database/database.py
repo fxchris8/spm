@@ -1,6 +1,6 @@
 """
-Database Connection Module
-Handles database connection and external API configuration.
+Module ini mengelola koneksi ke database dan konfigurasi API eksternal
+menggunakan SQLAlchemy engine dan environment variables.
 """
 
 import os
@@ -12,21 +12,14 @@ from sqlalchemy.pool import NullPool
 # Load environment variables
 load_dotenv()
 
-# Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise Exception("DATABASE_URL not found in .env file")
 
-# External API configuration
 API_BASE_URL_IT = os.getenv("API_BASE_URL_IT")
 API_BASE_URL_PUSAT = os.getenv("API_BASE_URL_PUSAT")
 
-# Create database engine
 engine = create_engine(DATABASE_URL, poolclass=NullPool, echo=False)
-
-print("=" * 60)
-print("DATABASE CONNECTION MODULE")
-print("=" * 60)
 
 
 def get_db_connection():

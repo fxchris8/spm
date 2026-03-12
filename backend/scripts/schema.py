@@ -1,5 +1,6 @@
-# @faw_sd
-# Script untuk membuat database dan semua tabel yang dibutuhkan
+"""
+Module ini digunakan untuk membuat database dan semua tabel yang dibutuhkan oleh aplikasi.
+"""
 
 import os
 
@@ -8,10 +9,6 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 load_dotenv()
-
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
 
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
@@ -29,18 +26,12 @@ print(f"Host: {DB_HOST}:{DB_PORT}")
 print(f"User: {DB_USER}")
 print("=" * 60)
 
-# ============================================================================
-# SQL SCRIPTS
-# ============================================================================
-
-# Create database
 CREATE_DATABASE_SQL = f"""
 -- Create database if not exists
 SELECT 'CREATE DATABASE "{DB_NAME}"'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{DB_NAME}');
 """
 
-# Table: seamen
 CREATE_TABLE_SEAMEN = """
 -- Table: seamen
 CREATE TABLE IF NOT EXISTS seamen (
@@ -83,7 +74,6 @@ CREATE INDEX IF NOT EXISTS idx_seamen_last_position ON seamen(last_position);
 CREATE INDEX IF NOT EXISTS idx_seamen_name ON seamen(name);
 """
 
-# Table: mutations
 CREATE_TABLE_MUTATIONS = """
 -- Table: mutations
 CREATE TABLE IF NOT EXISTS mutations (
@@ -116,7 +106,6 @@ CREATE INDEX IF NOT EXISTS idx_mutations_transactiondate ON mutations(transactio
 CREATE INDEX IF NOT EXISTS idx_mutations_jenis ON mutations(jenis);
 """
 
-# Table: locked_rotation_schedules
 CREATE_TABLE_LOCKED_ROTATIONS = """
 -- Table: locked_rotation_schedules
 CREATE TABLE IF NOT EXISTS locked_rotation_schedules (
@@ -151,7 +140,6 @@ CREATE INDEX IF NOT EXISTS idx_locked_rotation_categorization
     ON locked_rotation_schedules(categorization);
 """
 
-# Table: sync_logs
 CREATE_TABLE_SYNC_LOGS = """
 -- Table: sync_logs
 CREATE TABLE IF NOT EXISTS sync_logs (
@@ -180,7 +168,6 @@ FROM sync_logs
 ORDER BY table_name, sync_timestamp DESC;
 """
 
-# Table: vessels
 CREATE_TABLE_VESSELS = """
 -- Table: vessels
 CREATE TABLE IF NOT EXISTS vessels (
@@ -201,7 +188,6 @@ CREATE INDEX IF NOT EXISTS idx_vessels_type ON vessels(type);
 CREATE INDEX IF NOT EXISTS idx_vessels_job_title ON vessels(job_title);
 """
 
-# Table: vessels_groups
 CREATE_TABLE_VESSELS_GROUPS = """
 -- Table: vessels_groups
 CREATE TABLE IF NOT EXISTS vessels_groups (
@@ -224,7 +210,6 @@ CREATE TABLE IF NOT EXISTS vessels_groups (
 CREATE INDEX IF NOT EXISTS idx_vessels_groups_vessel ON vessels_groups(vessel_id);
 """
 
-# Table: vessels_ships
 CREATE_TABLE_VESSELS_SHIPS = """
 -- Table: vessels_ships
 CREATE TABLE IF NOT EXISTS vessels_ships (
@@ -247,7 +232,6 @@ CREATE TABLE IF NOT EXISTS vessels_ships (
 CREATE INDEX IF NOT EXISTS idx_vessels_ships_group ON vessels_ships(group_id);
 """
 
-# Table: rotation_submissions
 CREATE_TABLE_ROTATION_SUBMISSIONS = """
 -- Table: rotation_submissions
 CREATE TABLE IF NOT EXISTS rotation_submissions (
@@ -285,7 +269,6 @@ CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_d
 CREATE INDEX IF NOT EXISTS idx_rotation_tanggal ON rotation_submissions (tanggal);
 """
 
-# Table: users
 CREATE_TABLE_USERS = """
 -- Table: users
 CREATE TABLE IF NOT EXISTS users (
@@ -305,10 +288,6 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 """
 
-# ============================================================================
-# INITIALIZATION FUNCTIONS
-# ============================================================================
-
 
 def create_database():
     """Create database if not exists"""
@@ -319,7 +298,6 @@ def create_database():
         )
 
         with engine.connect() as conn:
-            # Check if database exists
             result = conn.execute(
                 text(f"SELECT 1 FROM pg_database WHERE datname = '{DB_NAME}'")
             )
@@ -414,7 +392,6 @@ def verify_database():
                 print(f"\n[FAILED] Missing tables: {', '.join(missing_tables)}")
                 return False
 
-            # Check view
             result = conn.execute(
                 text(
                     """
@@ -443,17 +420,14 @@ def init_database():
     """Main initialization function"""
     print("\nStarting database initialization...\n")
 
-    # Step 1: Create database
     if not create_database():
         print("\n[FAILED] Database initialization failed!")
         return False
 
-    # Step 2: Create tables
     if not create_tables():
         print("\n[FAILED] Database initialization failed!")
         return False
 
-    # Step 3: Verify
     if not verify_database():
         print("\n[FAILED] Database initialization failed!")
         return False
@@ -465,15 +439,10 @@ def init_database():
     return True
 
 
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
-
 if __name__ == "__main__":
     import sys
 
     if "--drop" in sys.argv:
-        # Drop database
         confirm = input(
             f"Are you sure you want to DROP database '{DB_NAME}'? (yes/no): "
         )
@@ -483,7 +452,6 @@ if __name__ == "__main__":
                     POSTGRES_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT"
                 )
                 with engine.connect() as conn:
-                    # Terminate all connections first
                     conn.execute(
                         text(
                             f"""
@@ -502,5 +470,4 @@ if __name__ == "__main__":
         else:
             print("Operation cancelled")
     else:
-        # Normal initialization
         init_database()

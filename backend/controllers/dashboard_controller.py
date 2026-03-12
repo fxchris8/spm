@@ -20,15 +20,7 @@ def get_dashboard_data_controller():
         return data.to_json(orient="records")
 
     except Exception as e:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": f"Failed to get dashboard data: {str(e)}",
-                }
-            ),
-            500,
-        )
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def get_vessel_stats_controller():
@@ -44,13 +36,7 @@ def get_vessel_stats_controller():
         return jsonify(stats), 200
 
     except Exception as e:
-        # print(f"[VESSEL STATS ERROR] {str(e)}")
-        return (
-            jsonify(
-                {"status": "error", "message": f"Failed to get vessel stats: {str(e)}"}
-            ),
-            500,
-        )
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def get_similarity_controller(seaman_code):
@@ -68,13 +54,4 @@ def get_similarity_controller(seaman_code):
         return jsonify(result), 200
 
     except Exception as e:
-        # print(f"[SIMILARITY CONTROLLER ERROR] {str(e)}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": f"Failed to get similar seamen: {str(e)}",
-                }
-            ),
-            500,
-        )
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

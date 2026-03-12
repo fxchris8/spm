@@ -1,6 +1,6 @@
 """
-Dashboard Routes
-Defines Flask Blueprint for dashboard endpoints.
+Module ini mendefinisikan route Blueprint untuk endpoint dashboard,
+meliputi data pelaut, statistik kapal, sinkronisasi manual, dan kemiripan pelaut.
 """
 
 from flask import Blueprint
@@ -12,7 +12,6 @@ from controllers import (
     manual_sync_controller,
 )
 
-# Create Blueprint
 dashboard_bp = Blueprint("dashboard", __name__)
 
 

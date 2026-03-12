@@ -1,9 +1,6 @@
 """
-Cadangan Repository
-Handles data access for cadangan (backup/reserve) crew data.
-
-Cadangan = crew yang sedang tidak bertugas di kapal (darat/stand-by/pending).
-Data diambil langsung dari database seamen dan difilter berdasarkan lokasi & posisi.
+Module ini menangani akses data untuk crew cadangan (darat/stand-by/pending).
+Data diambil dari database seamen dan difilter berdasarkan lokasi, posisi, dan kategori kapal.
 """
 
 import pandas as pd
@@ -12,7 +9,6 @@ from ai.model import filter_in_vessel
 from database.connection import get_seamen_as_data
 from repositories.vessel_repository import build_kelompok
 
-# Lokasi yang dikategorikan sebagai "tidak bertugas di kapal" (others)
 _LOKASI_OTHERS = [
     "DARAT",
     "DARAT BIASA",
@@ -24,7 +20,6 @@ _LOKASI_OTHERS = [
 
 _LOKASI_OTHERS_UPPER = frozenset(loc.upper() for loc in _LOKASI_OTHERS)
 
-# Mapping kategori vessel ke daftar nama kapal (digunakan oleh filter_in_vessel)
 _KELOMPOK = {
     "others": _LOKASI_OTHERS,
 }
@@ -106,12 +101,10 @@ def _get_cadangan_by_position(
     """
     df = get_seamen_as_data()
 
-    # Pool 1: crew dengan status DARAT/PENDING (selalu dimasukkan)
     pool_status = filter_in_vessel(df, "others", _KELOMPOK)
     pool_status = pool_status[pool_status["last_position"] == position]
 
     if forecast_month >= 2:
-        # Pool 2: crew di kapal dengan end_date dalam rentang forecast
         today = pd.Timestamp.now(tz="UTC").normalize()
         range_end = (today + pd.DateOffset(months=forecast_month)).replace(day=1)
         df["end_date"] = pd.to_datetime(df["end_date"], errors="coerce", utc=True)
@@ -125,7 +118,6 @@ def _get_cadangan_by_position(
     else:
         filtered = pool_status
 
-    # Apply vessel categorization filter (exclude wrong fleet)
     filtered = _filter_by_categorization(filtered, categorization)
 
     filtered = filtered.sort_values(by="last_location")

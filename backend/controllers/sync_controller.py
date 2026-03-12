@@ -1,6 +1,5 @@
 """
-Sync Controller
-Handles HTTP requests for manual data synchronization.
+Module ini menangani sinkronisasi data manual dari API eksternal.
 """
 
 from flask import jsonify
@@ -21,7 +20,4 @@ def manual_sync_controller():
         return jsonify(result), 200
 
     except Exception as e:
-        return (
-            jsonify({"status": "error", "message": f"Gagal melakukan sync: {str(e)}"}),
-            500,
-        )
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

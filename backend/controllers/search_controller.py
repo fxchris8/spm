@@ -1,6 +1,6 @@
 """
-Search Controller
-Handles HTTP requests for manual search functionality.
+Module ini menangani pencarian manual kandidat pelaut berdasarkan parameter
+seperti tipe kapal, jabatan, sertifikat, dan rentang usia menggunakan rekomendasi AI.
 """
 
 from flask import jsonify, request
@@ -32,7 +32,6 @@ def manual_search_controller():
         if not search_params:
             return jsonify({"error": "No search parameters provided"}), 400
 
-        # Validate required fields
         required_fields = [
             "TYPE",
             "BAGIAN",
@@ -50,4 +49,4 @@ def manual_search_controller():
         return jsonify(result), 200
 
     except Exception as e:
-        return jsonify({"error": f"Search failed: {str(e)}"}), 500
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

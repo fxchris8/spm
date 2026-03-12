@@ -1,6 +1,5 @@
 """
-Promotion Service
-Handles business logic for promotion candidates (kenaikan pangkat).
+Module ini menyediakan business logic untuk kandidat promosi (kenaikan pangkat) berdasarkan posisi jabatan.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -94,32 +93,25 @@ def get_promotion_candidates_nakhoda(
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Filter by end_date range for forecast
     df_seamen = _apply_forecast_filter(df_seamen, forecast_month)
 
-    # Filter by vessel categorization
     df_seamen = _apply_categorization_filter(df_seamen, categorization)
 
-    # Tanggal cutoff pengalaman 2 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
 
-    # Filter seamen berdasarkan posisi dan sertifikat
     seamancode_terfilter = df_seamen[
         (df_seamen["last_position"] == "MUALIM I")
         & (df_seamen["certificate"] == "ANT-I")
     ]["seamancode"].unique()
 
-    # Filter df_history untuk pengalaman lebih dari 2 tahun
     df_mutasi_filtered = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "last_location"]
@@ -128,7 +120,6 @@ def get_promotion_candidates_nakhoda(
         how="left",
     )
 
-    # Group jadi dict dan hilangkan history yang tidak relevan
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -162,31 +153,24 @@ def get_promotion_candidates_kkm(
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Filter by end_date range for forecast
     df_seamen = _apply_forecast_filter(df_seamen, forecast_month)
 
-    # Filter by vessel categorization
     df_seamen = _apply_categorization_filter(df_seamen, categorization)
 
-    # Tanggal cutoff pengalaman 4 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
-    # Filter seamen berdasarkan posisi
     seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS II")][
         "seamancode"
     ].unique()
 
-    # Filter df_history untuk pengalaman lebih dari 4 tahun
     df_mutasi_filtered = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]
 
-    # Daftar kapal yang disyaratkan
     kapal_disyaratkan = {
         "KM. HIJAU SEJUK",
         "KM. ORIENTAL DIAMOND",
@@ -207,7 +191,6 @@ def get_promotion_candidates_kkm(
         "KM. ORIENTAL EMERALD",
     }
 
-    # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
     df_kapal = df_mutasi_filtered.copy()
     df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
         df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
@@ -216,7 +199,6 @@ def get_promotion_candidates_kkm(
         df_kapal["tovesselname"]
     )
 
-    # Ambil hanya yang punya >= 2 kapal unik dari daftar
     df_kapal_valid = (
         df_kapal.dropna(subset=["kapal_terkait"])
         .groupby("seamancode")["kapal_terkait"]
@@ -225,12 +207,10 @@ def get_promotion_candidates_kkm(
     )
     df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
 
-    # Filter df_mutasi_filtered berdasarkan hasil di atas
     df_mutasi_filtered = df_mutasi_filtered[
         df_mutasi_filtered["seamancode"].isin(df_kapal_valid["seamancode"])
     ]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "last_location"]
@@ -239,7 +219,6 @@ def get_promotion_candidates_kkm(
         how="left",
     )
 
-    # Group jadi dict
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -268,32 +247,25 @@ def get_promotion_candidates_mualimI(
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Filter by end_date range for forecast
     df_seamen = _apply_forecast_filter(df_seamen, forecast_month)
 
-    # Filter by vessel categorization
     df_seamen = _apply_categorization_filter(df_seamen, categorization)
 
-    # Tanggal cutoff pengalaman 2 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
 
-    # Filter seamen berdasarkan posisi dan sertifikat (sertifikat mualin 2 itu apa?)
     seamancode_terfilter = df_seamen[
         (df_seamen["last_position"] == "MUALIM II")
         & (df_seamen["certificate"] == "ANT-I")
     ]["seamancode"].unique()
 
-    # Filter df_history untuk pengalaman lebih dari 2 tahun
     df_mutasi_filtered = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "last_location"]
@@ -302,7 +274,6 @@ def get_promotion_candidates_mualimI(
         how="left",
     )
 
-    # Group jadi dict dan hilangkan history yang tidak relevan
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -336,31 +307,24 @@ def get_promotion_candidates_masinisII(
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Filter by end_date range for forecast
     df_seamen = _apply_forecast_filter(df_seamen, forecast_month)
 
-    # Filter by vessel categorization
     df_seamen = _apply_categorization_filter(df_seamen, categorization)
 
-    # Tanggal cutoff pengalaman 4 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
-    # Filter seamen berdasarkan posisi
     seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS III")][
         "seamancode"
     ].unique()
 
-    # Filter df_history untuk pengalaman lebih dari 4 tahun
     df_mutasi_filtered = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]
 
-    # Daftar kapal yang disyaratkan
     kapal_disyaratkan = {
         "KM. HIJAU SEJUK",
         "KM. ORIENTAL DIAMOND",
@@ -381,7 +345,6 @@ def get_promotion_candidates_masinisII(
         "KM. ORIENTAL EMERALD",
     }
 
-    # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
     df_kapal = df_mutasi_filtered.copy()
     df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
         df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
@@ -390,7 +353,6 @@ def get_promotion_candidates_masinisII(
         df_kapal["tovesselname"]
     )
 
-    # Ambil hanya yang punya >= 2 kapal unik dari daftar
     df_kapal_valid = (
         df_kapal.dropna(subset=["kapal_terkait"])
         .groupby("seamancode")["kapal_terkait"]
@@ -399,12 +361,10 @@ def get_promotion_candidates_masinisII(
     )
     df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
 
-    # Filter df_mutasi_filtered berdasarkan hasil di atas
     df_mutasi_filtered = df_mutasi_filtered[
         df_mutasi_filtered["seamancode"].isin(df_kapal_valid["seamancode"])
     ]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "last_location"]
@@ -413,7 +373,6 @@ def get_promotion_candidates_masinisII(
         how="left",
     )
 
-    # Group jadi dict
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -431,9 +390,6 @@ def get_promotion_candidates_masinisII(
     return result
 
 
-# ISSUE
-
-
 def get_promotion_candidates_mualimII(forecast_month: int = 1) -> list:
     """
     Get promotion candidates for MUALIM II position.
@@ -443,39 +399,31 @@ def get_promotion_candidates_mualimII(forecast_month: int = 1) -> list:
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Tanggal cutoff pengalaman 2 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
 
-    # Filter seamen berdasarkan posisi dan sertifikat
     seamancode_terfilter = df_seamen[
         (df_seamen["last_position"] == "MUALIM III")
         & (df_seamen["certificate"] == "ANT-I")
     ]["seamancode"].unique()
 
-    # Cari seamancode yang punya pengalaman >= 2 tahun
     seamancode_with_experience = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]["seamancode"].unique()
 
-    # Tambahkan seamen dengan is_talent di posisi MUALIM III
     seamancode_talent = df_seamen[(df_seamen["last_position"] == "MUALIM III")][
         "seamancode"
     ].unique()
 
-    # Gabungkan kedua kriteria (experience + talent)
     seamancode_qualified = list(
         set(seamancode_with_experience) | set(seamancode_talent)
     )
 
-    # Ambil SEMUA history untuk seamancode yang qualified
     df_mutasi_filtered = df_history[df_history["seamancode"].isin(seamancode_qualified)]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "is_talent", "last_location"]
@@ -484,7 +432,6 @@ def get_promotion_candidates_mualimII(forecast_month: int = 1) -> list:
         how="left",
     )
 
-    # Group jadi dict dan hilangkan history yang tidak relevan
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -521,19 +468,15 @@ def get_promotion_candidates_masinisIII(forecast_month: int = 1) -> list:
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Tanggal cutoff pengalaman 4 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
-    # Filter seamen berdasarkan posisi
     seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "MASINIS IV")][
         "seamancode"
     ].unique()
 
-    # Daftar kapal yang disyaratkan
     kapal_disyaratkan = {
         "KM. HIJAU SEJUK",
         "KM. ORIENTAL DIAMOND",
@@ -554,10 +497,8 @@ def get_promotion_candidates_masinisIII(forecast_month: int = 1) -> list:
         "KM. ORIENTAL EMERALD",
     }
 
-    # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
     df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
 
-    # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
     df_kapal = df_all_history.copy()
     df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
         df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
@@ -566,7 +507,6 @@ def get_promotion_candidates_masinisIII(forecast_month: int = 1) -> list:
         df_kapal["tovesselname"]
     )
 
-    # Ambil hanya yang punya >= 2 kapal unik dari daftar
     df_kapal_valid = (
         df_kapal.dropna(subset=["kapal_terkait"])
         .groupby("seamancode")["kapal_terkait"]
@@ -575,26 +515,21 @@ def get_promotion_candidates_masinisIII(forecast_month: int = 1) -> list:
     )
     df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
 
-    # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
     seamancode_with_experience = df_history[
         (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]["seamancode"].unique()
 
-    # Tambahkan seamen dengan is_talent di posisi MASINIS IV
     seamancode_talent = df_seamen[
         (df_seamen["last_position"] == "MASINIS IV") & (df_seamen["is_talent"])
     ]["seamancode"].unique()
 
-    # Gabungkan kedua kriteria (experience + talent)
     seamancode_qualified = list(
         set(seamancode_with_experience) | set(seamancode_talent)
     )
 
-    # Ambil SEMUA history untuk seamancode yang qualified
     df_mutasi_filtered = df_history[df_history["seamancode"].isin(seamancode_qualified)]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "is_talent", "last_location"]
@@ -603,7 +538,6 @@ def get_promotion_candidates_masinisIII(forecast_month: int = 1) -> list:
         how="left",
     )
 
-    # Group jadi dict
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -635,39 +569,31 @@ def get_promotion_candidates_mualimIII(forecast_month: int = 1) -> list:
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Tanggal cutoff pengalaman 2 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=2 * 365)
 
-    # Filter seamen berdasarkan posisi dan sertifikat
     seamancode_terfilter = df_seamen[
         (df_seamen["last_position"] == "JURU MUDI")
         & (df_seamen["certificate"] == "ANT-III")
     ]["seamancode"].unique()
 
-    # Cari seamancode yang punya pengalaman >= 2 tahun
     seamancode_with_experience = df_history[
         (df_history["seamancode"].isin(seamancode_terfilter))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]["seamancode"].unique()
 
-    # Tambahkan seamen dengan is_talent di posisi JURU MUDI
     seamancode_talent = df_seamen[
         (df_seamen["last_position"] == "JURU MUDI") & (df_seamen["is_talent"])
     ]["seamancode"].unique()
 
-    # Gabungkan kedua kriteria (experience + talent)
     seamancode_qualified = list(
         set(seamancode_with_experience) | set(seamancode_talent)
     )
 
-    # Ambil SEMUA history untuk seamancode yang qualified
     df_mutasi_filtered = df_history[df_history["seamancode"].isin(seamancode_qualified)]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "is_talent", "last_location"]
@@ -676,7 +602,6 @@ def get_promotion_candidates_mualimIII(forecast_month: int = 1) -> list:
         how="left",
     )
 
-    # Group jadi dict dan hilangkan history yang tidak relevan
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(
@@ -713,19 +638,15 @@ def get_promotion_candidates_masinisIV(forecast_month: int = 1) -> list:
     Returns:
         list: List of promotion candidate records
     """
-    # Load from Supabase instead of Excel
     df_history = get_mutations_data()
     df_seamen = get_seamen_data()
 
-    # Tanggal cutoff pengalaman 4 tahun
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=4 * 365)
 
-    # Filter seamen berdasarkan posisi
     seamancode_terfilter = df_seamen[(df_seamen["last_position"] == "JURU MINYAK")][
         "seamancode"
     ].unique()
 
-    # Daftar kapal yang disyaratkan
     kapal_disyaratkan = {
         "KM. HIJAU SEJUK",
         "KM. ORIENTAL DIAMOND",
@@ -746,10 +667,8 @@ def get_promotion_candidates_masinisIV(forecast_month: int = 1) -> list:
         "KM. ORIENTAL EMERALD",
     }
 
-    # Ambil SEMUA history untuk seamancode terfilter (untuk cek kapal requirement)
     df_all_history = df_history[df_history["seamancode"].isin(seamancode_terfilter)]
 
-    # Hitung jumlah kapal unik dari daftar di atas yang pernah disinggahi oleh tiap seamancode
     df_kapal = df_all_history.copy()
     df_kapal["kapal_terkait"] = df_kapal["fromvesselname"].where(
         df_kapal["fromvesselname"].isin(kapal_disyaratkan), None
@@ -758,7 +677,6 @@ def get_promotion_candidates_masinisIV(forecast_month: int = 1) -> list:
         df_kapal["tovesselname"]
     )
 
-    # Ambil hanya yang punya >= 2 kapal unik dari daftar
     df_kapal_valid = (
         df_kapal.dropna(subset=["kapal_terkait"])
         .groupby("seamancode")["kapal_terkait"]
@@ -767,26 +685,21 @@ def get_promotion_candidates_masinisIV(forecast_month: int = 1) -> list:
     )
     df_kapal_valid = df_kapal_valid[df_kapal_valid["kapal_terkait"] >= 2]
 
-    # Cari seamancode yang punya pengalaman >= 4 tahun DAN memenuhi kapal requirement
     seamancode_with_experience = df_history[
         (df_history["seamancode"].isin(df_kapal_valid["seamancode"]))
         & (pd.to_datetime(df_history["transactiondate"]) <= cutoff_date)
     ]["seamancode"].unique()
 
-    # Tambahkan seamen dengan is_talent di posisi JURU MINYAK
     seamancode_talent = df_seamen[
         (df_seamen["last_position"] == "JURU MINYAK") & (df_seamen["is_talent"])
     ]["seamancode"].unique()
 
-    # Gabungkan kedua kriteria (experience + talent)
     seamancode_qualified = list(
         set(seamancode_with_experience) | set(seamancode_talent)
     )
 
-    # Ambil SEMUA history untuk seamancode yang qualified
     df_mutasi_filtered = df_history[df_history["seamancode"].isin(seamancode_qualified)]
 
-    # Merge untuk ambil nama
     df_mutasi_filtered = df_mutasi_filtered.merge(
         df_seamen[
             ["seamancode", "name", "last_position", "is_talent", "last_location"]
@@ -795,7 +708,6 @@ def get_promotion_candidates_masinisIV(forecast_month: int = 1) -> list:
         how="left",
     )
 
-    # Group jadi dict
     result = (
         df_mutasi_filtered.groupby("seamancode")
         .apply(

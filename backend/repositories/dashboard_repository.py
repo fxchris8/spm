@@ -1,6 +1,6 @@
 """
-Dashboard Repository
-Handles database queries for dashboard data.
+Module ini menangani query database untuk keperluan data dashboard,
+termasuk data pelaut, kapal rotasi, dan pencarian pelaut berdasarkan kode.
 """
 
 import pandas as pd
@@ -20,7 +20,6 @@ def get_seamen_data():
 
     with get_db_connection() as conn:
         df = pd.read_sql_query(text(query), conn)
-        # print(f"DONE - Fetched {len(df)} seamen records from database")
         return df
 
 
@@ -34,7 +33,6 @@ def get_vessels_data():
     Returns:
         list: List of rotation vessels with categorization and groups
     """
-    # Query to get all vessels with their groups and ships
     query = """
         SELECT 
             v.id,
@@ -57,13 +55,11 @@ def get_vessels_data():
         result = conn.execute(text(query))
         rows = result.fetchall()
 
-        # Build vessels dict with groups
         vessels_map = {}
 
         for row in rows:
             vessel_id = row[0]
 
-            # Initialize vessel if not exists
             if vessel_id not in vessels_map:
                 vessels_map[vessel_id] = {
                     "id": vessel_id,
@@ -77,7 +73,6 @@ def get_vessels_data():
                     "groups": {},
                 }
 
-            # Add ship to group
             group_key = row[8]
             ship_name = row[9]
 
@@ -86,10 +81,8 @@ def get_vessels_data():
                     vessels_map[vessel_id]["groups"][group_key] = []
                 vessels_map[vessel_id]["groups"][group_key].append(ship_name)
 
-        # Convert to list
         vessels = list(vessels_map.values())
 
-        # print(f"DONE - Fetched {len(vessels)} rotation vessels from database")
         return vessels
 
 
@@ -110,11 +103,8 @@ def get_seaman_by_code(seaman_code):
         row = result.fetchone()
 
         if row:
-            # Convert to dict
             columns = result.keys()
             seaman_data = dict(zip(columns, row))
-            # print(f"DONE - Found seaman with code {seaman_code}")
             return seaman_data
 
-        # print(f"WARN - No seaman found with code {seaman_code}")
         return None

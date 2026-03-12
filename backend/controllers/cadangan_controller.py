@@ -24,7 +24,7 @@ def get_cadangan_kkm_controller(forecast_month: int = 1, categorization: str | N
         data = get_cadangan_kkm_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def get_cadangan_nakhoda_controller(forecast_month: int = 1, categorization: str | None = None):
@@ -38,7 +38,7 @@ def get_cadangan_nakhoda_controller(forecast_month: int = 1, categorization: str
         data = get_cadangan_nakhoda_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def get_cadangan_mualim_i_controller(forecast_month: int = 1, categorization: str | None = None):
@@ -52,7 +52,7 @@ def get_cadangan_mualim_i_controller(forecast_month: int = 1, categorization: st
         data = get_cadangan_mualim_i_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
 def get_cadangan_masinis_ii_controller(forecast_month: int = 1, categorization: str | None = None):
@@ -66,4 +66,4 @@ def get_cadangan_masinis_ii_controller(forecast_month: int = 1, categorization: 
         data = get_cadangan_masinis_ii_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

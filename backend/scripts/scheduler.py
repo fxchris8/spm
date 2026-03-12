@@ -1,22 +1,18 @@
-# @faw_sd
-# Scheduler untuk sync data dari API ASLI ke Supabase setiap 00:01
+"""
+Module ini menjalankan scheduler untuk sinkronisasi data seamen dan mutasi
+dari API eksternal ke database secara otomatis setiap pukul 00:01.
+"""
 
 from datetime import datetime
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-# Import service layer untuk sync
 from services import manual_sync
 
 print("=" * 60)
 print("SEAMEN & MUTATIONS SCHEDULER")
 print("=" * 60)
-
-
-# ============================================================================
-# SCHEDULED JOBS
-# ============================================================================
 
 
 def scheduled_sync():
@@ -37,7 +33,6 @@ def start_scheduler():
     """Mulai scheduler untuk sync otomatis setiap 00.01"""
     scheduler = BlockingScheduler()
 
-    # Sync seamen dan mutations setiap pukul 00.01
     scheduler.add_job(
         scheduled_sync,
         CronTrigger(hour=0, minute=1),
@@ -71,16 +66,10 @@ def manual_sync_all():
         print(f"\nFAIL - Manual sync failed: {str(e)}\n")
 
 
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
-
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "--manual":
-        # Manual sync
         manual_sync_all()
     else:
-        # Start scheduler
         start_scheduler()

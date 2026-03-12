@@ -1,6 +1,6 @@
 """
-Cadangan Routes
-Defines Flask Blueprint for cadangan (backup/reserve) crew endpoints.
+Module ini mendefinisikan route Blueprint untuk endpoint crew cadangan
+(darat/stand-by/pending) berdasarkan posisi jabatan pelaut.
 """
 
 from flask import Blueprint, request
@@ -12,7 +12,6 @@ from controllers import (
     get_cadangan_nakhoda_controller,
 )
 
-# Create Blueprint
 cadangan_bp = Blueprint("cadangan", __name__)
 
 

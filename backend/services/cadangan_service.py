@@ -1,6 +1,5 @@
 """
-Cadangan Service
-Handles business logic for cadangan (backup/reserve) crew data.
+Module ini menyediakan business logic untuk data cadangan (backup/reserve) crew berdasarkan posisi jabatan.
 """
 
 from repositories import (

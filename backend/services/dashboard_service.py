@@ -1,6 +1,5 @@
 """
-Dashboard Service
-Handles business logic and data transformation for dashboard.
+Module ini menyediakan business logic dan transformasi data untuk dashboard, termasuk statistik vessel dan rekomendasi seamen serupa.
 """
 
 import pandas as pd
@@ -16,13 +15,10 @@ def get_dashboard_data():
     Returns:
         DataFrame: Processed dashboard data with renamed columns and filtered fields
     """
-    # Get raw data from repository
     data = get_seamen_data()
 
-    # Rename columns using mapping defined in SeamanRecord model
     data = data.rename(columns=SeamanRecord.COLUMN_MAP)
 
-    # Filter only display columns defined in SeamanRecord model
     data = data[SeamanRecord.DISPLAY_COLUMNS]
 
     return data
@@ -35,10 +31,8 @@ def get_vessel_stats() -> dict:
     Returns:
         dict: Dictionary with count of unique vessels per category
     """
-    # Get rotation vessels from repository
     rotation_vessels = get_vessels_data()
 
-    # Count unique ships per category
     container_ships = set()
     manalagi_ships = set()
     bc_ships = set()
@@ -47,7 +41,6 @@ def get_vessel_stats() -> dict:
         categorization = vessel.get("categorization", "").lower()
         groups = vessel.get("groups", {})
 
-        # Collect all ships from all groups in this vessel
         for group_ships in groups.values():
             if categorization == "container":
                 container_ships.update(group_ships)
@@ -56,7 +49,6 @@ def get_vessel_stats() -> dict:
             elif categorization == "bc":
                 bc_ships.update(group_ships)
 
-    # Build typed model then serialize to dict
     stats = VesselStats(
         container=len(container_ships),
         manalagi=len(manalagi_ships),
@@ -82,7 +74,6 @@ def get_similar_seamen(target_seaman_code) -> dict:
 
         from ai.model import load_word2vec_model, word2vec_model
 
-        # Load Word2Vec model if not loaded
         if word2vec_model is None:
             load_word2vec_model()
             from ai.model import word2vec_model
@@ -92,7 +83,6 @@ def get_similar_seamen(target_seaman_code) -> dict:
                     status="error", message="Word2Vec model belum dimuat"
                 ).to_dict()
 
-        # Get target seaman
         target_seaman = get_seaman_by_code(target_seaman_code)
         if not target_seaman:
             return SimilarSeamanResult(
@@ -103,15 +93,11 @@ def get_similar_seamen(target_seaman_code) -> dict:
         rank = target_seaman["last_position"]
         certificate = target_seaman["certificate"]
 
-        # print(f"[SIMILARITY] Finding similar seamen for {rank} - {certificate}")
-
-        # Get all seamen except target
         all_seamen = get_seamen_data()
         filtered_candidates = all_seamen[
             all_seamen["seamancode"] != target_seaman_code
         ].copy()
 
-        # Helper function to get Word2Vec vector
         def get_word2vec_vector(text):
             if not isinstance(text, str):
                 return np.zeros(word2vec_model.vector_size)
@@ -128,11 +114,9 @@ def get_similar_seamen(target_seaman_code) -> dict:
             except Exception:
                 return np.zeros(word2vec_model.vector_size)
 
-        # Calculate target vector
         user_input = f"{rank} {certificate}"
         user_vector = get_word2vec_vector(user_input)
 
-        # Calculate vectors for all candidates
         filtered_candidates["combined_text"] = (
             filtered_candidates["last_position"].astype(str)
             + " "
@@ -142,18 +126,14 @@ def get_similar_seamen(target_seaman_code) -> dict:
             get_word2vec_vector
         )
 
-        # Calculate similarity scores
         filtered_candidates["similarity"] = filtered_candidates["vector"].apply(
             lambda x: float(cosine_similarity([user_vector], [x])[0][0])
         )
 
-        # Get top 5
         top_5 = filtered_candidates.nlargest(5, "similarity")
 
-        # Calculate DAY REMAINS DIFF for similar seamen
         top_5["DAY REMAINS DIFF"] = pd.to_numeric(top_5["day_remains"], errors="coerce")
 
-        # Drop unnecessary columns
         columns_to_drop = [
             "vector",
             "combined_text",
@@ -162,16 +142,12 @@ def get_similar_seamen(target_seaman_code) -> dict:
             "phone_number_3",
             "phone_number_4",
         ]
-        # Only drop columns that exist
         columns_to_drop = [col for col in columns_to_drop if col in top_5.columns]
         top_5 = top_5.drop(columns=columns_to_drop)
 
-        # Convert to dict
         result = top_5.to_dict(orient="records")
 
-        # print(f"[SIMILARITY] Found {len(result)} similar seamen")
         return SimilarSeamanResult(status="success", data=result).to_dict()
 
     except Exception as e:
-        # print(f"[SIMILARITY ERROR] {str(e)}")
         return SimilarSeamanResult(status="error", message=str(e)).to_dict()

@@ -1,6 +1,6 @@
 """
-Sync Repository
-Handles database operations for syncing data from external API.
+Module ini menangani operasi database untuk sinkronisasi data dari API eksternal,
+meliputi data seamen dan mutasi beserta pencatatan log sinkronisasi.
 """
 
 from datetime import datetime
@@ -28,7 +28,6 @@ def sync_seamen_to_database(df):
     try:
         print(f"PROCESS - Processing {len(df)} seamen records...")
 
-        # Convert date columns from DD/MM/YYYY to YYYY-MM-DD
         date_columns = ["start_date", "end_date"]
         for col in date_columns:
             if col in df.columns:
@@ -38,17 +37,14 @@ def sync_seamen_to_database(df):
         print("DONE - Date conversion completed")
 
         with get_db_connection() as conn:
-            # Set statement timeout to 5 minutes
             print("SETTING - Setting statement timeout to 5 minutes...")
             conn.execute(text("SET statement_timeout = '300000';"))
 
-            # Delete all existing records
             print("Starting DELETE operation...")
             conn.execute(text("DELETE FROM seamen"))
             conn.commit()
             print("DONE - DELETE completed")
 
-            # Batch insert for large data
             batch_size = 500
             total_batches = (len(df) + batch_size - 1) // batch_size
 
@@ -66,7 +62,6 @@ def sync_seamen_to_database(df):
             print(f"DONE - Synced {len(df)} seamen records to database")
             print("=" * 60)
 
-            # Log sync time
             sync_log = {
                 "table_name": "seamen",
                 "records_synced": len(df),
@@ -90,7 +85,6 @@ def sync_seamen_to_database(df):
         print(f"FAIL - Error syncing seamen to database: {str(e)}")
         print("=" * 60)
 
-        # Log error
         try:
             with get_db_connection() as conn:
                 error_log = {
@@ -133,13 +127,11 @@ def sync_mutations_to_database(df):
     try:
         print(f"PROCESS - Processing {len(df)} mutation records...")
 
-        # Convert seamancode to integer
-        print("Converting seamancode to integer...")
+        print(f"Converting seamancode to integer...")
         df["seamancode"] = (
             pd.to_numeric(df["seamancode"], errors="coerce").fillna(0).astype(int)
         )
 
-        # Convert date columns
         if "transactiondate" in df.columns:
             print("Converting transactiondate format...")
             df["transactiondate"] = pd.to_datetime(
@@ -149,18 +141,15 @@ def sync_mutations_to_database(df):
         print("DONE - Data conversion completed")
 
         with get_db_connection() as conn:
-            # Set statement timeout to 10 minutes
             print("SETTING - Setting statement timeout to 10 minutes...")
             conn.execute(text("SET statement_timeout = '600000';"))
 
-            # Get valid seamancodes from seamen table
             print("FETCHING - Fetching valid seamancodes from seamen table...")
             valid_seamancodes = pd.read_sql_query(
                 text("SELECT seamancode FROM seamen"), conn
             )["seamancode"].tolist()
             print(f"   Found {len(valid_seamancodes)} valid seamancodes")
 
-            # Filter mutations to only include valid seamancodes
             original_count = len(df)
             df = df[df["seamancode"].isin(valid_seamancodes)]
             filtered_count = original_count - len(df)
@@ -176,13 +165,10 @@ def sync_mutations_to_database(df):
                 print("WARNING - No valid mutations to insert, skipping...")
                 return False
 
-            # Delete all existing records
-            print("Starting DELETE operation...")
             conn.execute(text("DELETE FROM mutations"))
             conn.commit()
             print("DONE - DELETE completed")
 
-            # Batch insert for large data
             batch_size = 1000
             total_batches = (len(df) + batch_size - 1) // batch_size
 
@@ -200,7 +186,6 @@ def sync_mutations_to_database(df):
             print(f"DONE - Synced {len(df)} mutation records to database")
             print("=" * 60)
 
-            # Log sync time
             sync_log = {
                 "table_name": "mutations",
                 "records_synced": len(df),
@@ -224,7 +209,6 @@ def sync_mutations_to_database(df):
         print(f"FAIL - Error syncing mutations to database: {str(e)}")
         print("=" * 60)
 
-        # Log error
         try:
             with get_db_connection() as conn:
                 error_log = {

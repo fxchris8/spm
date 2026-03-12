@@ -1,7 +1,5 @@
 """
-@faw_sd
-Seeder untuk tabel vessels, vessels_groups, dan vessels_ships
-Script ini akan mengisi data awal untuk vessel management
+Module ini digunakan untuk mengisi data awal (seed) pada tabel vessels, vessels_groups, dan vessels_ships.
 """
 
 import os
@@ -66,7 +64,6 @@ def seed_rotation_junior_data():
     print("SEEDING ROTATION junior DATA (type: junior)")
     print("=" * 70 + "\n")
 
-    # ============ MUALIM II ============
     mualimII_data = {
         "job_title": "mualimII",
         "vessel": "D",
@@ -142,7 +139,6 @@ def seed_rotation_junior_data():
         },
     }
 
-    # ============ MUALIM III ============
     mualimIII_data = {
         "job_title": "mualimIII",
         "vessel": "D",
@@ -152,7 +148,6 @@ def seed_rotation_junior_data():
         "groups": mualimII_data["groups"],
     }
 
-    # ============ MASINIS III ============
     masinisIII_data = {
         "job_title": "masinisIII",
         "vessel": "E",
@@ -227,7 +222,6 @@ def seed_rotation_junior_data():
         },
     }
 
-    # ============ MASINIS IV ============
     masinisIV_data = {
         "job_title": "masinisIV",
         "vessel": "E",
@@ -237,7 +231,6 @@ def seed_rotation_junior_data():
         "groups": masinisIII_data["groups"],
     }
 
-    # Insert all junior configs
     configs = [mualimII_data, mualimIII_data, masinisIII_data, masinisIV_data]
 
     for config in configs:
@@ -259,7 +252,6 @@ def seed_rotation_senior_data():
     print("SEEDING ROTATION senior DATA (type: senior)")
     print("=" * 70 + "\n")
 
-    # ============ NAKHODA ============
     nakhoda_data = {
         "job_title": "nakhoda",
         "vessel": "D",
@@ -343,7 +335,6 @@ def seed_rotation_senior_data():
         },
     }
 
-    # ============ KKM ============
     kkm_data = {
         "job_title": "KKM",
         "vessel": "E",
@@ -424,7 +415,6 @@ def seed_rotation_senior_data():
         },
     }
 
-    # ============ MUALIM I ============
     mualimI_data = {
         "job_title": "mualimI",
         "vessel": "D",
@@ -434,7 +424,6 @@ def seed_rotation_senior_data():
         "groups": nakhoda_data["groups"],
     }
 
-    # ============ MASINIS II ============
     masinisII_data = {
         "job_title": "masinisII",
         "vessel": "E",
@@ -444,7 +433,6 @@ def seed_rotation_senior_data():
         "groups": kkm_data["groups"],
     }
 
-    # Insert all senior configs
     configs = [nakhoda_data, kkm_data, mualimI_data, masinisII_data]
 
     for config in configs:
@@ -467,7 +455,6 @@ def seed_rotation_manalagi_senior_data():
     print("SEEDING ROTATION MANALAGI DATA (type: senior, categorization: manalagi)")
     print("=" * 70 + "\n")
 
-    # ============ NAKHODA (Manalagi) ============
     nakhoda_manalagi_data = {
         "job_title": "nakhoda",
         "vessel": "F",
@@ -495,7 +482,6 @@ def seed_rotation_manalagi_senior_data():
         },
     }
 
-    # ============ KKM (Manalagi) ============
     kkm_manalagi_data = {
         "job_title": "KKM",
         "vessel": "G",
@@ -523,7 +509,6 @@ def seed_rotation_manalagi_senior_data():
         },
     }
 
-    # ============ MUALIM I (Manalagi) ============
     mualimI_manalagi_data = {
         "job_title": "mualimI",
         "vessel": "F",
@@ -533,7 +518,6 @@ def seed_rotation_manalagi_senior_data():
         "groups": nakhoda_manalagi_data["groups"],
     }
 
-    # ============ MASINIS II (Manalagi) ============
     masinisII_manalagi_data = {
         "job_title": "masinisII",
         "vessel": "G",
@@ -543,7 +527,6 @@ def seed_rotation_manalagi_senior_data():
         "groups": kkm_manalagi_data["groups"],
     }
 
-    # Insert all manalagi configs
     configs = [
         nakhoda_manalagi_data,
         kkm_manalagi_data,
@@ -571,7 +554,6 @@ def seed_rotation_barge_crane_senior_data():
     print("SEEDING ROTATION BARGE CRANE DATA (type: senior, categorization: bc)")
     print("=" * 70 + "\n")
 
-    # ============ NAKHODA (Barge Crane) ============
     nakhoda_bc_data = {
         "job_title": "nakhoda",
         "vessel": "F",
@@ -601,7 +583,6 @@ def seed_rotation_barge_crane_senior_data():
         },
     }
 
-    # ============ KKM (Barge Crane) ============
     kkm_bc_data = {
         "job_title": "KKM",
         "vessel": "G",
@@ -631,7 +612,7 @@ def seed_rotation_barge_crane_senior_data():
         },
     }
 
-    # Insert all barge crane configs
+
     configs = [nakhoda_bc_data, kkm_bc_data]
 
     for config in configs:
@@ -652,7 +633,6 @@ def clear_rotation_data():
         from sqlalchemy import text
 
         with connection.engine.connect() as conn:
-            # CASCADE akan otomatis hapus vessels_groups dan vessels_ships
             conn.execute(text("DELETE FROM vessels"))
             conn.commit()
             print("[SUCCES] All rotation data cleared successfully")
@@ -672,14 +652,12 @@ if __name__ == "__main__":
         "bc": seed_rotation_barge_crane_senior_data,
     }
 
-    # Filter out flags like --fresh from positional args
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
     print("\n" + "=" * 35)
     print("ROTATION DATA SEEDER")
     print("=" * 35)
 
-    # Check for --fresh flag (only applies to rotation data)
     if "--fresh" in sys.argv:
         print("\n[WARNING] FRESH SEED MODE: Clearing existing data first...")
         confirm = input(
@@ -690,7 +668,6 @@ if __name__ == "__main__":
             sys.exit(0)
         clear_rotation_data()
 
-    # If specific seeders are requested
     if args:
         invalid = [a for a in args if a not in SEEDERS]
         if invalid:
@@ -700,10 +677,8 @@ if __name__ == "__main__":
 
         selected = args
     else:
-        # Run all by default
         selected = list(SEEDERS.keys())
 
-    # Run selected seeders
     try:
         for name in selected:
             SEEDERS[name]()

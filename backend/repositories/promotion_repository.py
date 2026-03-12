@@ -1,6 +1,6 @@
 """
-Promotion Repository
-Handles data access for promotion candidates (kenaikan pangkat) data.
+Module ini menangani akses data untuk kandidat kenaikan pangkat,
+meliputi riwayat mutasi dan data pelaut dari database.
 """
 
 from database.connection import get_mutations_as_data, get_seamen_as_data

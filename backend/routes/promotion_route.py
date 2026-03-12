@@ -1,6 +1,6 @@
 """
-Promotion Routes
-Defines Flask Blueprint for promotion candidates (kenaikan pangkat) endpoints.
+Module ini mendefinisikan route Blueprint untuk endpoint kandidat kenaikan pangkat
+berdasarkan posisi jabatan pelaut.
 """
 
 from flask import Blueprint, request
@@ -16,7 +16,6 @@ from controllers import (
     get_promotion_candidates_nakhoda_controller,
 )
 
-# Create Blueprint
 promotion_bp = Blueprint("promotion", __name__)
 
 

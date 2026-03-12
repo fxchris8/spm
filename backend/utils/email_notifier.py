@@ -1,5 +1,6 @@
-# @faw_sd
-# Email notification utility untuk rotation change notifications
+"""
+Module ini menyediakan utilitas pengiriman email notifikasi untuk perubahan jadwal rotation plan kru.
+"""
 
 import os
 import smtplib
@@ -16,18 +17,10 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SENDER_EMAIL = os.getenv("EMAIL_SENDER", "")
 SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
 
-# Recipient emails for different divisions (comma-separated in .env)
 RECIPIENT_EMAILS = os.getenv(
     "EMAIL_RECIPIENTS",
     "division1@company.com,division2@company.com,division3@company.com",
 ).split(",")
-
-# print("=" * 60)
-# print("EMAIL NOTIFIER MODULE")
-# print("=" * 60)
-# print(f"Sender: {SENDER_EMAIL}")
-# print(f"Recipients: {len(RECIPIENT_EMAILS)} divisions")
-# print("=" * 60)
 
 
 def send_rotation_change_notification(
@@ -49,18 +42,13 @@ def send_rotation_change_notification(
         Dict dengan status pengiriman email
     """
     try:
-        # Validate email configuration
         if not SENDER_PASSWORD:
-            # print(
-            #     "WARNING - EMAIL_PASSWORD not configured, skipping email notification"
-            # )
             return {
                 "success": False,
                 "message": "Email password not configured",
                 "sent_count": 0,
             }
 
-        # Format tanggal
         try:
             tanggal_formatted = datetime.strptime(tanggal_ready, "%d-%m-%Y").strftime(
                 "%d %B %Y"
@@ -68,7 +56,6 @@ def send_rotation_change_notification(
         except Exception:
             tanggal_formatted = tanggal_ready
 
-        # Determine status badge color and text
         if status_data == "CHANGE":
             status_color = "#FF9800"  # Orange
             status_text = "KRU TIDAK READY"
@@ -82,15 +69,12 @@ def send_rotation_change_notification(
             status_color = "#9E9E9E"  # Gray
             status_text = status_data
 
-        # Create email content
         subject = f"[URGENT] Perubahan Jadwal Rotation Plan Kru - {nama} ({job})"
 
-        # Ubah group_key apbila container_rotation1 maka menjadi Group 1, dan begitu selanjutnya
         if group_key.startswith("container_rotation"):
             group_number = group_key.split("container_rotation")[-1]
             group_key = f"Group {group_number}"
 
-        # HTML email body
         html_body = f"""
         <!DOCTYPE html>
         <html>
@@ -267,7 +251,6 @@ def send_rotation_change_notification(
         </html>
         """
 
-        # Plain text fallback
         text_body = f"""
 ============================================================================
 SPM - SHIP PERSONNEL MANAGEMENT
@@ -313,7 +296,6 @@ Harap tidak membalas email ini.
 (c) {datetime.now().year} PT Salam Pacific Indonesia Lines — All rights reserved.
 """
 
-        # Send email to all recipients
         sent_count = 0
         failed_recipients = []
 
@@ -323,32 +305,26 @@ Harap tidak membalas email ini.
                 continue
 
             try:
-                # Create message
                 msg = MIMEMultipart("alternative")
                 msg["Subject"] = subject
                 msg["From"] = SENDER_EMAIL
                 msg["To"] = recipient
 
-                # Attach both plain text and HTML versions
                 part1 = MIMEText(text_body, "plain")
                 part2 = MIMEText(html_body, "html")
                 msg.attach(part1)
                 msg.attach(part2)
 
-                # Send email
                 with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
                     server.starttls()
                     server.login(SENDER_EMAIL, SENDER_PASSWORD)
                     server.send_message(msg)
 
                 sent_count += 1
-                # print(f"DONE - Email sent to {recipient}")
 
             except Exception:
                 failed_recipients.append(recipient)
-                # print(f"FAIL - Failed to send email to {recipient}: {str(e)}")
 
-        # Return result
         if sent_count > 0:
             return {
                 "success": True,
@@ -367,7 +343,6 @@ Harap tidak membalas email ini.
             }
 
     except Exception as e:
-        # print(f"FAIL - Error sending rotation change notification: {str(e)}")
         return {
             "success": False,
             "message": f"Error sending notification: {str(e)}",
