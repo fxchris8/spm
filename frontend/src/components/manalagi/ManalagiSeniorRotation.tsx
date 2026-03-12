@@ -74,7 +74,11 @@ export function ManalagiSeniorRotation({
   const [isCurrentGroupLocked, setIsCurrentGroupLocked] = useState(false);
   const { lockedRotations } = useLockedRotations(job, vessel, forecastMonth);
   // Always fetch fm=1 locks for cross-month awareness (React Query caches, no extra request when already on fm=1)
-  const { lockedRotations: lockedRotationsFm1 } = useLockedRotations(job, vessel, 1);
+  const { lockedRotations: lockedRotationsFm1 } = useLockedRotations(
+    job,
+    vessel,
+    1
+  );
 
   // Calculate locked codes: current fm + fm=1 main crew (excluded from pool to prevent double-locking)
   const lockedCadanganCodes = useMemo(() => {
@@ -164,7 +168,13 @@ export function ManalagiSeniorRotation({
 
   // Lazy load potential promotion
   const { potentialData: potentialRawData, loading: loadingPotential } =
-    usePotentialPromotion(job, selectedGroup, groups, !!selectedGroup, forecastMonth);
+    usePotentialPromotion(
+      job,
+      selectedGroup,
+      groups,
+      !!selectedGroup,
+      forecastMonth
+    );
 
   // Mutations
   const { generateSchedule, loading: loadingGenerate } = useGenerateSchedule();
@@ -594,32 +604,37 @@ export function ManalagiSeniorRotation({
               1. All groups locked AND not yet submitted (first submit)
               2. All groups locked AND has pending changes (resubmit after CHANGE)
             */}
-            {forecastMonth === 1 && areAllGroupsLocked && (!isSubmitted || hasChanges) && (
-              <Button
-                color="success"
-                onClick={handleSubmitAllRotations}
-                disabled={loadingSubmit}
-              >
-                {loadingSubmit ? (
-                  <>
-                    <Spinner size="sm" light className="mr-2" />
-                    Submitting...
-                  </>
-                ) : hasChanges ? (
-                  `Kirim Perubahan (${changesCount})`
-                ) : (
-                  `Kirim Rotasi`
-                )}
-              </Button>
-            )}
+            {forecastMonth === 1 &&
+              areAllGroupsLocked &&
+              (!isSubmitted || hasChanges) && (
+                <Button
+                  color="success"
+                  onClick={handleSubmitAllRotations}
+                  disabled={loadingSubmit}
+                >
+                  {loadingSubmit ? (
+                    <>
+                      <Spinner size="sm" light className="mr-2" />
+                      Submitting...
+                    </>
+                  ) : hasChanges ? (
+                    `Kirim Perubahan (${changesCount})`
+                  ) : (
+                    `Kirim Rotasi`
+                  )}
+                </Button>
+              )}
 
             {/* Show submitted status - only when submitted and no pending changes */}
-            {forecastMonth === 1 && areAllGroupsLocked && isSubmitted && !hasChanges && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-                <HiLockClosed className="h-5 w-5" />
-                <span className="font-medium">Terkirim</span>
-              </div>
-            )}
+            {forecastMonth === 1 &&
+              areAllGroupsLocked &&
+              isSubmitted &&
+              !hasChanges && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+                  <HiLockClosed className="h-5 w-5" />
+                  <span className="font-medium">Terkirim</span>
+                </div>
+              )}
           </div>
           <p className="text-gray-600">
             Generate dan kelola jadwal rotasi MANALAGI {getJobDisplayName(job)}
@@ -665,9 +680,12 @@ export function ManalagiSeniorRotation({
                   ? 'bg-red-500 text-white shadow-sm'
                   : 'text-red-400 hover:text-red-600'
               }`}
-              onClick={() => { if (forecastMonth !== month) setForecastMonth(month); }}
+              onClick={() => {
+                if (forecastMonth !== month) setForecastMonth(month);
+              }}
             >
-              {month === 1 ? 'Bulan Depan' : `${month} Bulan Depan`} ({getForecastMonthLabel(month)})
+              {month === 1 ? 'Bulan Depan' : `${month} Bulan Depan`} (
+              {getForecastMonthLabel(month)})
             </button>
           ))}
         </div>
@@ -676,7 +694,8 @@ export function ManalagiSeniorRotation({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {Object.entries(groups).map(([groupKey, ships]) => {
             const isLocked = !!lockedRotations[groupKey];
-            const hasPendingChange = forecastMonth === 1 && affectedGroups.includes(groupKey);
+            const hasPendingChange =
+              forecastMonth === 1 && affectedGroups.includes(groupKey);
 
             return (
               <div key={groupKey} className="relative">
@@ -766,7 +785,8 @@ export function ManalagiSeniorRotation({
                                 </td>
                                 <td className="px-4 py-3">{item.name}</td>
                                 <td className="px-4 py-3 text-xs">
-                                  {item.vessels || '----- [BELUM ADA DATA MUTASI] -----'}
+                                  {item.vessels ||
+                                    '----- [BELUM ADA DATA MUTASI] -----'}
                                 </td>
                                 <td className="px-4 py-3">
                                   {item.last_location}

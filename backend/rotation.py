@@ -78,7 +78,14 @@ def get_nganggur(job):
 # ============================================================================
 
 
-def get_schedule(vessel_group_id_filter, new_nahkoda, type, part, job="NAKHODA", month_offset: int = 1):
+def get_schedule(
+    vessel_group_id_filter,
+    new_nahkoda,
+    type,
+    part,
+    job="NAKHODA",
+    month_offset: int = 1,
+):
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
 

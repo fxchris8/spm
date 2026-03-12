@@ -220,7 +220,14 @@ def container_rotation_api():
         # print(f"[DEBUG] Memanggil get_schedule dengan job='{job}', forecast_month={forecast_month}")
 
         # Dapatkan DataFrame schedule dengan parameter job dan month_offset
-        schedule_df = get_schedule(selected_group, cadangan, type_vessel, part, job, month_offset=forecast_month)
+        schedule_df = get_schedule(
+            selected_group,
+            cadangan,
+            type_vessel,
+            part,
+            job,
+            month_offset=forecast_month,
+        )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
         # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
@@ -390,7 +397,10 @@ def get_mutasi_filtered():
         # Base DataFrame dari seamen valid (termasuk yang tidak punya history mutasi)
         df_base = (
             df_seamen[
-                df_seamen["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
+                df_seamen["seamancode"]
+                .astype(str)
+                .str.strip()
+                .isin(seamancode_terfilter)
             ][["seamancode", "name", "last_location"]]
             .drop_duplicates(subset=["seamancode"])
             .copy()
@@ -401,7 +411,9 @@ def get_mutasi_filtered():
         df_history_filtered = df_history[
             df_history["seamancode"].astype(str).str.strip().isin(seamancode_terfilter)
         ].copy()
-        df_history_filtered["seamancode"] = df_history_filtered["seamancode"].astype(str).str.strip()
+        df_history_filtered["seamancode"] = (
+            df_history_filtered["seamancode"].astype(str).str.strip()
+        )
 
         # LEFT JOIN dari base seamen ke history → seaman tanpa history tetap muncul
         df_mutasi_filtered = df_base.merge(
@@ -635,7 +647,9 @@ def filter_history():
                 & (df_seamen_work["end_date"] >= today)
                 & (df_seamen_work["end_date"] <= range_end)
             ]["seamancode"].unique()
-            df_history = df_history[df_history["seamancode"].isin(forecast_seaman_codes)]
+            df_history = df_history[
+                df_history["seamancode"].isin(forecast_seaman_codes)
+            ]
 
         # Merge untuk dapat nama
         df = df_history.merge(
@@ -830,7 +844,9 @@ def api_unlock_rotation(group_key):
             )
 
         # Unlock menggunakan fungsi di database.py
-        result = unlock_rotation(group_key=group_key, job=job, vessel=vessel, forecast_month=forecast_month)
+        result = unlock_rotation(
+            group_key=group_key, job=job, vessel=vessel, forecast_month=forecast_month
+        )
 
         if result["success"]:
             return jsonify({"status": "success", "message": result["message"]})

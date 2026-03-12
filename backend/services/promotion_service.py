@@ -9,9 +9,16 @@ import pandas as pd
 from repositories import get_mutations_data, get_seamen_data
 from repositories.vessel_repository import build_kelompok
 
-_LOKASI_OTHERS_UPPER = frozenset([
-    "DARAT", "DARAT BIASA", "DARAT STAND-BY", "STAND BY CREW", "PENDING CUTI", "PENDING GAJI",
-])
+_LOKASI_OTHERS_UPPER = frozenset(
+    [
+        "DARAT",
+        "DARAT BIASA",
+        "DARAT STAND-BY",
+        "STAND BY CREW",
+        "PENDING CUTI",
+        "PENDING GAJI",
+    ]
+)
 
 
 def _apply_categorization_filter(
@@ -67,7 +74,9 @@ def _apply_categorization_filter(
     return df_seamen[mask]
 
 
-def _apply_forecast_filter(df_seamen: pd.DataFrame, forecast_month: int) -> pd.DataFrame:
+def _apply_forecast_filter(
+    df_seamen: pd.DataFrame, forecast_month: int
+) -> pd.DataFrame:
     """
     Filter df_seamen by end_date range for forecast_month >= 2.
     Returns seamen whose end_date falls within [today, start of forecast month].

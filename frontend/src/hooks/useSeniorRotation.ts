@@ -192,7 +192,8 @@ async function unlockRotation(
   forecastMonth: number = 1
 ): Promise<any> {
   const params = new URLSearchParams({ job, vessel });
-  if (forecastMonth !== 1) params.append('forecast_month', String(forecastMonth));
+  if (forecastMonth !== 1)
+    params.append('forecast_month', String(forecastMonth));
 
   const response = await fetch(
     `${API_BASE_URL}/locked-rotations/${groupKey}?${params.toString()}`,
@@ -212,13 +213,20 @@ async function unlockRotation(
 // ============= CUSTOM HOOKS =============
 
 // Hook untuk locked rotations (load once per job and vessel)
-export function useLockedRotations(job: string, vessel: string, forecastMonth: number = 1) {
+export function useLockedRotations(
+  job: string,
+  vessel: string,
+  forecastMonth: number = 1
+) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['locked-rotations', job, vessel, forecastMonth],
     queryFn: async () => {
       const params = new URLSearchParams({ job, vessel });
-      if (forecastMonth !== 1) params.append('forecast_month', String(forecastMonth));
-      const response = await fetch(`${API_BASE_URL}/locked-rotations?${params.toString()}`);
+      if (forecastMonth !== 1)
+        params.append('forecast_month', String(forecastMonth));
+      const response = await fetch(
+        `${API_BASE_URL}/locked-rotations?${params.toString()}`
+      );
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -229,11 +237,31 @@ export function useLockedRotations(job: string, vessel: string, forecastMonth: n
           const daratData = item.reliever_data?.data || [];
 
           const cadanganCodes = nahkodaData
-            .map((row: any) => String(row.seamancode || row.SEAMANCODE || row.Seamancode || row.SeamanCode || row.seaman_code || row.SEAMAN_CODE || '').trim())
+            .map((row: any) =>
+              String(
+                row.seamancode ||
+                  row.SEAMANCODE ||
+                  row.Seamancode ||
+                  row.SeamanCode ||
+                  row.seaman_code ||
+                  row.SEAMAN_CODE ||
+                  ''
+              ).trim()
+            )
             .filter((code: string) => code !== '');
 
           const relieverCodes = daratData
-            .map((row: any) => String(row.seamancode || row.SEAMANCODE || row.Seamancode || row.SeamanCode || row.seaman_code || row.SEAMAN_CODE || '').trim())
+            .map((row: any) =>
+              String(
+                row.seamancode ||
+                  row.SEAMANCODE ||
+                  row.Seamancode ||
+                  row.SeamanCode ||
+                  row.seaman_code ||
+                  row.SEAMAN_CODE ||
+                  ''
+              ).trim()
+            )
             .filter((code: string) => code !== '');
 
           locksMap[item.group_key] = {
@@ -273,9 +301,23 @@ export function useMutasiData(
   enabled: boolean = true,
   forecastMonth: number = 1
 ) {
-  const { containerVessels, manalagiVessels, bcVessels, mtVessels, tbVessels, tkVessels } = useVesselCategories();
+  const {
+    containerVessels,
+    manalagiVessels,
+    bcVessels,
+    mtVessels,
+    tbVessels,
+    tkVessels,
+  } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['mutasi-data', job, type, groupKey, lockedCadanganCodes, forecastMonth],
+    queryKey: [
+      'mutasi-data',
+      job,
+      type,
+      groupKey,
+      lockedCadanganCodes,
+      forecastMonth,
+    ],
     queryFn: async () => {
       if (!groupKey || !type) return [];
 
@@ -307,7 +349,11 @@ export function useMutasiData(
             if (vlist.length > 0) {
               const lastVessel = vlist[vlist.length - 1]; // Vessel terakhir di array
 
-              const isNonFleet = bcVessels.has(lastVessel) || mtVessels.has(lastVessel) || tbVessels.has(lastVessel) || tkVessels.has(lastVessel);
+              const isNonFleet =
+                bcVessels.has(lastVessel) ||
+                mtVessels.has(lastVessel) ||
+                tbVessels.has(lastVessel) ||
+                tkVessels.has(lastVessel);
               if (type === 'senior' || type === 'junior') {
                 if (manalagiVessels.has(lastVessel) || isNonFleet) return null;
               } else if (type === 'manalagi') {
@@ -375,7 +421,9 @@ export function usePotentialPromotion(
           mualimI: `${API_BASE_URL}/seamen/promotion-candidates-mualimI`,
           masinisII: `${API_BASE_URL}/seamen/promotion-candidates-masinisII`,
         };
-        return base[job] || `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`;
+        return (
+          base[job] || `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`
+        );
       };
       const candidateUrl = getPromotionEndpoint(job);
 
@@ -497,8 +545,22 @@ export function useCadanganData(
   categorization?: string
 ) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['cadangan-data', job, groupKey, lockedCadanganCodes, forecastMonth, categorization],
-    queryFn: () => fetchCadanganData(job, groupKey!, lockedCadanganCodes, forecastMonth, categorization),
+    queryKey: [
+      'cadangan-data',
+      job,
+      groupKey,
+      lockedCadanganCodes,
+      forecastMonth,
+      categorization,
+    ],
+    queryFn: () =>
+      fetchCadanganData(
+        job,
+        groupKey!,
+        lockedCadanganCodes,
+        forecastMonth,
+        categorization
+      ),
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
@@ -521,9 +583,22 @@ export function usePromotionCandidates(
   categorization?: string
 ) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['promotion-candidates', job, groupKey, lockedCadanganCodes, forecastMonth, categorization],
+    queryKey: [
+      'promotion-candidates',
+      job,
+      groupKey,
+      lockedCadanganCodes,
+      forecastMonth,
+      categorization,
+    ],
     queryFn: () =>
-      fetchPromotionCandidates(job, groupKey!, lockedCadanganCodes, forecastMonth, categorization),
+      fetchPromotionCandidates(
+        job,
+        groupKey!,
+        lockedCadanganCodes,
+        forecastMonth,
+        categorization
+      ),
     enabled: enabled && !!groupKey, // Only fetch when group is selected
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit

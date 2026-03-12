@@ -160,7 +160,9 @@ def save_orphaned_records_report(orphaned_records, deleted_count):
 # ============================================================================
 
 
-def get_locked_rotations(job=None, vessel=None, categorization=None, forecast_month=None):
+def get_locked_rotations(
+    job=None, vessel=None, categorization=None, forecast_month=None
+):
     try:
         params = {}
         conditions = ["is_active = TRUE"]
@@ -268,7 +270,12 @@ def save_locked_rotation(
             # Deactivate existing
             conn.execute(
                 text(deactivate_query),
-                {"group_key": group_key, "job": job, "vessel": vessel, "forecast_month": forecast_month},
+                {
+                    "group_key": group_key,
+                    "job": job,
+                    "vessel": vessel,
+                    "forecast_month": forecast_month,
+                },
             )
 
             # Insert new (dengan JSON string, bukan JSONB)
@@ -317,7 +324,13 @@ def unlock_rotation(group_key, job, vessel, forecast_month=1):
 
         with engine.connect() as conn:
             result = conn.execute(
-                text(query), {"group_key": group_key, "job": job, "vessel": vessel, "forecast_month": forecast_month}
+                text(query),
+                {
+                    "group_key": group_key,
+                    "job": job,
+                    "vessel": vessel,
+                    "forecast_month": forecast_month,
+                },
             )
             conn.commit()
 

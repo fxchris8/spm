@@ -127,7 +127,7 @@ def sync_mutations_to_database(df):
     try:
         print(f"PROCESS - Processing {len(df)} mutation records...")
 
-        print(f"Converting seamancode to integer...")
+        print("Converting seamancode to integer...")
         df["seamancode"] = (
             pd.to_numeric(df["seamancode"], errors="coerce").fillna(0).astype(int)
         )

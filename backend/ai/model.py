@@ -103,9 +103,7 @@ def getRecommendation(
         if word_vectors:
             return np.mean(word_vectors, axis=0)
         else:
-            return np.zeros(
-                word2vec_model.vector_size
-            )
+            return np.zeros(word2vec_model.vector_size)
 
     filtered_df["vector"] = filtered_df["combined_features"].apply(get_word2vec_vector)
 
@@ -125,9 +123,7 @@ def getRecommendation(
         for group in hierarchy_mapping.values():
             if cert1 in group and cert2 in group:
                 idx1, idx2 = group.index(cert1), group.index(cert2)
-                return 1 - abs(idx1 - idx2) / len(
-                    group
-                )
+                return 1 - abs(idx1 - idx2) / len(group)
         return 0
 
     def handle_non_hierarchical_certificate(cert):

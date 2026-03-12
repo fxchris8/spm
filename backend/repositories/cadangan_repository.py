@@ -25,7 +25,9 @@ _KELOMPOK = {
 }
 
 
-def _filter_by_categorization(df: pd.DataFrame, categorization: str | None) -> pd.DataFrame:
+def _filter_by_categorization(
+    df: pd.DataFrame, categorization: str | None
+) -> pd.DataFrame:
     """
     Filter seamen by vessel category (container/manalagi).
 
@@ -114,7 +116,9 @@ def _get_cadangan_by_position(
             & (df["end_date"] >= today)
             & (df["end_date"] <= range_end)
         ]
-        filtered = pd.concat([pool_status, pool_vessel]).drop_duplicates(subset=["seamancode"])
+        filtered = pd.concat([pool_status, pool_vessel]).drop_duplicates(
+            subset=["seamancode"]
+        )
     else:
         filtered = pool_status
 
@@ -124,7 +128,9 @@ def _get_cadangan_by_position(
     return filtered[["name", "last_location", "seamancode"]]
 
 
-def get_cadangan_kkm(forecast_month: int = 1, categorization: str | None = None) -> pd.DataFrame:
+def get_cadangan_kkm(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
     """
     Retrieve backup crew data for KKM position.
 
@@ -134,7 +140,9 @@ def get_cadangan_kkm(forecast_month: int = 1, categorization: str | None = None)
     return _get_cadangan_by_position("KKM", forecast_month, categorization)
 
 
-def get_cadangan_nakhoda(forecast_month: int = 1, categorization: str | None = None) -> pd.DataFrame:
+def get_cadangan_nakhoda(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
     """
     Retrieve backup crew data for NAKHODA position.
 
@@ -144,7 +152,9 @@ def get_cadangan_nakhoda(forecast_month: int = 1, categorization: str | None = N
     return _get_cadangan_by_position("NAKHODA", forecast_month, categorization)
 
 
-def get_cadangan_mualim_i(forecast_month: int = 1, categorization: str | None = None) -> pd.DataFrame:
+def get_cadangan_mualim_i(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
     """
     Retrieve backup crew data for MUALIM I position.
 
@@ -154,7 +164,9 @@ def get_cadangan_mualim_i(forecast_month: int = 1, categorization: str | None = 
     return _get_cadangan_by_position("MUALIM I", forecast_month, categorization)
 
 
-def get_cadangan_masinis_ii(forecast_month: int = 1, categorization: str | None = None) -> pd.DataFrame:
+def get_cadangan_masinis_ii(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
     """
     Retrieve backup crew data for MASINIS II position.
 

@@ -10,7 +10,9 @@ from repositories import (
 )
 
 
-def get_cadangan_kkm_data(forecast_month: int = 1, categorization: str | None = None) -> list:
+def get_cadangan_kkm_data(
+    forecast_month: int = 1, categorization: str | None = None
+) -> list:
     """
     Get cadangan crew data for KKM position.
 
@@ -21,7 +23,9 @@ def get_cadangan_kkm_data(forecast_month: int = 1, categorization: str | None = 
     return df.to_dict(orient="records")
 
 
-def get_cadangan_nakhoda_data(forecast_month: int = 1, categorization: str | None = None) -> list:
+def get_cadangan_nakhoda_data(
+    forecast_month: int = 1, categorization: str | None = None
+) -> list:
     """
     Get cadangan crew data for NAKHODA position.
 
@@ -32,7 +36,9 @@ def get_cadangan_nakhoda_data(forecast_month: int = 1, categorization: str | Non
     return df.to_dict(orient="records")
 
 
-def get_cadangan_mualim_i_data(forecast_month: int = 1, categorization: str | None = None) -> list:
+def get_cadangan_mualim_i_data(
+    forecast_month: int = 1, categorization: str | None = None
+) -> list:
     """
     Get cadangan crew data for MUALIM I position.
 
@@ -43,7 +49,9 @@ def get_cadangan_mualim_i_data(forecast_month: int = 1, categorization: str | No
     return df.to_dict(orient="records")
 
 
-def get_cadangan_masinis_ii_data(forecast_month: int = 1, categorization: str | None = None) -> list:
+def get_cadangan_masinis_ii_data(
+    forecast_month: int = 1, categorization: str | None = None
+) -> list:
     """
     Get cadangan crew data for MASINIS II position.
 

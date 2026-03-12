@@ -612,7 +612,6 @@ def seed_rotation_barge_crane_senior_data():
         },
     }
 
-
     configs = [nakhoda_bc_data, kkm_bc_data]
 
     for config in configs:

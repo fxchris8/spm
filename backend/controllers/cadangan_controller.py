@@ -13,7 +13,9 @@ from services import (
 )
 
 
-def get_cadangan_kkm_controller(forecast_month: int = 1, categorization: str | None = None):
+def get_cadangan_kkm_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     """
     Controller for GET /api/cadangan-KKM endpoint.
 
@@ -27,7 +29,9 @@ def get_cadangan_kkm_controller(forecast_month: int = 1, categorization: str | N
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
-def get_cadangan_nakhoda_controller(forecast_month: int = 1, categorization: str | None = None):
+def get_cadangan_nakhoda_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     """
     Controller for GET /api/cadangan-nakhoda endpoint.
 
@@ -41,7 +45,9 @@ def get_cadangan_nakhoda_controller(forecast_month: int = 1, categorization: str
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
-def get_cadangan_mualim_i_controller(forecast_month: int = 1, categorization: str | None = None):
+def get_cadangan_mualim_i_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     """
     Controller for GET /api/cadangan-mualimI endpoint.
 
@@ -55,7 +61,9 @@ def get_cadangan_mualim_i_controller(forecast_month: int = 1, categorization: st
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
 
 
-def get_cadangan_masinis_ii_controller(forecast_month: int = 1, categorization: str | None = None):
+def get_cadangan_masinis_ii_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
     """
     Controller for GET /api/cadangan-masinisII endpoint.
 

@@ -8,7 +8,11 @@ import os
 import bcrypt
 import jwt
 
-from repositories.user_repository import create_user, get_user_by_id, get_user_by_username
+from repositories.user_repository import (
+    create_user,
+    get_user_by_id,
+    get_user_by_username,
+)
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 
