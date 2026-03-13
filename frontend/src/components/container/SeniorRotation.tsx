@@ -14,6 +14,8 @@ import {
   HiLockClosed,
   HiLockOpen,
   HiExclamationCircle,
+  HiChevronDown,
+  HiChevronUp,
 } from 'react-icons/hi';
 import {
   useLockedRotations,
@@ -67,6 +69,8 @@ export function SeniorRotation({
   const [error, setError] = useState<string>('');
   const [showOnlyMatchMutasi, setShowOnlyMatchMutasi] = useState(false);
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
+  const [expandedMutasi, setExpandedMutasi] = useState(false);
+  const [expandedPotential, setExpandedPotential] = useState(false);
   const [forecastMonth, setForecastMonth] = useState<1 | 2>(1);
   // Alert state removed - using toast instead
 
@@ -760,8 +764,12 @@ export function SeniorRotation({
                 <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* EXISTING */}
                   {mutasiTable && (
-                    <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
-                      <div className="flex items-center justify-between gap-3 mb-4 pb-3">
+                    <div className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedMutasi(prev => !prev)}
+                        className="w-full flex items-center justify-between gap-3 p-4 hover:bg-gray-50 transition-colors"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-red-100 rounded-lg">
                             <HiUserGroup className="h-5 w-5 text-red-600" />
@@ -769,56 +777,70 @@ export function SeniorRotation({
                           <h2 className="text-lg font-bold text-gray-900">
                             {getJobDisplayName(job)} EXISTING
                           </h2>
+                          <span className="text-xs text-gray-500 font-normal">
+                            ({mutasiTable.data.length} data)
+                          </span>
                         </div>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={showOnlyMatchMutasi}
-                            onChange={e =>
-                              setShowOnlyMatchMutasi(e.target.checked)
-                            }
-                            className="rounded"
-                          />
-                          Tampilkan matchCount &gt; 0 saja
-                        </label>
-                      </div>
+                        {expandedMutasi ? (
+                          <HiChevronUp className="h-5 w-5 text-gray-500 shrink-0" />
+                        ) : (
+                          <HiChevronDown className="h-5 w-5 text-gray-500 shrink-0" />
+                        )}
+                      </button>
 
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-700">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3">Seaman Code</th>
-                              <th className="px-4 py-3">Name</th>
-                              <th className="px-4 py-3">History Vessels</th>
-                              <th className="px-4 py-3">Last Location</th>
-                              <th className="px-4 py-3">Match Count</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {mutasiTable.data.map((item, idx) => (
-                              <tr
-                                key={idx}
-                                className="border-b hover:bg-gray-50"
-                              >
-                                <td className="px-4 py-3 font-medium">
-                                  {item.seamancode}
-                                </td>
-                                <td className="px-4 py-3">{item.name}</td>
-                                <td className="px-4 py-3 text-xs">
-                                  {item.vessels ||
-                                    '----- [BELUM ADA DATA MUTASI] -----'}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {item.last_location}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  {item.matchCount}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      {expandedMutasi && (
+                        <div className="px-4 pb-4">
+                          <div className="flex justify-end mb-3">
+                            <label className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={showOnlyMatchMutasi}
+                                onChange={e =>
+                                  setShowOnlyMatchMutasi(e.target.checked)
+                                }
+                                className="rounded"
+                              />
+                              Tampilkan matchCount &gt; 0 saja
+                            </label>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-gray-700">
+                              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-3">Seaman Code</th>
+                                  <th className="px-4 py-3">Name</th>
+                                  <th className="px-4 py-3">History Vessels</th>
+                                  <th className="px-4 py-3">Last Location</th>
+                                  <th className="px-4 py-3">Match Count</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {mutasiTable.data.map((item, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className="border-b hover:bg-gray-50"
+                                  >
+                                    <td className="px-4 py-3 font-medium">
+                                      {item.seamancode}
+                                    </td>
+                                    <td className="px-4 py-3">{item.name}</td>
+                                    <td className="px-4 py-3 text-xs">
+                                      {item.vessels ||
+                                        '----- [BELUM ADA DATA MUTASI] -----'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {item.last_location}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      {item.matchCount}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -842,8 +864,12 @@ export function SeniorRotation({
 
                     return (
                       (showForKKMorMasinisII || showForNahkodaOrMualimI) && (
-                        <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm overflow-x-auto">
-                          <div className="flex items-center justify-between gap-3 mb-4 pb-3">
+                        <div className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedPotential(prev => !prev)}
+                            className="w-full flex items-center justify-between gap-3 p-4 hover:bg-gray-50 transition-colors"
+                          >
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-yellow-100 rounded-lg">
                                 <HiStar className="h-5 w-5 text-yellow-600" />
@@ -851,68 +877,96 @@ export function SeniorRotation({
                               <h2 className="text-lg font-bold text-gray-900">
                                 POTENTIAL PROMOTION
                               </h2>
+                              {potentialTable && (
+                                <span className="text-xs text-gray-500 font-normal">
+                                  ({potentialTable.data.length} data)
+                                </span>
+                              )}
                             </div>
-                            <label className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={showOnlyMatchPotential}
-                                onChange={e =>
-                                  setShowOnlyMatchPotential(e.target.checked)
-                                }
-                                className="rounded"
-                              />
-                              Tampilkan matchCount &gt; 0 saja
-                            </label>
-                          </div>
+                            {expandedPotential ? (
+                              <HiChevronUp className="h-5 w-5 text-gray-500 shrink-0" />
+                            ) : (
+                              <HiChevronDown className="h-5 w-5 text-gray-500 shrink-0" />
+                            )}
+                          </button>
 
-                          {loadingPotential ? (
-                            <div className="flex flex-col items-center justify-center py-8 gap-4">
-                              <Spinner size="lg" color="failure" />
-                              <span className="text-gray-600">
-                                Loading potential promotion data...
-                              </span>
-                            </div>
-                          ) : potentialTable &&
-                            potentialTable.data.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm text-left text-gray-700">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                                  <tr>
-                                    <th className="px-4 py-3">Seaman Code</th>
-                                    <th className="px-4 py-3">Name</th>
-                                    <th className="px-4 py-3">History</th>
-                                    <th className="px-4 py-3">Last Location</th>
-                                    <th className="px-4 py-3">Match Count</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {potentialTable.data.map((item, idx) => (
-                                    <tr
-                                      key={idx}
-                                      className="border-b hover:bg-gray-50"
-                                    >
-                                      <td className="px-4 py-3 font-medium">
-                                        {item.seamancode}
-                                      </td>
-                                      <td className="px-4 py-3">{item.name}</td>
-                                      <td className="px-4 py-3 text-xs">
-                                        {item.history}
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        {item.last_location}
-                                      </td>
-                                      <td className="px-4 py-3 text-center">
-                                        {item.matchCount}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8 text-gray-500">
-                              Tidak ada {getJobDisplayName(job)} yang
-                              mendapatkan potensial promosi
+                          {expandedPotential && (
+                            <div className="px-4 pb-4">
+                              {loadingPotential ? (
+                                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                                  <Spinner size="lg" color="failure" />
+                                  <span className="text-gray-600">
+                                    Loading potential promotion data...
+                                  </span>
+                                </div>
+                              ) : potentialTable &&
+                                potentialTable.data.length > 0 ? (
+                                <>
+                                  <div className="flex justify-end mb-3">
+                                    <label className="flex items-center gap-2 text-sm">
+                                      <input
+                                        type="checkbox"
+                                        checked={showOnlyMatchPotential}
+                                        onChange={e =>
+                                          setShowOnlyMatchPotential(
+                                            e.target.checked
+                                          )
+                                        }
+                                        className="rounded"
+                                      />
+                                      Tampilkan matchCount &gt; 0 saja
+                                    </label>
+                                  </div>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-gray-700">
+                                      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                        <tr>
+                                          <th className="px-4 py-3">
+                                            Seaman Code
+                                          </th>
+                                          <th className="px-4 py-3">Name</th>
+                                          <th className="px-4 py-3">History</th>
+                                          <th className="px-4 py-3">
+                                            Last Location
+                                          </th>
+                                          <th className="px-4 py-3">
+                                            Match Count
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {potentialTable.data.map((item, idx) => (
+                                          <tr
+                                            key={idx}
+                                            className="border-b hover:bg-gray-50"
+                                          >
+                                            <td className="px-4 py-3 font-medium">
+                                              {item.seamancode}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                              {item.name}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs">
+                                              {item.history}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                              {item.last_location}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                              {item.matchCount}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                  Tidak ada {getJobDisplayName(job)} yang
+                                  mendapatkan potensial promosi
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
