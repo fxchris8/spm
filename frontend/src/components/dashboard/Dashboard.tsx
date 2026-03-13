@@ -30,6 +30,7 @@ import { useDashboardData } from '../../hooks/useDashboardData';
 import { useSimilarSeamen } from '../../hooks/useSimilarSeamen';
 import { useManualSync } from '../../hooks/useManualSync';
 import { RotationSummary } from './RotationSummary';
+import { OffboardDetailModal } from './OffboardDetailModal';
 import { formatDateIndo } from '../../utils/dateUtils';
 
 export function Dashboard() {
@@ -43,6 +44,9 @@ export function Dashboard() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [selectedOffboardLocation, setSelectedOffboardLocation] = useState<
+    string | null
+  >(null);
 
   const { similarSeamen, loading: loadingSimilar } =
     useSimilarSeamen(selectedSeamanCode);
@@ -285,9 +289,12 @@ export function Dashboard() {
 
         {/* Pie Chart 2 - Offboard Distribution */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">
             Distribusi Offboard
           </h3>
+          <p className="text-xs text-gray-400 mb-4">
+            Klik segmen untuk melihat detail per role
+          </p>
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
@@ -299,6 +306,8 @@ export function Dashboard() {
                 outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
+                onClick={entry => setSelectedOffboardLocation(entry.name)}
+                style={{ cursor: 'pointer' }}
               >
                 {offboardDistribution.map((_, index) => {
                   const colors = [
@@ -530,6 +539,12 @@ export function Dashboard() {
           )}
         </Modal.Body>
       </Modal>
+
+      <OffboardDetailModal
+        show={!!selectedOffboardLocation}
+        onClose={() => setSelectedOffboardLocation(null)}
+        locationName={selectedOffboardLocation ?? ''}
+      />
 
       <ConfirmModal
         show={showSyncModal}
