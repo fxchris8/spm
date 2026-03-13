@@ -5,7 +5,7 @@ Module ini menyediakan business logic dan transformasi data untuk dashboard, ter
 import pandas as pd
 
 from models import SeamanRecord, SimilarSeamanResult, VesselStats
-from repositories import get_seaman_by_code, get_seamen_data, get_vessels_data
+from repositories import get_offboard_seamen_by_location, get_seaman_by_code, get_seamen_data, get_vessels_data
 
 
 def get_dashboard_data():
@@ -56,6 +56,19 @@ def get_vessel_stats() -> dict:
     )
 
     return stats.to_dict()
+
+
+def get_offboard_detail(location: str) -> list:
+    """
+    Get offboard seamen filtered by last_location, including prevlocation.
+
+    Args:
+        location: The offboard status to filter by (e.g. "DARAT STAND-BY")
+
+    Returns:
+        list[dict]: List of seamen with their prevlocation (previous vessel)
+    """
+    return get_offboard_seamen_by_location(location)
 
 
 def get_similar_seamen(target_seaman_code) -> dict:

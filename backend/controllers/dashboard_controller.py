@@ -5,7 +5,7 @@ Handles HTTP request/response for dashboard endpoints.
 
 from flask import jsonify
 
-from services import get_dashboard_data, get_similar_seamen, get_vessel_stats
+from services import get_dashboard_data, get_offboard_detail, get_similar_seamen, get_vessel_stats
 
 
 def get_dashboard_data_controller():
@@ -34,6 +34,21 @@ def get_vessel_stats_controller():
         stats = get_vessel_stats()
 
         return jsonify(stats), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_offboard_detail_controller(location: str):
+    """
+    Controller for GET /api/offboard-detail/<location> endpoint.
+
+    Returns:
+        JSON: List of seamen with prevlocation for the given offboard status
+    """
+    try:
+        data = get_offboard_detail(location)
+        return jsonify(data), 200
 
     except Exception as e:
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

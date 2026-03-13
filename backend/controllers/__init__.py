@@ -18,6 +18,7 @@ from .cadangan_controller import (
 )
 from .dashboard_controller import (
     get_dashboard_data_controller,
+    get_offboard_detail_controller,
     get_similarity_controller,
     get_vessel_stats_controller,
 )
@@ -49,6 +50,7 @@ __all__ = [
     "get_dashboard_data_controller",
     "get_vessel_stats_controller",
     "get_similarity_controller",
+    "get_offboard_detail_controller",
     # Promotion Controllers
     "get_promotion_candidates_nakhoda_controller",
     "get_promotion_candidates_kkm_controller",

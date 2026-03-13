@@ -19,7 +19,7 @@ from .cadangan_service import (
     get_cadangan_mualim_i_data,
     get_cadangan_nakhoda_data,
 )
-from .dashboard_service import get_dashboard_data, get_similar_seamen, get_vessel_stats
+from .dashboard_service import get_dashboard_data, get_offboard_detail, get_similar_seamen, get_vessel_stats
 from .promotion_service import (
     get_promotion_candidates_kkm,
     get_promotion_candidates_masinisII,
@@ -51,6 +51,7 @@ __all__ = [
     "get_dashboard_data",
     "get_vessel_stats",
     "get_similar_seamen",
+    "get_offboard_detail",
     # Promotion Services
     "get_promotion_candidates_nakhoda",
     "get_promotion_candidates_kkm",

@@ -86,6 +86,31 @@ def get_vessels_data():
         return vessels
 
 
+def get_offboard_seamen_by_location(location: str):
+    """
+    Retrieve offboard seamen filtered by last_location, including prevlocation.
+
+    Args:
+        location: The last_location value to filter by (e.g. "DARAT STAND-BY")
+
+    Returns:
+        list[dict]: List of seamen records with relevant fields
+    """
+    query = """
+        SELECT seamancode, seafarercode, name, last_position,
+               last_location, prevlocation, age, certificate
+        FROM seamen
+        WHERE UPPER(last_location) = UPPER(:location)
+        ORDER BY last_position, name
+    """
+
+    with get_db_connection() as conn:
+        result = conn.execute(text(query), {"location": location})
+        rows = result.fetchall()
+        columns = result.keys()
+        return [dict(zip(columns, row)) for row in rows]
+
+
 def get_seaman_by_code(seaman_code):
     """
     Get seaman data by seamancode.
