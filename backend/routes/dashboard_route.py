@@ -7,6 +7,7 @@ from flask import Blueprint
 
 from controllers import (
     get_dashboard_data_controller,
+    get_offboard_detail_controller,
     get_similarity_controller,
     get_vessel_stats_controller,
     manual_sync_controller,
@@ -41,6 +42,15 @@ def manual_sync():
     Manually trigger data sync from external API to database.
     """
     return manual_sync_controller()
+
+
+@dashboard_bp.route("/offboard-detail/<string:location>", methods=["GET"])
+def get_offboard_detail(location):
+    """
+    GET /api/offboard-detail/<location>
+    Returns seamen list for a given offboard status, including prevlocation.
+    """
+    return get_offboard_detail_controller(location)
 
 
 @dashboard_bp.route("/similarity/<int:seaman_code>", methods=["GET"])
