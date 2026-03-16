@@ -68,7 +68,8 @@ export function ManalagiSeniorRotation({
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
   const [expandedMutasi, setExpandedMutasi] = useState(false);
   const [expandedPotential, setExpandedPotential] = useState(false);
-  const [forecastMonth, setForecastMonth] = useState<1 | 2>(1);
+  const [forecastMonthPerGroup, setForecastMonthPerGroup] = useState<Record<string, 1 | 2>>({});
+  const forecastMonth = selectedGroup ? (forecastMonthPerGroup[selectedGroup] ?? 1) : 1;
 
   // Modal states
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -126,17 +127,17 @@ export function ManalagiSeniorRotation({
     return currentFmCodes;
   }, [lockedRotations, lockedRotationsFm1, job, selectedGroup, forecastMonth]);
 
-  // Check if all groups are locked for current job
+  // Check if all groups are locked for fm=1 (used for submit button)
   const areAllGroupsLocked = useMemo(() => {
     const groupKeys = Object.keys(groups);
-    const lockedGroupsForJob = Object.keys(lockedRotations).filter(
-      key => lockedRotations[key]?.job?.toUpperCase() === job.toUpperCase()
+    const lockedGroupsForJob = Object.keys(lockedRotationsFm1).filter(
+      key => lockedRotationsFm1[key]?.job?.toUpperCase() === job.toUpperCase()
     );
     return (
       groupKeys.length > 0 &&
       groupKeys.every(key => lockedGroupsForJob.includes(key))
     );
-  }, [groups, lockedRotations, job]);
+  }, [groups, lockedRotationsFm1, job]);
 
   // Lazy load cadangan data (only when group selected)
   const { cadanganData, loading: loadingCadangan } = useCadanganData(
@@ -207,6 +208,7 @@ export function ManalagiSeniorRotation({
   // Reset state saat ganti job (pindah tabs)
   useEffect(() => {
     setSelectedGroup(null);
+    setForecastMonthPerGroup({});
     setScheduleTable(null);
     setNahkodaTable(null);
     setDaratTable(null);
@@ -215,9 +217,8 @@ export function ManalagiSeniorRotation({
     setError('');
   }, [job]);
 
-  // Reset state saat ganti forecast month tab
+  // Reset tables saat ganti forecast month per group (group tetap terpilih)
   useEffect(() => {
-    setSelectedGroup(null);
     setScheduleTable(null);
     setNahkodaTable(null);
     setDaratTable(null);
@@ -608,8 +609,7 @@ export function ManalagiSeniorRotation({
               1. All groups locked AND not yet submitted (first submit)
               2. All groups locked AND has pending changes (resubmit after CHANGE)
             */}
-            {forecastMonth === 1 &&
-              areAllGroupsLocked &&
+            {areAllGroupsLocked &&
               (!isSubmitted || hasChanges) && (
                 <Button
                   color="success"
@@ -630,8 +630,7 @@ export function ManalagiSeniorRotation({
               )}
 
             {/* Show submitted status - only when submitted and no pending changes */}
-            {forecastMonth === 1 &&
-              areAllGroupsLocked &&
+            {areAllGroupsLocked &&
               isSubmitted &&
               !hasChanges && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
@@ -652,7 +651,7 @@ export function ManalagiSeniorRotation({
         )}
 
         {/* Pending Changes Alert */}
-        {forecastMonth === 1 && hasChanges && affectedGroups.length > 0 && (
+        {hasChanges && affectedGroups.length > 0 && (
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-1">
@@ -674,32 +673,11 @@ export function ManalagiSeniorRotation({
           </div>
         )}
 
-        {/* Forecast Month Tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-red-50 border border-red-100 rounded-full p-1 w-fit">
-          {([1, 2] as const).map(month => (
-            <button
-              key={month}
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
-                forecastMonth === month
-                  ? 'bg-red-500 text-white shadow-sm'
-                  : 'text-red-400 hover:text-red-600'
-              }`}
-              onClick={() => {
-                if (forecastMonth !== month) setForecastMonth(month);
-              }}
-            >
-              {month === 1 ? 'Bulan Depan' : `${month} Bulan Depan`} (
-              {getForecastMonthLabel(month)})
-            </button>
-          ))}
-        </div>
-
         {/* Card for group selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {Object.entries(groups).map(([groupKey, ships]) => {
-            const isLocked = !!lockedRotations[groupKey];
-            const hasPendingChange =
-              forecastMonth === 1 && affectedGroups.includes(groupKey);
+            const isLocked = !!lockedRotationsFm1[groupKey];
+            const hasPendingChange = affectedGroups.includes(groupKey);
 
             return (
               <div key={groupKey} className="relative">
@@ -730,6 +708,32 @@ export function ManalagiSeniorRotation({
             );
           })}
         </div>
+
+        {/* Per-group Forecast Month Selector - tampil setelah group dipilih */}
+        {selectedGroup && (
+          <div className="flex items-center gap-1 mt-4 bg-red-50 border border-red-100 rounded-full p-1 w-fit">
+            {([1, 2] as const).map(month => (
+              <button
+                key={month}
+                className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                  forecastMonth === month
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'text-red-400 hover:text-red-600'
+                }`}
+                onClick={() => {
+                  if ((forecastMonthPerGroup[selectedGroup] ?? 1) !== month) {
+                    setForecastMonthPerGroup(prev => ({
+                      ...prev,
+                      [selectedGroup]: month,
+                    }));
+                  }
+                }}
+              >
+                {getForecastMonthLabel(month)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Loading state for group selection */}
         {loadingGroup && !isCurrentGroupLocked ? (
