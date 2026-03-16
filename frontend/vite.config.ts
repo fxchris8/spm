@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: '/spm/',
   server: {
     allowedHosts: ['pe.spil.co.id'],
     watch: {

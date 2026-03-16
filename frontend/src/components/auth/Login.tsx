@@ -6,6 +6,7 @@ import { Button, Card, Label, TextInput } from 'flowbite-react';
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const APP_BASE_URL = import.meta.env.BASE_URL;
 
 export function Login() {
   const [username, setUsername] = useState('');
@@ -58,7 +59,11 @@ export function Login() {
       <Card className="w-full max-w-md">
         <div className="mb-4 text-center">
           <div className="flex justify-center mb-4">
-            <img src="/logo.ico" alt="SPIL Logo" className="h-16 w-auto" />
+            <img
+              src={`${APP_BASE_URL}logo.ico`}
+              alt="SPIL Logo"
+              className="h-16 w-auto"
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">
             Ship Personnel Management
