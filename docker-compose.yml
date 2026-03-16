@@ -16,11 +16,16 @@ services:
       - "traefik.http.routers.spm-backend.rule=Host(`px.spil.co.id`) && PathPrefix(`/spm-backend`)"
       - "traefik.http.routers.spm-backend.entrypoints=websecure"
       - "traefik.http.routers.spm-backend.tls=true"
+      - "traefik.http.routers.spm-backend-pe.rule=Host(`pe.spil.co.id`) && PathPrefix(`/spm-backend`)"
+      - "traefik.http.routers.spm-backend-pe.entrypoints=websecure"
+      - "traefik.http.routers.spm-backend-pe.tls=true"
+      - "traefik.http.routers.spm-backend-pe.service=spm-backend"
 
       - "traefik.http.services.spm-backend.loadbalancer.server.port=5000"
 
       - "traefik.http.middlewares.spm-backend-strip.stripprefix.prefixes=/spm-backend"
       - "traefik.http.routers.spm-backend.middlewares=spm-backend-strip"
+      - "traefik.http.routers.spm-backend-pe.middlewares=spm-backend-strip"
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_DEBUG=${FLASK_DEBUG:-0}
@@ -35,6 +40,7 @@ services:
       - API_BASE_URL_PUSAT=http://nanika.spil.co.id:3021
       - API_BASE_URL_IT=http://192.168.1.218:3773
       - JWT_SECRET_KEY=5e38010fb872141a82636467b98c5915
+      - CORS_ALLOWED_ORIGINS=https://pe.spil.co.id,https://px.spil.co.id,http://localhost:5173
     command: python app.py
     restart: unless-stopped
     networks:
@@ -93,7 +99,7 @@ services:
 
       - "traefik.http.services.spm-frontend.loadbalancer.server.port=5173"
     environment:
-      - VITE_API_BASE_URL=https://px.spil.co.id/spm-backend/api
+      - VITE_API_BASE_URL=https://pe.spil.co.id/spm-backend/api
       - JWT_SECRET_KEY=5e38010fb872141a82636467b98c5915
     restart: unless-stopped
     networks:
