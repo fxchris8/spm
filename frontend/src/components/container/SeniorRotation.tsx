@@ -71,7 +71,12 @@ export function SeniorRotation({
   const [showOnlyMatchPotential, setShowOnlyMatchPotential] = useState(false);
   const [expandedMutasi, setExpandedMutasi] = useState(false);
   const [expandedPotential, setExpandedPotential] = useState(false);
-  const [forecastMonth, setForecastMonth] = useState<1 | 2>(1);
+  const [forecastMonthPerGroup, setForecastMonthPerGroup] = useState<
+    Record<string, 1 | 2>
+  >({});
+  const forecastMonth = selectedGroup
+    ? (forecastMonthPerGroup[selectedGroup] ?? 1)
+    : 1;
   // Alert state removed - using toast instead
 
   // Modal states
@@ -130,17 +135,17 @@ export function SeniorRotation({
     return currentFmCodes;
   }, [lockedRotations, lockedRotationsFm1, job, selectedGroup, forecastMonth]);
 
-  // Check if all groups are locked for current job
+  // Check if all groups are locked for fm=1 (used for submit button)
   const areAllGroupsLocked = useMemo(() => {
     const groupKeys = Object.keys(groups);
-    const lockedGroupsForJob = Object.keys(lockedRotations).filter(
-      key => lockedRotations[key]?.job?.toUpperCase() === job.toUpperCase()
+    const lockedGroupsForJob = Object.keys(lockedRotationsFm1).filter(
+      key => lockedRotationsFm1[key]?.job?.toUpperCase() === job.toUpperCase()
     );
     return (
       groupKeys.length > 0 &&
       groupKeys.every(key => lockedGroupsForJob.includes(key))
     );
-  }, [groups, lockedRotations, job]);
+  }, [groups, lockedRotationsFm1, job]);
 
   // Lazy load cadangan data (only when group selected)
   const { cadanganData, loading: loadingCadangan } = useCadanganData(
@@ -220,6 +225,7 @@ export function SeniorRotation({
   useEffect(() => {
     // Clear semua state saat ganti job
     setSelectedGroup(null);
+    setForecastMonthPerGroup({});
     setScheduleTable(null);
     setNahkodaTable(null);
     setDaratTable(null);
@@ -230,9 +236,8 @@ export function SeniorRotation({
     setError('');
   }, [job]); // Re-run saat job berubah
 
-  // Reset state saat ganti forecast month tab
+  // Reset tables saat ganti forecast month per group (group tetap terpilih)
   useEffect(() => {
-    setSelectedGroup(null);
     setScheduleTable(null);
     setNahkodaTable(null);
     setDaratTable(null);
@@ -614,37 +619,32 @@ export function SeniorRotation({
               1. All groups locked AND not yet submitted (first submit)
               2. All groups locked AND has pending changes (resubmit after CHANGE)
           */}
-            {forecastMonth === 1 &&
-              areAllGroupsLocked &&
-              (!isSubmitted || hasChanges) && (
-                <Button
-                  color="success"
-                  onClick={handleSubmitAllRotations}
-                  disabled={loadingSubmit}
-                >
-                  {loadingSubmit ? (
-                    <>
-                      <Spinner size="sm" light className="mr-2" />
-                      Submitting...
-                    </>
-                  ) : hasChanges ? (
-                    `Kirim Perubahan (${changesCount})`
-                  ) : (
-                    `Kirim Rotasi`
-                  )}
-                </Button>
-              )}
+            {areAllGroupsLocked && (!isSubmitted || hasChanges) && (
+              <Button
+                color="success"
+                onClick={handleSubmitAllRotations}
+                disabled={loadingSubmit}
+              >
+                {loadingSubmit ? (
+                  <>
+                    <Spinner size="sm" light className="mr-2" />
+                    Submitting...
+                  </>
+                ) : hasChanges ? (
+                  `Kirim Perubahan (${changesCount})`
+                ) : (
+                  `Kirim Rotasi`
+                )}
+              </Button>
+            )}
 
             {/* Show submitted status - only when submitted and no pending changes */}
-            {forecastMonth === 1 &&
-              areAllGroupsLocked &&
-              isSubmitted &&
-              !hasChanges && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-                  <HiLockClosed className="h-5 w-5" />
-                  <span className="font-medium">Terkirim</span>
-                </div>
-              )}
+            {areAllGroupsLocked && isSubmitted && !hasChanges && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+                <HiLockClosed className="h-5 w-5" />
+                <span className="font-medium">Terkirim</span>
+              </div>
+            )}
           </div>
           <p className="text-gray-600">
             Generate dan kelola jadwal rotasi CONTAINER {getJobDisplayName(job)}
@@ -660,7 +660,7 @@ export function SeniorRotation({
         )}
 
         {/* Pending Changes Alert */}
-        {forecastMonth === 1 && hasChanges && affectedGroups.length > 0 && (
+        {hasChanges && affectedGroups.length > 0 && (
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-1">
@@ -682,26 +682,6 @@ export function SeniorRotation({
           </div>
         )}
 
-        {/* Forecast Month Tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-red-50 border border-red-100 rounded-full p-1 w-fit">
-          {([1, 2] as const).map(month => (
-            <button
-              key={month}
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
-                forecastMonth === month
-                  ? 'bg-red-500 text-white shadow-sm'
-                  : 'text-red-400 hover:text-red-600'
-              }`}
-              onClick={() => {
-                if (forecastMonth !== month) setForecastMonth(month);
-              }}
-            >
-              {month === 1 ? 'Bulan Depan' : `${month} Bulan Depan`} (
-              {getForecastMonthLabel(month)})
-            </button>
-          ))}
-        </div>
-
         {/* Card for group selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {Object.entries(groups)
@@ -717,9 +697,8 @@ export function SeniorRotation({
               return numA - numB;
             })
             .map(([groupKey, ships]) => {
-              const isLocked = !!lockedRotations[groupKey];
-              const hasPendingChange =
-                forecastMonth === 1 && affectedGroups.includes(groupKey);
+              const isLocked = !!lockedRotationsFm1[groupKey];
+              const hasPendingChange = affectedGroups.includes(groupKey);
 
               return (
                 <div key={groupKey} className="relative">
@@ -750,6 +729,35 @@ export function SeniorRotation({
               );
             })}
         </div>
+
+        {/* Per-group Forecast Month Selector - tampil setelah group dipilih */}
+        {selectedGroup && (
+          <div className='my-6'>
+            <h1 className='font-bold mb-2'>Bulan Forecast</h1>
+            <div className="flex items-center gap-1 bg-red-50 border border-red-100 rounded-full p-1 w-fit">
+              {([1, 2] as const).map(month => (
+                <button
+                  key={month}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                    forecastMonth === month
+                      ? 'bg-red-500 text-white shadow-sm'
+                      : 'text-red-400 hover:text-red-600'
+                  }`}
+                  onClick={() => {
+                    if ((forecastMonthPerGroup[selectedGroup] ?? 1) !== month) {
+                      setForecastMonthPerGroup(prev => ({
+                        ...prev,
+                        [selectedGroup]: month,
+                      }));
+                    }
+                  }}
+                >
+                  {getForecastMonthLabel(month)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Loading state for group selection */}
         {loadingGroup && !isCurrentGroupLocked ? (
@@ -935,28 +943,30 @@ export function SeniorRotation({
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {potentialTable.data.map((item, idx) => (
-                                          <tr
-                                            key={idx}
-                                            className="border-b hover:bg-gray-50"
-                                          >
-                                            <td className="px-4 py-3 font-medium">
-                                              {item.seamancode}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                              {item.name}
-                                            </td>
-                                            <td className="px-4 py-3 text-xs">
-                                              {item.history}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                              {item.last_location}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                              {item.matchCount}
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {potentialTable.data.map(
+                                          (item, idx) => (
+                                            <tr
+                                              key={idx}
+                                              className="border-b hover:bg-gray-50"
+                                            >
+                                              <td className="px-4 py-3 font-medium">
+                                                {item.seamancode}
+                                              </td>
+                                              <td className="px-4 py-3">
+                                                {item.name}
+                                              </td>
+                                              <td className="px-4 py-3 text-xs">
+                                                {item.history}
+                                              </td>
+                                              <td className="px-4 py-3">
+                                                {item.last_location}
+                                              </td>
+                                              <td className="px-4 py-3 text-center">
+                                                {item.matchCount}
+                                              </td>
+                                            </tr>
+                                          )
+                                        )}
                                       </tbody>
                                     </table>
                                   </div>
