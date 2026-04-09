@@ -1,20 +1,62 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Card, Label, TextInput } from 'flowbite-react';
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const APP_BASE_URL = import.meta.env.BASE_URL;
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID;
 
 export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSsoLoading, setIsSsoLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const hasAutoStartedSso = useRef(false);
+
+  const handleSsoLogin = (clientId?: string) => {
+    setIsSsoLoading(true);
+
+    const targetClientId = clientId || SSO_CLIENT_ID;
+    const initiateUrl = new URL(`${API_BASE_URL}/auth/sso/initiate`);
+
+    if (targetClientId) {
+      initiateUrl.searchParams.set('client_id', targetClientId);
+    }
+
+    window.location.href = initiateUrl.toString();
+  };
+
+  useEffect(() => {
+    const ssoError = searchParams.get('sso_error');
+    if (ssoError) {
+      toast.error(ssoError);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const shouldAutoLogin = searchParams.get('login_sso') === 'true';
+    const clientId = searchParams.get('client_id');
+
+    if (
+      hasAutoStartedSso.current ||
+      !shouldAutoLogin ||
+      !clientId ||
+      !SSO_CLIENT_ID ||
+      clientId !== SSO_CLIENT_ID
+    ) {
+      return;
+    }
+
+    hasAutoStartedSso.current = true;
+    handleSsoLogin(clientId);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,11 +158,22 @@ export function Login() {
           <Button
             type="submit"
             isProcessing={isLoading}
-            disabled={isLoading}
+            disabled={isLoading || isSsoLoading}
             color="failure"
             className="w-full"
           >
             {isLoading ? 'Sedang masuk...' : 'Masuk'}
+          </Button>
+
+          <Button
+            type="button"
+            color="light"
+            isProcessing={isSsoLoading}
+            disabled={isLoading || isSsoLoading}
+            className="w-full"
+            onClick={() => handleSsoLogin()}
+          >
+            {isSsoLoading ? 'Mengarahkan ke SSO...' : 'Login dengan SSO SPIL'}
           </Button>
         </form>
       </Card>

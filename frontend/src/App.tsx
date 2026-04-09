@@ -3,6 +3,7 @@
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './components/auth/Login';
+import { SsoCallback } from './components/auth/SsoCallback';
 import { NavbarComponent } from './components/layouts/NavbarComponent';
 import { SidebarComponent } from './components/layouts/SidebarComponent';
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -31,6 +32,7 @@ export function App() {
         <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
+          <Route path="/auth/sso/callback" element={<SsoCallback />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

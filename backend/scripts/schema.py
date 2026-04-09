@@ -275,7 +275,8 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255),
+    sso_id VARCHAR(255) UNIQUE,
     role VARCHAR(20) DEFAULT 'USER',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -286,6 +287,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_sso_id ON users(sso_id);
 """
 
 
@@ -340,6 +342,18 @@ def create_tables():
                 conn.execute(text(sql))
                 conn.commit()
                 print(f"[SUCCES] Table '{table_name}' created successfully")
+
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS sso_id VARCHAR(255);
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_sso_id ON users(sso_id);
+                """
+                )
+            )
+            conn.commit()
+            print("[SUCCES] Users table updated for SSO support")
 
         engine.dispose()
         return True

@@ -24,6 +24,7 @@ interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<User | null>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -35,31 +36,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true); // true until /me check finishes
   const navigate = useNavigate();
 
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        return data.user as User;
+      }
+
+      setUser(null);
+      return null;
+    } catch (err) {
+      console.error('Session restore failed:', err);
+      setUser(null);
+      return null;
+    }
+  }, []);
+
   // On mount: restore session by hitting /api/auth/me (reads HttpOnly cookie)
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/me`, {
-          method: 'GET',
-          credentials: 'include', // send cookie automatically
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Session restore failed:', err);
-        setUser(null);
+        await refreshSession();
       } finally {
         setIsLoading(false);
       }
     };
 
     restoreSession();
-  }, []);
+  }, [refreshSession]);
 
   const login = (newUser: User) => {
     // Token is set as HttpOnly cookie by the backend — we only store user info in state
@@ -119,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     login,
     logout,
+    refreshSession,
     isAuthenticated: !!user,
     isLoading,
   };
