@@ -85,6 +85,7 @@ def get_schedule(
     part,
     job="NAKHODA",
     month_offset: int = 1,
+    ship_names=None,
 ):
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
@@ -106,8 +107,25 @@ def get_schedule(
     # Urutkan berdasarkan end_date
     filtered_df_nahkoda = filtered_df_nahkoda.sort_values(by="end_date")
 
-    # Daftar kapal unik
-    kapal_list = filtered_df_nahkoda["last_location"].dropna().unique()
+    # Daftar kapal unik. Prefer konfigurasi group dari frontend supaya schedule
+    # tetap bisa dibuat meskipun belum ada crew aktif di salah satu kapal group.
+    if ship_names:
+        kapal_list = pd.Series(ship_names).dropna().astype(str).str.strip()
+        kapal_list = kapal_list[kapal_list != ""].drop_duplicates().to_numpy()
+    else:
+        kapal_list = (
+            filtered_df_nahkoda["last_location"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .drop_duplicates()
+            .to_numpy()
+        )
+
+    if len(kapal_list) == 0:
+        raise ValueError(
+            "Tidak ada kapal untuk membuat schedule. Pastikan group kapal terisi."
+        )
 
     # Ambil bulan target berdasarkan month_offset (1 = bulan depan, 2 = 2 bulan ke depan, dst)
     today = pd.Timestamp.today()
@@ -153,6 +171,11 @@ def get_schedule(
             [cadangan, filtered_df_nahkoda], ignore_index=True, sort=False
         )
 
+    if filtered_df_nahkoda.empty:
+        raise ValueError(
+            f"Tidak ada crew atau cadangan {job} untuk membuat schedule."
+        )
+
     alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
     filtered_df_nahkoda.insert(0, "Index", alphabet)
 
@@ -189,6 +212,8 @@ def get_schedule(
                     break
 
         if transaction:
+            month_index += 1
+        else:
             month_index += 1
 
     # print(filtered_df_nahkoda)

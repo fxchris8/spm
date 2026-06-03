@@ -10,16 +10,17 @@ export function ProtectedRoute() {
   // Wait for session restore before deciding to redirect
   if (isLoading) {
     return null; // or a loading spinner
-  }
+  } 
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   if (user && !ALLOWED_ROLES.includes(user.role)) {
-    toast.error(`Akses ditolak. Role '${user.role}' tidak diizinkan.`);
+    toast.error(`Akses ditolak. Role '${user.role}' tidak diizinkan.`); 
     return <Navigate to="/login" replace />;
   }
 
+  
   return <Outlet />;
 }

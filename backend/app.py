@@ -212,6 +212,7 @@ def container_rotation_api():
         selected_group = data["selected_group"]
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
+        kapal = data.get("kapal", [])
         type_vessel = data.get("categorization")
         part = data.get("part")
         forecast_month = int(data.get("forecast_month", 1))
@@ -227,6 +228,7 @@ def container_rotation_api():
             part,
             job,
             month_offset=forecast_month,
+            ship_names=kapal,
         )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
@@ -287,6 +289,8 @@ def container_rotation_api():
             }
         )
 
+    except ValueError as e:
+        return jsonify({"error": str(e), "message": str(e)}), 400
     except Exception as e:
         app.logger.error(f"Error in container_rotation_api: {str(e)}", exc_info=True)
         print(f"[ERROR] Exception: {str(e)}")
