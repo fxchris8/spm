@@ -16,6 +16,58 @@ _last_index_to_first_date = {}
 # ============================================================================
 
 
+def normalize_ship_names(ship_names):
+    """
+    Normalize ship names while preserving their configured order.
+    """
+    if ship_names is None:
+        return []
+    if isinstance(ship_names, str):
+        ship_names = [ship_names]
+
+    normalized = []
+    seen = set()
+    for ship_name in ship_names:
+        if pd.isna(ship_name):
+            continue
+        ship_name = str(ship_name).strip()
+        if ship_name and ship_name not in seen:
+            normalized.append(ship_name)
+            seen.add(ship_name)
+
+    return normalized
+
+
+def get_configured_ship_names(vessel_group_id_filter, categorization, part):
+    """
+    Resolve ship names from vessel management config using IDs like D9/E3/F1.
+    """
+    try:
+        from repositories.vessel_repository import get_vessel_config_from_db
+
+        prefix, groups = get_vessel_config_from_db(categorization, part)
+        if not prefix or not groups:
+            return []
+
+        group_id = str(vessel_group_id_filter or "")
+        if not group_id.startswith(prefix):
+            return []
+
+        group_number = group_id[len(prefix) :]
+        if not group_number.isdigit():
+            return []
+
+        group_index = int(group_number) - 1
+        group_ship_lists = list(groups.values())
+        if 0 <= group_index < len(group_ship_lists):
+            return normalize_ship_names(group_ship_lists[group_index])
+
+        return []
+    except Exception as e:
+        print(f"WARN - Could not resolve configured ships: {e}")
+        return []
+
+
 def add_first_rotation_date_column(df):
     """
     Add first_rotation_date column to crew DataFrame based on Index.
@@ -85,7 +137,11 @@ def get_schedule(
     part,
     job="NAKHODA",
     month_offset: int = 1,
+<<<<<<< Updated upstream
     ship_names=None,
+=======
+    vessel_names=None,
+>>>>>>> Stashed changes
 ):
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
@@ -107,6 +163,7 @@ def get_schedule(
     # Urutkan berdasarkan end_date
     filtered_df_nahkoda = filtered_df_nahkoda.sort_values(by="end_date")
 
+<<<<<<< Updated upstream
     # Daftar kapal unik. Prefer konfigurasi group dari frontend supaya schedule
     # tetap bisa dibuat meskipun belum ada crew aktif di salah satu kapal group.
     if ship_names:
@@ -126,6 +183,19 @@ def get_schedule(
         raise ValueError(
             "Tidak ada kapal untuk membuat schedule. Pastikan group kapal terisi."
         )
+=======
+    # Daftar kapal dari konfigurasi UI/DB menjadi fallback untuk grup baru
+    configured_kapal_list = normalize_ship_names(vessel_names)
+    if not configured_kapal_list:
+        configured_kapal_list = get_configured_ship_names(
+            vessel_group_id_filter, type, part
+        )
+
+    data_kapal_list = normalize_ship_names(
+        filtered_df_nahkoda["last_location"].dropna().unique()
+    )
+    kapal_list = data_kapal_list or configured_kapal_list
+>>>>>>> Stashed changes
 
     # Ambil bulan target berdasarkan month_offset (1 = bulan depan, 2 = 2 bulan ke depan, dst)
     today = pd.Timestamp.today()
@@ -181,37 +251,39 @@ def get_schedule(
 
     month_index = get_month_index(min_start_month, min_start_year)
     durasi_penugasan = len(kapal_list)
-    available_nahkoda = [alphabet[-1]] + alphabet[:-1]
-    used_nahkoda = []
-    nakhoda_terakhir_bertugas = {seamancode: None for seamancode in available_nahkoda}
+    if alphabet and len(kapal_list) > 0:
+        available_nahkoda = [alphabet[-1]] + alphabet[:-1]
+        used_nahkoda = []
+        nakhoda_terakhir_bertugas = {
+            seamancode: None for seamancode in available_nahkoda
+        }
 
-    while month_index < len(bulan_list):
-        month = bulan_list[month_index]
-        # print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
-        transaction = False
+        while month_index < len(bulan_list):
+            month = bulan_list[month_index]
+            # print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
+            transaction = False
 
-        if not available_nahkoda:
-            # print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
-            available_nahkoda = used_nahkoda
-            used_nahkoda = []
+            if not available_nahkoda:
+                # print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
+                available_nahkoda = used_nahkoda
+                used_nahkoda = []
 
-        for i, kapal in enumerate(kapal_list):
-            if pd.isna(schedule.at[kapal, month]) and not transaction:
-                if available_nahkoda:
-                    nakhoda = available_nahkoda.pop(0)
-                    # print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
+            for i, kapal in enumerate(kapal_list):
+                if pd.isna(schedule.at[kapal, month]) and not transaction:
+                    if available_nahkoda:
+                        nakhoda = available_nahkoda.pop(0)
+                        # print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
 
-                    for j in range(durasi_penugasan):
-                        if month_index + j < len(bulan_list):
-                            target_month = bulan_list[month_index + j]
-                            schedule.at[kapal, target_month] = nakhoda
+                        for j in range(durasi_penugasan):
+                            if month_index + j < len(bulan_list):
+                                target_month = bulan_list[month_index + j]
+                                schedule.at[kapal, target_month] = nakhoda
 
-                    nakhoda_terakhir_bertugas[nakhoda] = month_index
-                    used_nahkoda.append(nakhoda)
-                    transaction = True
-                    break
+                        nakhoda_terakhir_bertugas[nakhoda] = month_index
+                        used_nahkoda.append(nakhoda)
+                        transaction = True
+                        break
 
-        if transaction:
             month_index += 1
         else:
             month_index += 1

@@ -210,6 +210,7 @@ def container_rotation_api():
 
         # Ambil data dari payload
         selected_group = data["selected_group"]
+        kapal = data.get("kapal", [])
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
         kapal = data.get("kapal", [])
@@ -228,7 +229,11 @@ def container_rotation_api():
             part,
             job,
             month_offset=forecast_month,
+<<<<<<< Updated upstream
             ship_names=kapal,
+=======
+            vessel_names=kapal,
+>>>>>>> Stashed changes
         )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB

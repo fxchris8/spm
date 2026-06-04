@@ -164,6 +164,7 @@ async function generateSchedule(payload: {
   // console.log('payload generateSchedule:', finalPayload);
 
   if (!response.ok) {
+<<<<<<< Updated upstream
     let message = 'Failed to generate schedule';
     try {
       const errorData = await response.json();
@@ -172,6 +173,12 @@ async function generateSchedule(payload: {
       // Keep default message when response is not JSON.
     }
     throw new Error(message);
+=======
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || errorData.error || 'Failed to generate schedule'
+    );
+>>>>>>> Stashed changes
   }
 
   return response.json();
