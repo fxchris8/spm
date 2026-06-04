@@ -171,14 +171,9 @@ def get_schedule(
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
 
-    filtered_df = filter_in_vessel(local_df, type)
-    filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-    # Filter berdasarkan job (bukan hardcoded "NAKHODA")
-    filtered_df_nahkoda = filtered_df[
-        (filtered_df["last_position"] == job)  # ← PAKAI PARAMETER JOB
-        & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-    ].copy()  # ← Tambahkan .copy()
+    filtered_df_nahkoda = get_group_job_crew(
+        local_df, vessel_group_id_filter, type, part, job, vessel_names
+    )
 
     # Pastikan end_date dalam format datetime
     filtered_df_nahkoda["end_date"] = pd.to_datetime(
@@ -287,8 +282,6 @@ def get_schedule(
                         transaction = True
                         break
 
-            month_index += 1
-        else:
             month_index += 1
 
     # print(filtered_df_nahkoda)
