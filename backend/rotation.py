@@ -68,6 +68,35 @@ def get_configured_ship_names(vessel_group_id_filter, categorization, part):
         return []
 
 
+def get_group_job_crew(
+    local_df, vessel_group_id_filter, type, part, job, vessel_names=None
+):
+    filtered_df = filter_in_vessel(local_df, type)
+    filtered_df = vessel_group_id_deck(filtered_df, type, part)
+
+    group_crew = filtered_df[
+        (filtered_df["last_position"] == job)
+        & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
+    ].copy()
+
+    if not group_crew.empty:
+        return group_crew
+
+    fallback_vessels = normalize_ship_names(vessel_names)
+    if not fallback_vessels:
+        fallback_vessels = get_configured_ship_names(
+            vessel_group_id_filter, type, part
+        )
+
+    if not fallback_vessels:
+        return group_crew
+
+    return filtered_df[
+        (filtered_df["last_position"] == job)
+        & (filtered_df["last_location"].isin(fallback_vessels))
+    ].copy()
+
+
 def add_first_rotation_date_column(df):
     """
     Add first_rotation_date column to crew DataFrame based on Index.
@@ -328,18 +357,16 @@ def get_schedule(
 # ============================================================================
 
 
-def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_nahkoda(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "NAKHODA")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "NAKHODA", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -408,18 +435,16 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     ]
 
 
-def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_kkm(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "KKM")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "KKM", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -488,18 +513,16 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
     ]
 
 
-def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_mualimI(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "MUALIM I")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "MUALIM I", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -568,18 +591,16 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     ]
 
 
-def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_masinisII(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "MASINIS II")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "MASINIS II", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 

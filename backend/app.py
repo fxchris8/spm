@@ -236,13 +236,21 @@ def container_rotation_api():
         # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
 
         if job == "NAKHODA":
-            crew_df = get_nahkoda(selected_group, cadangan, type_vessel, part)
+            crew_df = get_nahkoda(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "KKM":
-            crew_df = get_kkm(selected_group, cadangan, type_vessel, part)
+            crew_df = get_kkm(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "MUALIM I":
-            crew_df = get_mualimI(selected_group, cadangan, type_vessel, part)
+            crew_df = get_mualimI(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "MASINIS II":
-            crew_df = get_masinisII(selected_group, cadangan, type_vessel, part)
+            crew_df = get_masinisII(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         else:
             return jsonify({"error": f"Fungsi untuk job {job} belum tersedia"}), 400
 
