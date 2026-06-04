@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
-const ALLOWED_ROLES = ['ADMIN', 'CREWING'];
+const ALLOWED_ROLES = ['ADMIN', 'CREWING', 'user', 'superadmin'];
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
