@@ -137,11 +137,7 @@ def get_schedule(
     part,
     job="NAKHODA",
     month_offset: int = 1,
-<<<<<<< Updated upstream
-    ship_names=None,
-=======
     vessel_names=None,
->>>>>>> Stashed changes
 ):
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
@@ -163,27 +159,6 @@ def get_schedule(
     # Urutkan berdasarkan end_date
     filtered_df_nahkoda = filtered_df_nahkoda.sort_values(by="end_date")
 
-<<<<<<< Updated upstream
-    # Daftar kapal unik. Prefer konfigurasi group dari frontend supaya schedule
-    # tetap bisa dibuat meskipun belum ada crew aktif di salah satu kapal group.
-    if ship_names:
-        kapal_list = pd.Series(ship_names).dropna().astype(str).str.strip()
-        kapal_list = kapal_list[kapal_list != ""].drop_duplicates().to_numpy()
-    else:
-        kapal_list = (
-            filtered_df_nahkoda["last_location"]
-            .dropna()
-            .astype(str)
-            .str.strip()
-            .drop_duplicates()
-            .to_numpy()
-        )
-
-    if len(kapal_list) == 0:
-        raise ValueError(
-            "Tidak ada kapal untuk membuat schedule. Pastikan group kapal terisi."
-        )
-=======
     # Daftar kapal dari konfigurasi UI/DB menjadi fallback untuk grup baru
     configured_kapal_list = normalize_ship_names(vessel_names)
     if not configured_kapal_list:
@@ -195,7 +170,6 @@ def get_schedule(
         filtered_df_nahkoda["last_location"].dropna().unique()
     )
     kapal_list = data_kapal_list or configured_kapal_list
->>>>>>> Stashed changes
 
     # Ambil bulan target berdasarkan month_offset (1 = bulan depan, 2 = 2 bulan ke depan, dst)
     today = pd.Timestamp.today()

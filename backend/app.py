@@ -229,11 +229,7 @@ def container_rotation_api():
             part,
             job,
             month_offset=forecast_month,
-<<<<<<< Updated upstream
-            ship_names=kapal,
-=======
             vessel_names=kapal,
->>>>>>> Stashed changes
         )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
