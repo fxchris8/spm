@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 from ai.model import filter_in_vessel, vessel_group_id_deck
@@ -38,6 +40,13 @@ def normalize_ship_names(ship_names):
     return normalized
 
 
+def get_rotation_group_number(group_key):
+    match = re.search(r"rotation(\d+)$", str(group_key))
+    if not match:
+        return None
+    return str(int(match.group(1)))
+
+
 def get_configured_ship_names(vessel_group_id_filter, categorization, part):
     """
     Resolve ship names from vessel management config using IDs like D9/E3/F1.
@@ -57,7 +66,19 @@ def get_configured_ship_names(vessel_group_id_filter, categorization, part):
         if not group_number.isdigit():
             return []
 
-        group_index = int(group_number) - 1
+        normalized_group_number = str(int(group_number))
+        numbered_groups = {
+            parsed_number: ships
+            for group_key, ships in groups.items()
+            if (parsed_number := get_rotation_group_number(group_key)) is not None
+        }
+
+        if numbered_groups:
+            return normalize_ship_names(
+                numbered_groups.get(normalized_group_number, [])
+            )
+
+        group_index = int(normalized_group_number) - 1
         group_ship_lists = list(groups.values())
         if 0 <= group_index < len(group_ship_lists):
             return normalize_ship_names(group_ship_lists[group_index])
@@ -84,9 +105,7 @@ def get_group_job_crew(
 
     fallback_vessels = normalize_ship_names(vessel_names)
     if not fallback_vessels:
-        fallback_vessels = get_configured_ship_names(
-            vessel_group_id_filter, type, part
-        )
+        fallback_vessels = get_configured_ship_names(vessel_group_id_filter, type, part)
 
     if not fallback_vessels:
         return group_crew
@@ -240,9 +259,7 @@ def get_schedule(
         )
 
     if filtered_df_nahkoda.empty:
-        raise ValueError(
-            f"Tidak ada crew atau cadangan {job} untuk membuat schedule."
-        )
+        raise ValueError(f"Tidak ada crew atau cadangan {job} untuk membuat schedule.")
 
     alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
     filtered_df_nahkoda.insert(0, "Index", alphabet)

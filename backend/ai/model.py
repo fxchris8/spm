@@ -4,6 +4,7 @@ menggunakan model Word2Vec. Kemiripan antara kandidat dan kebutuhan kapal dihitu
 berbasis cosine similarity, skor hierarki sertifikat, dan kesesuaian jabatan.
 """
 
+import re
 from datetime import datetime
 
 import numpy as np
@@ -221,6 +222,13 @@ def filter_in_vessel(dataframe, group_name, kelompok=None):
     return filtered_df
 
 
+def get_rotation_group_number(group_key):
+    match = re.search(r"rotation(\d+)$", str(group_key))
+    if not match:
+        return None
+    return str(int(match.group(1)))
+
+
 def vessel_group_id_deck(dataframe, vessel, type=None):
     """
     Menambahkan kolom 'VESSEL GROUP ID' ke dalam DataFrame berdasarkan konfigurasi
@@ -258,9 +266,19 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         dataframe["VESSEL GROUP ID"] = "UNKNOWN"
         return dataframe
 
+    has_numbered_groups = any(
+        get_rotation_group_number(group_key) is not None for group_key in groups.keys()
+    )
+
     vessel_to_group = {}
-    for idx, (_, ships) in enumerate(groups.items(), start=1):
-        group_id = f"{prefix}{idx}"
+    for idx, (group_key, ships) in enumerate(groups.items(), start=1):
+        group_number = get_rotation_group_number(group_key)
+        if group_number is None:
+            if has_numbered_groups:
+                continue
+            group_number = str(idx)
+
+        group_id = f"{prefix}{group_number}"
         for ship in ships:
             vessel_to_group[ship] = group_id
 
