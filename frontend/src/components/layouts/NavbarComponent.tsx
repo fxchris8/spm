@@ -6,6 +6,7 @@ import { HiLogout, HiExclamationCircle } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 
 export function NavbarComponent() {
+  const appBaseUrl = import.meta.env.BASE_URL;
   const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -23,9 +24,12 @@ export function NavbarComponent() {
   return (
     <>
       <Navbar fluid className="bg-red-800 shadow-lg border-red-950">
-        <Navbar.Brand href="/" className="hover:opacity-90 transition-opacity">
+        <Navbar.Brand
+          href={appBaseUrl}
+          className="hover:opacity-90 transition-opacity"
+        >
           <img
-            src="/logo.ico"
+            src={`${appBaseUrl}logo.ico`}
             className="mr-4 h-8 sm:h-10"
             alt="SPIL Fleet Logo"
           />

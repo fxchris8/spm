@@ -143,6 +143,7 @@ async function generateSchedule(payload: {
 
   const finalPayload = {
     selected_group: mappedGroup,
+    kapal: payload.kapal,
     cadangan: payload.standby,
     cadangan2: payload.darat,
     type: payload.type,
@@ -162,7 +163,10 @@ async function generateSchedule(payload: {
   // console.log('payload generateSchedule:', finalPayload);
 
   if (!response.ok) {
-    throw new Error('Failed to generate schedule');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || errorData.error || 'Failed to generate schedule'
+    );
   }
 
   return response.json();

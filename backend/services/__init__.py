@@ -5,13 +5,20 @@ Services process data from repositories and prepare it for controllers.
 """
 
 from .auth_service import (
+    build_sso_login_url,
     check_password,
+    find_or_create_sso_user,
+    fetch_sso_userinfo,
     generate_token,
+    generate_sso_state,
     get_current_user,
     hash_password,
+    is_sso_enabled,
     login_user,
+    login_user_with_sso_code,
     logout_user,
     register_user,
+    validate_sso_state,
 )
 from .cadangan_service import (
     get_cadangan_kkm_data,
@@ -36,12 +43,19 @@ from .sync_service import manual_sync
 __all__ = [
     # Auth Services
     "login_user",
+    "login_user_with_sso_code",
     "logout_user",
     "register_user",
     "hash_password",
     "check_password",
     "generate_token",
     "get_current_user",
+    "is_sso_enabled",
+    "generate_sso_state",
+    "validate_sso_state",
+    "build_sso_login_url",
+    "fetch_sso_userinfo",
+    "find_or_create_sso_user",
     # Cadangan Services
     "get_cadangan_kkm_data",
     "get_cadangan_nakhoda_data",

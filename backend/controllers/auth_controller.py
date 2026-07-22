@@ -4,12 +4,30 @@ dan pengecekan sesi aktif. Token JWT disimpan sebagai HttpOnly cookie.
 """
 
 import os
+from urllib.parse import urlencode
 
 from flask import jsonify, make_response, request
 
-from services import get_current_user, login_user, register_user
+from services import (
+    build_sso_login_url,
+    get_current_user,
+    is_sso_enabled,
+    login_user,
+    login_user_with_sso_code,
+    register_user,
+)
 
 IS_PRODUCTION = os.environ.get("FLASK_ENV", "development") == "production"
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "").rstrip("/")
+SSO_CLIENT_ID = os.environ.get("SSO_CLIENT_ID", "").strip()
+
+
+def _build_frontend_url(path, **query_params):
+    base_url = f"{FRONTEND_URL}{path}" if FRONTEND_URL else path
+    filtered_query = {k: v for k, v in query_params.items() if v}
+    if not filtered_query:
+        return base_url
+    return f"{base_url}?{urlencode(filtered_query)}"
 
 
 def login_controller():
@@ -118,3 +136,72 @@ def me_controller():
         return jsonify({"user": user}), 200
     except Exception as e:
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def sso_initiate_controller():
+    """
+    Start SSO login by redirecting browser to SSO Portal frontend.
+    """
+    try:
+        if not is_sso_enabled():
+            return jsonify({"message": "SSO is not configured"}), 503
+
+        requested_client_id = request.args.get("client_id")
+        if requested_client_id and requested_client_id != SSO_CLIENT_ID:
+            return jsonify({"message": "Invalid client_id"}), 400
+
+        redirect_url = build_sso_login_url(requested_client_id)
+        return make_response("", 302, {"Location": redirect_url})
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def sso_callback_controller():
+    """
+    Complete SSO callback, set local JWT cookie, then redirect to frontend.
+    """
+    try:
+        if not is_sso_enabled():
+            return jsonify({"message": "SSO is not configured"}), 503
+
+        if request.args.get("error"):
+            error_message = request.args.get("error_description") or request.args.get(
+                "error"
+            )
+            redirect_url = _build_frontend_url("/login", sso_error=error_message)
+            return make_response("", 302, {"Location": redirect_url})
+
+        code = request.args.get("code")
+        state = request.args.get("state")
+        client_id = request.args.get("client_id")
+
+        if not code or not state:
+            redirect_url = _build_frontend_url(
+                "/login", sso_error="Missing code or state"
+            )
+            return make_response("", 302, {"Location": redirect_url})
+
+        result = login_user_with_sso_code(code, state, client_id=client_id)
+
+        response = make_response(
+            "",
+            302,
+            {"Location": _build_frontend_url("/auth/sso/callback", sso="success")},
+        )
+        response.set_cookie(
+            "token",
+            result["token"],
+            httponly=True,
+            samesite="Lax",
+            secure=IS_PRODUCTION,
+            max_age=6 * 60 * 60,
+        )
+        return response
+    except ValueError as e:
+        redirect_url = _build_frontend_url("/login", sso_error=str(e))
+        return make_response("", 302, {"Location": redirect_url})
+    except Exception as e:
+        redirect_url = _build_frontend_url("/login", sso_error="SSO login failed")
+        response = make_response("", 302, {"Location": redirect_url})
+        response.headers["X-SSO-Error"] = str(e)
+        return response

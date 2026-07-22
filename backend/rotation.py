@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 from ai.model import filter_in_vessel, vessel_group_id_deck
@@ -14,6 +16,104 @@ _last_index_to_first_date = {}
 # ============================================================================
 # BAGIAN 1: UTILITY FUNCTIONS
 # ============================================================================
+
+
+def normalize_ship_names(ship_names):
+    """
+    Normalize ship names while preserving their configured order.
+    """
+    if ship_names is None:
+        return []
+    if isinstance(ship_names, str):
+        ship_names = [ship_names]
+
+    normalized = []
+    seen = set()
+    for ship_name in ship_names:
+        if pd.isna(ship_name):
+            continue
+        ship_name = str(ship_name).strip()
+        if ship_name and ship_name not in seen:
+            normalized.append(ship_name)
+            seen.add(ship_name)
+
+    return normalized
+
+
+def get_rotation_group_number(group_key):
+    match = re.search(r"rotation(\d+)$", str(group_key))
+    if not match:
+        return None
+    return str(int(match.group(1)))
+
+
+def get_configured_ship_names(vessel_group_id_filter, categorization, part):
+    """
+    Resolve ship names from vessel management config using IDs like D9/E3/F1.
+    """
+    try:
+        from repositories.vessel_repository import get_vessel_config_from_db
+
+        prefix, groups = get_vessel_config_from_db(categorization, part)
+        if not prefix or not groups:
+            return []
+
+        group_id = str(vessel_group_id_filter or "")
+        if not group_id.startswith(prefix):
+            return []
+
+        group_number = group_id[len(prefix) :]
+        if not group_number.isdigit():
+            return []
+
+        normalized_group_number = str(int(group_number))
+        numbered_groups = {
+            parsed_number: ships
+            for group_key, ships in groups.items()
+            if (parsed_number := get_rotation_group_number(group_key)) is not None
+        }
+
+        if numbered_groups:
+            return normalize_ship_names(
+                numbered_groups.get(normalized_group_number, [])
+            )
+
+        group_index = int(normalized_group_number) - 1
+        group_ship_lists = list(groups.values())
+        if 0 <= group_index < len(group_ship_lists):
+            return normalize_ship_names(group_ship_lists[group_index])
+
+        return []
+    except Exception as e:
+        print(f"WARN - Could not resolve configured ships: {e}")
+        return []
+
+
+def get_group_job_crew(
+    local_df, vessel_group_id_filter, type, part, job, vessel_names=None
+):
+    filtered_df = filter_in_vessel(local_df, type)
+    filtered_df = vessel_group_id_deck(filtered_df, type, part)
+
+    group_crew = filtered_df[
+        (filtered_df["last_position"] == job)
+        & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
+    ].copy()
+
+    if not group_crew.empty:
+        return group_crew
+
+    fallback_vessels = normalize_ship_names(vessel_names)
+    if not fallback_vessels:
+        fallback_vessels = get_configured_ship_names(vessel_group_id_filter, type, part)
+
+    if not fallback_vessels:
+        return group_crew
+
+    return filtered_df[
+        (filtered_df["last_position"] == job)
+        & (filtered_df["last_location"].isin(fallback_vessels))
+    ].copy()
 
 
 def add_first_rotation_date_column(df):
@@ -85,18 +185,14 @@ def get_schedule(
     part,
     job="NAKHODA",
     month_offset: int = 1,
+    vessel_names=None,
 ):
     """Tambahkan parameter job dengan default NAKHODA, dan month_offset untuk forecasting."""
     local_df = get_seamen_as_data()
 
-    filtered_df = filter_in_vessel(local_df, type)
-    filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-    # Filter berdasarkan job (bukan hardcoded "NAKHODA")
-    filtered_df_nahkoda = filtered_df[
-        (filtered_df["last_position"] == job)  # ← PAKAI PARAMETER JOB
-        & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-    ].copy()  # ← Tambahkan .copy()
+    filtered_df_nahkoda = get_group_job_crew(
+        local_df, vessel_group_id_filter, type, part, job, vessel_names
+    )
 
     # Pastikan end_date dalam format datetime
     filtered_df_nahkoda["end_date"] = pd.to_datetime(
@@ -106,8 +202,17 @@ def get_schedule(
     # Urutkan berdasarkan end_date
     filtered_df_nahkoda = filtered_df_nahkoda.sort_values(by="end_date")
 
-    # Daftar kapal unik
-    kapal_list = filtered_df_nahkoda["last_location"].dropna().unique()
+    # Daftar kapal dari konfigurasi UI/DB menjadi fallback untuk grup baru
+    configured_kapal_list = normalize_ship_names(vessel_names)
+    if not configured_kapal_list:
+        configured_kapal_list = get_configured_ship_names(
+            vessel_group_id_filter, type, part
+        )
+
+    data_kapal_list = normalize_ship_names(
+        filtered_df_nahkoda["last_location"].dropna().unique()
+    )
+    kapal_list = data_kapal_list or configured_kapal_list
 
     # Ambil bulan target berdasarkan month_offset (1 = bulan depan, 2 = 2 bulan ke depan, dst)
     today = pd.Timestamp.today()
@@ -153,42 +258,47 @@ def get_schedule(
             [cadangan, filtered_df_nahkoda], ignore_index=True, sort=False
         )
 
+    if filtered_df_nahkoda.empty:
+        raise ValueError(f"Tidak ada crew atau cadangan {job} untuk membuat schedule.")
+
     alphabet = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
     filtered_df_nahkoda.insert(0, "Index", alphabet)
 
     month_index = get_month_index(min_start_month, min_start_year)
     durasi_penugasan = len(kapal_list)
-    available_nahkoda = [alphabet[-1]] + alphabet[:-1]
-    used_nahkoda = []
-    nakhoda_terakhir_bertugas = {seamancode: None for seamancode in available_nahkoda}
+    if alphabet and len(kapal_list) > 0:
+        available_nahkoda = [alphabet[-1]] + alphabet[:-1]
+        used_nahkoda = []
+        nakhoda_terakhir_bertugas = {
+            seamancode: None for seamancode in available_nahkoda
+        }
 
-    while month_index < len(bulan_list):
-        month = bulan_list[month_index]
-        # print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
-        transaction = False
+        while month_index < len(bulan_list):
+            month = bulan_list[month_index]
+            # print(f"--- Bulan: {month} ({job}) ---")  # ← Print job yang benar
+            transaction = False
 
-        if not available_nahkoda:
-            # print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
-            available_nahkoda = used_nahkoda
-            used_nahkoda = []
+            if not available_nahkoda:
+                # print(f"Semua {job} sudah digunakan, mereset daftar")  # ← Print job
+                available_nahkoda = used_nahkoda
+                used_nahkoda = []
 
-        for i, kapal in enumerate(kapal_list):
-            if pd.isna(schedule.at[kapal, month]) and not transaction:
-                if available_nahkoda:
-                    nakhoda = available_nahkoda.pop(0)
-                    # print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
+            for i, kapal in enumerate(kapal_list):
+                if pd.isna(schedule.at[kapal, month]) and not transaction:
+                    if available_nahkoda:
+                        nakhoda = available_nahkoda.pop(0)
+                        # print(f"Menugaskan {job} {nakhoda} ke kapal {kapal}")  # ← Print job
 
-                    for j in range(durasi_penugasan):
-                        if month_index + j < len(bulan_list):
-                            target_month = bulan_list[month_index + j]
-                            schedule.at[kapal, target_month] = nakhoda
+                        for j in range(durasi_penugasan):
+                            if month_index + j < len(bulan_list):
+                                target_month = bulan_list[month_index + j]
+                                schedule.at[kapal, target_month] = nakhoda
 
-                    nakhoda_terakhir_bertugas[nakhoda] = month_index
-                    used_nahkoda.append(nakhoda)
-                    transaction = True
-                    break
+                        nakhoda_terakhir_bertugas[nakhoda] = month_index
+                        used_nahkoda.append(nakhoda)
+                        transaction = True
+                        break
 
-        if transaction:
             month_index += 1
 
     # print(filtered_df_nahkoda)
@@ -257,18 +367,16 @@ def get_schedule(
 # ============================================================================
 
 
-def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_nahkoda(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "NAKHODA")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "NAKHODA", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -337,18 +445,16 @@ def get_nahkoda(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     ]
 
 
-def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_kkm(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "KKM")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "KKM", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -417,18 +523,16 @@ def get_kkm(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
     ]
 
 
-def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_mualimI(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "MUALIM I")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "MUALIM I", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 
@@ -497,18 +601,16 @@ def get_mualimI(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL")
     ]
 
 
-def get_masinisII(vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL"):
+def get_masinisII(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df = filter_in_vessel(local_df, type)
-        filtered_df = vessel_group_id_deck(filtered_df, type, part)
-
-        filtered_df_nahkoda = filtered_df[
-            (filtered_df["last_position"] == "MASINIS II")
-            & (filtered_df["VESSEL GROUP ID"] == vessel_group_id_filter)
-        ].copy()
+        filtered_df_nahkoda = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, "MASINIS II", vessel_names
+        )
     else:
         filtered_df_nahkoda = pd.DataFrame()
 

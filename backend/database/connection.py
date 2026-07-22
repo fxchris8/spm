@@ -3,12 +3,14 @@
 
 import json
 import os
+import time
 from datetime import datetime
 
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
+
 
 load_dotenv()
 
@@ -20,22 +22,31 @@ if not DATABASE_URL:
 
 engine = create_engine(DATABASE_URL, poolclass=NullPool, echo=False)
 
+_seamen_cache = {"df": None, "ts": 0.0}
+_SEAMEN_TTL = 30
+
 # ============================================================================
 # BAGIAN 1: FETCH DATA DARI SUPABASE (Untuk Frontend/app.py)
 # ============================================================================
 
 
-def get_seamen_as_data():
-    """
-    Fetch data seamen dari Supabase Database
-    Digunakan oleh app.py untuk melayani request frontend
-    """
+def get_seamen_as_data(force_refresh=False):
+    now = time.time()
+    if (
+        not force_refresh
+        and _seamen_cache["df"] is not None
+        and now - _seamen_cache["ts"] < _SEAMEN_TTL
+    ):
+        return _seamen_cache["df"].copy()
+
     try:
         query = "SELECT * FROM seamen"
         with engine.connect() as conn:
             df = pd.read_sql_query(text(query), conn)
-            print(f"DONE - Fetched {len(df)} seamen records from database")
-            return df
+        print(f"DONE - Fetched {len(df)} seamen records from database")
+        _seamen_cache["df"] = df
+        _seamen_cache["ts"] = now
+        return df.copy()
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
         raise Exception(f"Failed to fetch seamen data: {str(e)}")

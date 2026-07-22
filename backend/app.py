@@ -210,8 +210,10 @@ def container_rotation_api():
 
         # Ambil data dari payload
         selected_group = data["selected_group"]
+        kapal = data.get("kapal", [])
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
+        kapal = data.get("kapal", [])
         type_vessel = data.get("categorization")
         part = data.get("part")
         forecast_month = int(data.get("forecast_month", 1))
@@ -227,19 +229,28 @@ def container_rotation_api():
             part,
             job,
             month_offset=forecast_month,
+            vessel_names=kapal,
         )
 
         # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
         # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
 
         if job == "NAKHODA":
-            crew_df = get_nahkoda(selected_group, cadangan, type_vessel, part)
+            crew_df = get_nahkoda(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "KKM":
-            crew_df = get_kkm(selected_group, cadangan, type_vessel, part)
+            crew_df = get_kkm(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "MUALIM I":
-            crew_df = get_mualimI(selected_group, cadangan, type_vessel, part)
+            crew_df = get_mualimI(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         elif job == "MASINIS II":
-            crew_df = get_masinisII(selected_group, cadangan, type_vessel, part)
+            crew_df = get_masinisII(
+                selected_group, cadangan, type_vessel, part, vessel_names=kapal
+            )
         else:
             return jsonify({"error": f"Fungsi untuk job {job} belum tersedia"}), 400
 
@@ -287,6 +298,8 @@ def container_rotation_api():
             }
         )
 
+    except ValueError as e:
+        return jsonify({"error": str(e), "message": str(e)}), 400
     except Exception as e:
         app.logger.error(f"Error in container_rotation_api: {str(e)}", exc_info=True)
         print(f"[ERROR] Exception: {str(e)}")

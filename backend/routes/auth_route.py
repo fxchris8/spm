@@ -10,6 +10,8 @@ from controllers.auth_controller import (
     logout_controller,
     me_controller,
     register_controller,
+    sso_callback_controller,
+    sso_initiate_controller,
 )
 
 auth_bp = Blueprint("auth", __name__)
@@ -45,3 +47,19 @@ def me():
     GET /api/auth/me — Mengembalikan data pengguna dari sesi aktif.
     """
     return me_controller()
+
+
+@auth_bp.route("/auth/sso/initiate", methods=["GET"])
+def sso_initiate():
+    """
+    GET /api/auth/sso/initiate — Redirect browser ke SSO Portal frontend.
+    """
+    return sso_initiate_controller()
+
+
+@auth_bp.route("/auth/sso/callback", methods=["GET"])
+def sso_callback():
+    """
+    GET /api/auth/sso/callback — Proses callback OAuth lalu set cookie lokal.
+    """
+    return sso_callback_controller()
