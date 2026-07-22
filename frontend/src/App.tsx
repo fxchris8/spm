@@ -116,7 +116,7 @@ export function App() {
             />
           </Route>
         </Routes>
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-right" richColors closeButton />
       </AuthProvider>
     </div>
   );
