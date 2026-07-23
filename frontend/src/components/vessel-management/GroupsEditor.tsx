@@ -20,6 +20,8 @@ import { EmptyGroupDropZone } from './EmptyGroupDropZone';
 import {
   formatGroupName,
   generateNextGroupKey,
+  renumberGroups,
+  mergeRenames,
 } from '../../utils/vesselMappingUtils';
 
 interface GroupsEditorProps {
@@ -27,6 +29,7 @@ interface GroupsEditorProps {
   categorization: string;
   isEditMode: boolean;
   onGroupsChange: (groups: Record<string, string[]>) => void;
+  onGroupKeyRenames?: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
 }
 
 export function GroupsEditor({
@@ -34,6 +37,7 @@ export function GroupsEditor({
   categorization,
   isEditMode,
   onGroupsChange,
+  onGroupKeyRenames,
 }: GroupsEditorProps) {
   const [newShipInputs, setNewShipInputs] = useState<Record<string, string>>(
     {}
@@ -62,7 +66,11 @@ export function GroupsEditor({
   const handleRemoveGroup = (groupKey: string) => {
     const newGroups = { ...groups };
     delete newGroups[groupKey];
-    onGroupsChange(newGroups);
+    const { renumberedGroups, renames } = renumberGroups(newGroups, categorization);
+    onGroupsChange(renumberedGroups);
+    if (Object.keys(renames).length > 0) {
+      onGroupKeyRenames?.(prev => mergeRenames(prev, renames));
+    }
   };
 
   const handleAddShip = (groupKey: string) => {
