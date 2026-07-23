@@ -5,23 +5,27 @@ import { Tabs, Spinner } from 'flowbite-react';
 import { HiUserCircle } from 'react-icons/hi';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
 import { useRotationVessels } from '../../hooks/useRotationVessels';
+import { useMemo } from 'react';
+
+// Urutan tabs untuk barge crane
+const BARGE_CRANE_ORDER = ['nakhoda', 'KKM'];
 
 export function RotationBargeCraneSenior() {
   const { vessels, loading, error } = useRotationVessels('senior', 'bc');
 
-  // Urutan tabs untuk barge crane
-  const bargeCraneOrder = ['nakhoda', 'KKM'];
+  // Optimized: useMemo untuk sorting
+  const sortedVessels = useMemo(() => {
+    return [...vessels].sort((a, b) => {
+      const indexA = BARGE_CRANE_ORDER.indexOf(a.job_title);
+      const indexB = BARGE_CRANE_ORDER.indexOf(b.job_title);
 
-  const sortedVessels = [...vessels].sort((a, b) => {
-    const indexA = bargeCraneOrder.indexOf(a.job_title);
-    const indexB = bargeCraneOrder.indexOf(b.job_title);
+      // Jika tidak ada di urutan, taruh di akhir
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
 
-    // Jika tidak ada di urutan, taruh di akhir
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-
-    return indexA - indexB;
-  });
+      return indexA - indexB;
+    });
+  }, [vessels]);
 
   if (loading) {
     return (
@@ -53,7 +57,7 @@ export function RotationBargeCraneSenior() {
 
   return (
     <div className="flex flex-col gap-3 mb-0">
-      <Tabs aria-label="Default tabs" variant="default">
+      <Tabs aria-label="Barge Crane rotation tabs" variant="underline">
         {sortedVessels.map((v, index) => (
           <Tabs.Item
             key={v.id}
@@ -67,6 +71,7 @@ export function RotationBargeCraneSenior() {
               part={v.part}
               job={v.job_title}
               groups={v.groups}
+              categorization={v.categorization}
             />
           </Tabs.Item>
         ))}
