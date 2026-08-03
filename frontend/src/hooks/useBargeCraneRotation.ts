@@ -341,19 +341,27 @@ export function useMutasiData(
                 tkVessels.has(lastVessel);
 
               if (type === 'bc') {
-                // For BC: skip if last vessel is container, manalagi, or other non-fleet
-                if (
-                  containerVessels.has(lastVessel) ||
-                  manalagiVessels.has(lastVessel) ||
-                  isNonFleet
-                )
-                  return null;
-
                 // BC requires at least 1 history entry in a BC vessel
                 const hasBCHistory = vlist.some((v: string) =>
                   bcVessels.has(v)
                 );
                 if (!hasBCHistory) {
+                  return null;
+                }
+
+                const lastLoc = info?.last_location || '';
+                const isOffBoard = 
+                  lastLoc.includes('DARAT') || 
+                  lastLoc.includes('PENDING');
+
+                // For BC: skip if last vessel is container, manalagi, or other non-fleet,
+                // BUT if they are currently off-board (e.g. DARAT BIASA) and have BC history, allow them.
+                if (
+                  !isOffBoard &&
+                  (containerVessels.has(lastVessel) ||
+                  manalagiVessels.has(lastVessel) ||
+                  isNonFleet)
+                ) {
                   return null;
                 }
               }
