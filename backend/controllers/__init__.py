@@ -33,6 +33,7 @@ from .promotion_controller import (
     get_promotion_candidates_nakhoda_controller,
 )
 from .search_controller import manual_search_controller
+from .offduty_all_controller import get_all_offduty_controller
 from .sync_controller import manual_sync_controller
 
 __all__ = [
@@ -62,6 +63,8 @@ __all__ = [
     "get_promotion_candidates_masinisIV_controller",
     # Search Controllers
     "manual_search_controller",
+    # Off Duty All Controllers
+    "get_all_offduty_controller",
     # Sync Controllers
     "manual_sync_controller",
 ]
