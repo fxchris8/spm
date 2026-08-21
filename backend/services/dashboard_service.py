@@ -5,7 +5,13 @@ Module ini menyediakan business logic dan transformasi data untuk dashboard, ter
 import pandas as pd
 
 from models import SeamanRecord, SimilarSeamanResult, VesselStats
-from repositories import get_offboard_seamen_by_location, get_seaman_by_code, get_seamen_data, get_vessels_data
+from repositories import (
+    get_offboard_seamen_by_location,
+    get_seaman_by_code,
+    get_seamen_data,
+    get_ship_particular_from_db,
+    get_vessels_data,
+)
 
 
 def get_dashboard_data():
@@ -164,3 +170,21 @@ def get_similar_seamen(target_seaman_code) -> dict:
 
     except Exception as e:
         return SimilarSeamanResult(status="error", message=str(e)).to_dict()
+
+
+def get_ship_particular_list(search: str = ""):
+    """
+    Ambil daftar kapal dari database lokal ship_particular.
+
+    Args:
+        search: Filter nama kapal (opsional, case-insensitive substring match)
+
+    Returns:
+        list[dict]: List kapal, masing-masing berisi vesselid, vesselname, dll.
+    """
+    try:
+        ships = get_ship_particular_from_db(search=search)
+        return ships
+    except Exception as e:
+        raise Exception(f"Failed to get ship particular list: {str(e)}")
+

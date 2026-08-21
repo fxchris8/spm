@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, TextInput } from 'flowbite-react';
+import { Button, TextInput, Spinner } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
+import { useShipParticular } from '../../hooks/useShipParticular';
 import {
   DndContext,
   DragEndEvent,
@@ -42,6 +43,13 @@ export function GroupsEditor({
     shipName: string;
     groupKey: string;
   } | null>(null);
+  // Autocomplete: filtered suggestions per group
+  const [filteredSuggestions, setFilteredSuggestions] = useState<
+    Record<string, string[]>
+  >({});
+
+  // Ambil daftar kapal dari ship_particular
+  const { vesselNames, loading: loadingShips } = useShipParticular();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -73,8 +81,29 @@ export function GroupsEditor({
     newGroups[groupKey] = [...(newGroups[groupKey] || []), shipName];
     onGroupsChange(newGroups);
 
-    // Clear input
+    // Clear input & suggestions
     setNewShipInputs(prev => ({ ...prev, [groupKey]: '' }));
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
+  };
+
+  const handleShipInputChange = (groupKey: string, value: string) => {
+    setNewShipInputs(prev => ({ ...prev, [groupKey]: value }));
+    if (!value) {
+      setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
+      return;
+    }
+    const filtered = vesselNames.filter(name =>
+      name.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: filtered.slice(0, 10) }));
+  };
+
+  const handleSelectSuggestion = (groupKey: string, shipName: string) => {
+    const newGroups = { ...groups };
+    newGroups[groupKey] = [...(newGroups[groupKey] || []), shipName];
+    onGroupsChange(newGroups);
+    setNewShipInputs(prev => ({ ...prev, [groupKey]: '' }));
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
   };
 
   const handleRemoveShip = (groupKey: string, index: number) => {
@@ -203,23 +232,45 @@ export function GroupsEditor({
 
               {/* Add Ship Input (Edit Mode Only) */}
               {isEditMode && (
-                <div className="flex gap-2 mb-3">
-                  <TextInput
-                    value={newShipInputs[groupKey] || ''}
-                    onChange={e =>
-                      setNewShipInputs(prev => ({
-                        ...prev,
-                        [groupKey]: e.target.value,
-                      }))
-                    }
-                    onKeyPress={e => handleKeyPress(e, groupKey)}
-                    placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
-                    className="flex-1"
-                    sizing="sm"
-                  />
-                  <Button size="sm" onClick={() => handleAddShip(groupKey)}>
-                    <HiPlus />
-                  </Button>
+                <div className="flex flex-col gap-2 mb-3">
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <TextInput
+                          value={newShipInputs[groupKey] || ''}
+                          onChange={e =>
+                            handleShipInputChange(groupKey, e.target.value)
+                          }
+                          onKeyPress={e => handleKeyPress(e, groupKey)}
+                          placeholder={
+                            loadingShips
+                              ? 'Loading kapal...'
+                              : 'Cari atau ketik nama kapal...'
+                          }
+                          sizing="sm"
+                          disabled={loadingShips}
+                          rightIcon={loadingShips ? () => <Spinner size="xs" /> : undefined}
+                        />
+                        {/* Autocomplete dropdown */}
+                        {(filteredSuggestions[groupKey] ?? []).length > 0 && (
+                          <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto mt-1">
+                            {(filteredSuggestions[groupKey] ?? []).map((name, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => handleSelectSuggestion(groupKey, name)}
+                                className="px-3 py-2 text-sm text-gray-800 hover:bg-blue-50 hover:text-blue-700 cursor-pointer border-b border-gray-100 last:border-0"
+                              >
+                                {name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button size="sm" onClick={() => handleAddShip(groupKey)}>
+                        <HiPlus />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 

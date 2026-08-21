@@ -1,6 +1,6 @@
 """
 Module ini menangani operasi database untuk sinkronisasi data dari API eksternal,
-meliputi data seamen dan mutasi beserta pencatatan log sinkronisasi.
+meliputi data seamen, mutasi, dan ship particular beserta pencatatan log sinkronisasi.
 """
 
 from datetime import datetime
@@ -232,3 +232,94 @@ def sync_mutations_to_database(df):
             pass
 
         return False
+
+
+def sync_ship_particular_to_database(df):
+    """
+    Sync data Ship Particular ke tabel ship_particular di database.
+    Strategi: TRUNCATE kemudian INSERT semua data.
+
+    Args:
+        df: DataFrame berisi data kapal dari API
+
+    Returns:
+        bool: True jika berhasil, False jika gagal
+    """
+    if df is None or df.empty:
+        print("WARNING - No ship particular data to sync")
+        return False
+
+    try:
+        print(f"PROCESS - Processing {len(df)} ship particular records...")
+
+        # Pastikan kolom dblgrosstonnage adalah string (kadang numeric)
+        if "dblgrosstonnage" in df.columns:
+            df["dblgrosstonnage"] = df["dblgrosstonnage"].astype(str)
+
+        # Tambahkan timestamp sync
+        df["synced_at"] = datetime.now()
+
+        with get_db_connection() as conn:
+            print("SETTING - Setting statement timeout...")
+            conn.execute(text("SET statement_timeout = '120000';"))
+
+            print("Starting DELETE operation on ship_particular...")
+            conn.execute(text("DELETE FROM ship_particular"))
+            conn.commit()
+            print("DONE - DELETE completed")
+
+            # Insert semua dalam satu batch (174 baris, sangat ringan)
+            print(f"Starting INSERT of {len(df)} records...")
+            df.to_sql("ship_particular", conn, if_exists="append", index=False)
+            conn.commit()
+            print(f"DONE - Inserted {len(df)} ship_particular records")
+            print("=" * 60)
+
+            # Catat ke sync_logs
+            sync_log = {
+                "table_name": "ship_particular",
+                "records_synced": len(df),
+                "sync_timestamp": datetime.now(),
+                "status": "success",
+            }
+            conn.execute(
+                text(
+                    """
+                INSERT INTO sync_logs (table_name, records_synced, sync_timestamp, status)
+                VALUES (:table_name, :records_synced, :sync_timestamp, :status)
+            """
+                ),
+                sync_log,
+            )
+            conn.commit()
+
+            return True
+
+    except Exception as e:
+        print(f"FAIL - Error syncing ship_particular to database: {str(e)}")
+        print("=" * 60)
+
+        try:
+            with get_db_connection() as conn:
+                error_log = {
+                    "table_name": "ship_particular",
+                    "records_synced": 0,
+                    "sync_timestamp": datetime.now(),
+                    "status": "failed",
+                    "error_message": str(e)[:500],
+                }
+                conn.execute(
+                    text(
+                        """
+                    INSERT INTO sync_logs (table_name, records_synced, sync_timestamp, status, error_message)
+                    VALUES (:table_name, :records_synced, :sync_timestamp, :status, :error_message)
+                """
+                    ),
+                    error_log,
+                )
+                conn.commit()
+        except Exception:
+            pass
+
+        return False
+

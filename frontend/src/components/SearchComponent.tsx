@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -13,6 +11,7 @@ import {
 } from 'flowbite-react';
 
 import { CallComponent } from './CallComponent';
+import { useShipParticular } from '../hooks/useShipParticular';
 
 interface SearchProps {
   type: string;
@@ -25,8 +24,10 @@ export function SearchComponent({ type, part }: SearchProps) {
     bagian_option: [] as string[],
     cert_option: [] as string[],
     rank_option: [] as string[],
-    vessel_option: [] as string[],
   });
+
+  // Daftar kapal dari ship_particular (source of truth dari API Pusat)
+  const { vesselNames: shipParticularVessels } = useShipParticular();
 
   // Loading state untuk memastikan request POST options selesai
   const [loadingOptions, setLoadingOptions] = useState<boolean>(true);
@@ -91,7 +92,7 @@ export function SearchComponent({ type, part }: SearchProps) {
     fetchOptions();
   }, [type, part]);
 
-  // Fungsi untuk memfilter vessel sesuai input
+  // Fungsi untuk memfilter vessel sesuai input — sumber dari ship_particular API
   const filterVessel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setVesselInput(value);
@@ -99,7 +100,7 @@ export function SearchComponent({ type, part }: SearchProps) {
       setFilteredVessels([]);
       return;
     }
-    const filtered = options.vessel_option.filter(vessel =>
+    const filtered = shipParticularVessels.filter(vessel =>
       vessel.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredVessels(filtered);

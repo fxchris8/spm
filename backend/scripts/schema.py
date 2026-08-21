@@ -269,6 +269,28 @@ CREATE INDEX IF NOT EXISTS idx_rotation_status ON rotation_submissions (status_d
 CREATE INDEX IF NOT EXISTS idx_rotation_tanggal ON rotation_submissions (tanggal);
 """
 
+CREATE_TABLE_SHIP_PARTICULAR = """
+-- Table: ship_particular
+-- Menyimpan data kapal dari API Ship Particular (nanika.spil.co.id)
+CREATE TABLE IF NOT EXISTS ship_particular (
+    vesselid VARCHAR(20) PRIMARY KEY,
+    vesselname VARCHAR(200) NOT NULL,
+    companyid INTEGER,
+    dblgrosstonnage VARCHAR(50),
+    inidnationality INTEGER,
+    vcmainpower VARCHAR(100),
+    vesseltypeid INTEGER,
+    synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for ship_particular
+CREATE INDEX IF NOT EXISTS idx_ship_particular_vesselname ON ship_particular(vesselname);
+CREATE INDEX IF NOT EXISTS idx_ship_particular_vesseltypeid ON ship_particular(vesseltypeid);
+CREATE INDEX IF NOT EXISTS idx_ship_particular_companyid ON ship_particular(companyid);
+"""
+
 CREATE_TABLE_USERS = """
 -- Table: users
 CREATE TABLE IF NOT EXISTS users (
@@ -334,6 +356,7 @@ def create_tables():
             ("vessels_ships", CREATE_TABLE_VESSELS_SHIPS),
             ("rotation_submissions", CREATE_TABLE_ROTATION_SUBMISSIONS),
             ("users", CREATE_TABLE_USERS),
+            ("ship_particular", CREATE_TABLE_SHIP_PARTICULAR),
         ]
 
         with engine.connect() as conn:
@@ -379,6 +402,7 @@ def verify_database():
             "vessels_ships",
             "rotation_submissions",
             "users",
+            "ship_particular",
         ]
 
         with engine.connect() as conn:
