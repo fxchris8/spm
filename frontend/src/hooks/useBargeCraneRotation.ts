@@ -288,14 +288,7 @@ export function useMutasiData(
   enabled: boolean = true,
   forecastMonth: number = 1
 ) {
-  const {
-    containerVessels,
-    manalagiVessels,
-    bcVessels,
-    mtVessels,
-    tbVessels,
-    tkVessels,
-  } = useVesselCategories();
+  const { bcVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: [
       'bc',
@@ -333,12 +326,6 @@ export function useMutasiData(
 
             // Skip seaman based on last vessel category
             if (vlist.length > 0) {
-              const lastVessel = vlist[vlist.length - 1];
-
-              const isNonFleet =
-                mtVessels.has(lastVessel) ||
-                tbVessels.has(lastVessel) ||
-                tkVessels.has(lastVessel);
 
               if (type === 'bc') {
                 // BC requires at least 1 history entry in a BC vessel
