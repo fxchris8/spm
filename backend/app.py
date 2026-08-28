@@ -35,7 +35,7 @@ from database.connection import (
 )
 from middlewares import init_cors
 from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
-from routes import auth_bp, cadangan_bp, dashboard_bp, promotion_bp, search_bp
+from routes import auth_bp, cadangan_bp, dashboard_bp, offduty_all_bp, promotion_bp, search_bp
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -51,6 +51,7 @@ load_word2vec_model()
 
 app.register_blueprint(cadangan_bp, url_prefix="/api")
 app.register_blueprint(dashboard_bp, url_prefix="/api")
+app.register_blueprint(offduty_all_bp, url_prefix="/api")
 app.register_blueprint(promotion_bp, url_prefix="/api")
 app.register_blueprint(search_bp, url_prefix="/api")
 app.register_blueprint(auth_bp, url_prefix="/api")

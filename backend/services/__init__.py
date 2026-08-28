@@ -44,6 +44,7 @@ from .promotion_service import (
     get_promotion_candidates_nakhoda,
 )
 from .search_service import manual_search
+from .offduty_all_service import get_all_offduty_seamen
 from .sync_service import manual_sync, sync_ship_particular
 
 __all__ = [
@@ -83,6 +84,8 @@ __all__ = [
     "get_promotion_candidates_masinisIV",
     # Search Services
     "manual_search",
+    # Off Duty All Services
+    "get_all_offduty_seamen",
     # Sync Services
     "manual_sync",
     # Ship Particular Services
