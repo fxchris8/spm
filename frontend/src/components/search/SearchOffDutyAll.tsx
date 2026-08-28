@@ -103,35 +103,32 @@ export function SearchOffDutyAll() {
     }
   };
 
-  // Load data on mount
-  useEffect(() => {
-    fetchData({ vesselCategory: '', rank: '', name: '', forecastMonth: 1 });
-  }, []);
+  // Compute dynamic month labels
+  const now = new Date();
+  const month1Date = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const month2Date = new Date(now.getFullYear(), now.getMonth() + 2, 1);
+  const month1Label = month1Date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  const month2Label = month2Date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 
-  // Auto-fetch when vesselCategory, rank, or forecastMonth changes
-  useEffect(() => {
-    fetchData({ vesselCategory, rank, name: nameSearch, forecastMonth });
-  }, [vesselCategory, rank, forecastMonth]);
-
-  // Debounced auto-fetch for name search (300ms delay)
+  // Single debounced effect for all filter and search changes
   useEffect(() => {
     if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     nameDebounceRef.current = setTimeout(() => {
       fetchData({ vesselCategory, rank, name: nameSearch, forecastMonth });
     }, 300);
+
     return () => {
       if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     };
-  }, [nameSearch]);
+  }, [vesselCategory, rank, nameSearch, forecastMonth]);
 
   // Reset all filters
   const handleReset = () => {
+    if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     setVesselCategory('');
     setRank('');
     setNameSearch('');
     setForecastMonth(1);
-    // useEffect for each filter will fire, but let's fire directly too
-    fetchData({ vesselCategory: '', rank: '', name: '', forecastMonth: 1 });
   };
 
   // Pagination
@@ -143,9 +140,9 @@ export function SearchOffDutyAll() {
   const getStatusBadge = (status: string) => {
     if (status === 'Currently Offboard') {
       return <Badge color="success">{status}</Badge>;
-    } else if (status.includes('Sep')) {
+    } else if (status.includes(month1Label)) {
       return <Badge color="warning">{status}</Badge>;
-    } else if (status.includes('Oct')) {
+    } else if (status.includes(month2Label)) {
       return <Badge color="purple">{status}</Badge>;
     }
     return <Badge color="gray">{status}</Badge>;
@@ -163,9 +160,9 @@ export function SearchOffDutyAll() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
           {/* Vessel Category Filter */}
           <div>
-            <Label htmlFor="vessel-category-filter" value="Vessel Category (History)" />
+            <Label htmlFor="vessel-cat-filter" value="Previous Vessel Category" className="mb-2" />
             <Select
-              id="vessel-category-filter"
+              id="vessel-cat-filter"
               value={vesselCategory}
               onChange={e => setVesselCategory(e.target.value)}
             >
@@ -176,9 +173,9 @@ export function SearchOffDutyAll() {
             </Select>
           </div>
 
-          {/* Rank Filter — uses static list so it never shrinks */}
+          {/* Rank Filter */}
           <div>
-            <Label htmlFor="rank-filter" value="Rank" />
+            <Label htmlFor="rank-filter" value="Rank" className="mb-2" />
             <Select
               id="rank-filter"
               value={rank}
@@ -195,23 +192,27 @@ export function SearchOffDutyAll() {
 
           {/* Name Search */}
           <div>
-            <Label htmlFor="name-filter" value="Name" />
+            <Label htmlFor="name-search" value="Search Name" className="mb-2" />
             <TextInput
-              id="name-filter"
+              id="name-search"
               type="text"
-              placeholder="Search by name..."
+              placeholder="Search by seaman name..."
               value={nameSearch}
               onChange={e => setNameSearch(e.target.value)}
             />
           </div>
 
-          {/* Forecast Toggle */}
-          <div className="flex flex-col justify-end">
-            <Label value="Include October Forecast" className="mb-2" />
+          {/* Forecast Month Toggle */}
+          <div>
+            <Label value={`Include ${month2Label} Forecast`} className="mb-2" />
             <ToggleSwitch
               checked={forecastMonth === 2}
               onChange={checked => setForecastMonth(checked ? 2 : 1)}
-              label={forecastMonth === 2 ? '2 Months (Oct 2026)' : '1 Month (Sep 2026)'}
+              label={
+                forecastMonth === 2
+                  ? `2 Months (${month2Label})`
+                  : `1 Month (${month1Label})`
+              }
             />
           </div>
         </div>
@@ -263,8 +264,8 @@ export function SearchOffDutyAll() {
                   </Table.Cell>
                 </Table.Row>
               ) : currentResults.length > 0 ? (
-                currentResults.map((item, idx) => (
-                  <Table.Row key={idx}>
+                currentResults.map(item => (
+                  <Table.Row key={item.seamancode}>
                     <Table.Cell>{item.seamancode}</Table.Cell>
                     <Table.Cell>{item.seafarercode}</Table.Cell>
                     <Table.Cell>{item.name}</Table.Cell>

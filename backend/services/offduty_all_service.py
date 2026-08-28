@@ -21,30 +21,6 @@ _LOKASI_OTHERS = [
 _LOKASI_OTHERS_UPPER = frozenset(loc.upper() for loc in _LOKASI_OTHERS)
 
 
-def _classify_vessel_category(prevlocation: str, kelompok: dict) -> str:
-    """
-    Classify a seaman's previous vessel into a category based on the kelompok mapping.
-
-    Args:
-        prevlocation: The seaman's previous vessel name
-        kelompok: Dict mapping category -> list of vessel names
-
-    Returns:
-        str: Category name (e.g. "container", "manalagi", "bc") or "unknown"
-    """
-    if not prevlocation or not prevlocation.strip():
-        return "unknown"
-
-    prev_upper = prevlocation.strip().upper()
-
-    for category, vessels in kelompok.items():
-        vessel_set = frozenset(v.upper() for v in vessels)
-        if prev_upper in vessel_set:
-            return category
-
-    return "unknown"
-
-
 def get_all_offduty_seamen(
     vessel_category: str | None = None,
     rank: str | None = None,
@@ -61,15 +37,14 @@ def get_all_offduty_seamen(
 
     Each seaman gets an 'offboard_status' field:
         - "Currently Offboard" if last_location is in DARAT/PENDING
-        - "Will be Offboard (Sep 2026)" if end_date makes them offboard by September
-        - "Will be Offboard (Oct 2026)" if end_date makes them offboard by October
+        - "Will be Offboard (Month Year)" dynamically computed from forecast end dates
 
     Args:
         vessel_category: Optional filter by previous vessel category
                          ("bc", "container", "manalagi")
         rank: Optional filter by last_position
         name: Optional partial name search
-        forecast_month: 1 = current offboard only, 2 = include October forecast
+        forecast_month: 1 = current offboard only, 2 = include 2nd month forecast
 
     Returns:
         list: List of seamen dicts with offboard_status field
@@ -95,13 +70,14 @@ def get_all_offduty_seamen(
             & (df["end_date_parsed"] <= range_end)
         ].copy()
 
-        # Determine which forecast month each seaman falls into
-        # Sep boundary: today + 1 month, replace day=1
-        sep_boundary = (today + pd.DateOffset(months=1)).replace(day=1)
+        # Determine which forecast month each seaman falls into dynamically
+        boundary_1 = (today + pd.DateOffset(months=1)).replace(day=1)
+        label_1 = boundary_1.strftime("%b %Y")
+        label_2 = (today + pd.DateOffset(months=2)).replace(day=1).strftime("%b %Y")
         pool_vessel["offboard_status"] = pool_vessel["end_date_parsed"].apply(
-            lambda d: "Will be Offboard (Sep 2026)"
-            if d <= sep_boundary
-            else "Will be Offboard (Oct 2026)"
+            lambda d: f"Will be Offboard ({label_1})"
+            if d <= boundary_1
+            else f"Will be Offboard ({label_2})"
         )
 
         filtered = pd.concat([pool_status, pool_vessel]).drop_duplicates(
@@ -111,6 +87,7 @@ def get_all_offduty_seamen(
         # forecast_month=1: also include those whose end_date is within this month
         today = pd.Timestamp.now(tz="UTC").normalize()
         range_end = (today + pd.DateOffset(months=1)).replace(day=1)
+        label_1 = range_end.strftime("%b %Y")
         df["end_date_parsed"] = pd.to_datetime(
             df["end_date"], errors="coerce", utc=True
         )
@@ -119,7 +96,7 @@ def get_all_offduty_seamen(
             & (df["end_date_parsed"] >= today)
             & (df["end_date_parsed"] <= range_end)
         ].copy()
-        pool_vessel["offboard_status"] = "Will be Offboard (Sep 2026)"
+        pool_vessel["offboard_status"] = f"Will be Offboard ({label_1})"
 
         filtered = pd.concat([pool_status, pool_vessel]).drop_duplicates(
             subset=["seamancode"]
@@ -172,8 +149,17 @@ def get_all_offduty_seamen(
             .str.contains(name_lower, na=False)
         ]
 
-    # --- Select and return columns ---
-    filtered = filtered.sort_values(by=["offboard_status", "last_position", "name"])
+    # --- Select and return columns (sorted chronologically) ---
+    status_month = pd.to_datetime(
+        filtered["offboard_status"].astype(str).str.extract(r"\(([^)]+)\)")[0],
+        format="%b %Y",
+        errors="coerce",
+    )
+    filtered = (
+        filtered.assign(_offboard_sort=status_month)
+        .sort_values(by=["_offboard_sort", "last_position", "name"], na_position="first")
+        .drop(columns=["_offboard_sort"])
+    )
 
     output_cols = [
         "seamancode",

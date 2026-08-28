@@ -26,6 +26,8 @@ def get_all_offduty_controller():
         rank = request.args.get("rank", None, type=str) or None
         name = request.args.get("name", None, type=str) or None
         forecast_month = request.args.get("forecast_month", 1, type=int)
+        if forecast_month not in (1, 2):
+            return jsonify({"message": "forecast_month must be 1 or 2"}), 400
 
         data = get_all_offduty_seamen(
             vessel_category=vessel_category,
