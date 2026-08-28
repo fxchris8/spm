@@ -1,6 +1,7 @@
 // src/hooks/useBargeCraneRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useVesselCategories } from './useVesselCategories';
+import { normalizeVesselName } from '../utils/vesselNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -319,6 +320,7 @@ export function useMutasiData(
       if (result.status === 'success' && result.data) {
         const rawDataObject = result.data;
         const groupShips = groups[groupKey] || [];
+        const clean = normalizeVesselName;
 
         const rows = Object.entries(rawDataObject)
           .map(([seamancode, info]: [string, any]) => {
@@ -326,11 +328,10 @@ export function useMutasiData(
 
             // Skip seaman based on last vessel category
             if (vlist.length > 0) {
-
               if (type === 'bc') {
                 // BC requires at least 1 history entry in a BC vessel
-                const hasBCHistory = vlist.some((v: string) =>
-                  bcVessels.has(v)
+                const hasBCHistory = vlist.some(
+                  (v: string) => bcVessels.has(clean(v)) || bcVessels.has(v)
                 );
                 if (!hasBCHistory) {
                   return null;
@@ -339,7 +340,9 @@ export function useMutasiData(
             }
 
             const matchCount = vlist.filter((v: string) =>
-              groupShips.some(gs => v.includes(gs))
+              groupShips.some(
+                gs => clean(v) === clean(gs) || v.includes(gs) || gs.includes(v)
+              )
             ).length;
 
             return {

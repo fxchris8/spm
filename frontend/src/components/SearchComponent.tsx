@@ -12,6 +12,7 @@ import {
 
 import { CallComponent } from './CallComponent';
 import { useShipParticular } from '../hooks/useShipParticular';
+import { isVesselMatch } from '../utils/vesselNormalizer';
 
 interface SearchProps {
   type: string;
@@ -92,7 +93,7 @@ export function SearchComponent({ type, part }: SearchProps) {
     fetchOptions();
   }, [type, part]);
 
-  // Fungsi untuk memfilter vessel sesuai input — sumber dari ship_particular API
+  // Fungsi untuk memfilter vessel sesuai input — sumber dari ship_particular API dengan matching fleksibel
   const filterVessel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setVesselInput(value);
@@ -101,7 +102,7 @@ export function SearchComponent({ type, part }: SearchProps) {
       return;
     }
     const filtered = shipParticularVessels.filter(vessel =>
-      vessel.toLowerCase().includes(value.toLowerCase())
+      isVesselMatch(value, vessel)
     );
     setFilteredVessels(filtered);
   };

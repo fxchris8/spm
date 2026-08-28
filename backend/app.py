@@ -1990,7 +1990,7 @@ def api_soft_delete_rotation():
 if __name__ == "__main__":
     # Use port from environment variable if available, otherwise default to 5000
     # Note: docker-compose maps host:18037 to container:5000
-    port = int(os.environ.get("FLASK_RUN_PORT", 5000))
+    port = int(os.environ.get("FLASK_RUN_PORT") or 5000)
     host = "0.0.0.0"
     print(f"Flask app running on port {port}")
 

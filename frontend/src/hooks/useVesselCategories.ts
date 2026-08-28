@@ -8,6 +8,8 @@ import {
   TK_VESSELS,
 } from '../constants/vessels';
 
+import { buildNormalizedVesselSet } from '../utils/vesselNormalizer';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 async function fetchVesselCategories(): Promise<Record<string, string[]>> {
@@ -16,13 +18,6 @@ async function fetchVesselCategories(): Promise<Record<string, string[]>> {
   return response.json();
 }
 
-/**
- * Hook untuk mendapatkan daftar kapal per kategori dari database.
- * Konsisten dengan konfigurasi yang dikelola di Vessel Management UI.
- *
- * Jika API belum selesai / gagal, fallback ke constants/vessels.ts
- * sehingga UI tetap berfungsi.
- */
 export function useVesselCategories() {
   const { data } = useQuery({
     queryKey: ['vessel-categories'],
@@ -31,16 +26,15 @@ export function useVesselCategories() {
     gcTime: 60 * 60 * 1000,
   });
 
+  const getSet = (rawList: string[] | undefined, fallbackSet: Set<string>) =>
+    buildNormalizedVesselSet(rawList && rawList.length > 0 ? rawList : fallbackSet);
+
   return {
-    containerVessels: new Set<string>(
-      data?.container ?? Array.from(CONTAINER_VESSELS)
-    ),
-    manalagiVessels: new Set<string>(
-      data?.manalagi ?? Array.from(MANALAGI_VESSELS)
-    ),
-    bcVessels: new Set<string>(data?.bc ?? Array.from(BC_VESSELS)),
-    mtVessels: new Set<string>(data?.mt ?? Array.from(MT_VESSELS)),
-    tbVessels: new Set<string>(data?.tb ?? Array.from(TB_VESSELS)),
-    tkVessels: new Set<string>(data?.tk ?? Array.from(TK_VESSELS)),
+    containerVessels: getSet(data?.container, CONTAINER_VESSELS),
+    manalagiVessels: getSet(data?.manalagi, MANALAGI_VESSELS),
+    bcVessels: getSet(data?.bc, BC_VESSELS),
+    mtVessels: getSet(data?.mt, MT_VESSELS),
+    tbVessels: getSet(data?.tb, TB_VESSELS),
+    tkVessels: getSet(data?.tk, TK_VESSELS),
   };
 }

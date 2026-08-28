@@ -259,7 +259,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     from repositories.vessel_repository import get_vessel_config_from_db
     from utils.vessel_normalizer import normalize_vessel_name
 
-    if vessel not in ["container", "manalagi"]:
+    if vessel not in ["container", "manalagi", "bc"]:
         dataframe = dataframe.copy()
         dataframe["VESSEL GROUP ID"] = "1"
         return dataframe
