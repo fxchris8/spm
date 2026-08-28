@@ -26,7 +26,13 @@ from .cadangan_service import (
     get_cadangan_mualim_i_data,
     get_cadangan_nakhoda_data,
 )
-from .dashboard_service import get_dashboard_data, get_offboard_detail, get_similar_seamen, get_vessel_stats
+from .dashboard_service import (
+    get_dashboard_data,
+    get_offboard_detail,
+    get_ship_particular_list,
+    get_similar_seamen,
+    get_vessel_stats,
+)
 from .promotion_service import (
     get_promotion_candidates_kkm,
     get_promotion_candidates_masinisII,
@@ -39,7 +45,7 @@ from .promotion_service import (
 )
 from .search_service import manual_search
 from .offduty_all_service import get_all_offduty_seamen
-from .sync_service import manual_sync
+from .sync_service import manual_sync, sync_ship_particular
 
 __all__ = [
     # Auth Services
@@ -82,4 +88,7 @@ __all__ = [
     "get_all_offduty_seamen",
     # Sync Services
     "manual_sync",
+    # Ship Particular Services
+    "get_ship_particular_list",
+    "sync_ship_particular",
 ]

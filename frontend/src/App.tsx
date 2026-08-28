@@ -57,7 +57,7 @@ export function App() {
                       className="fixed left-0 bottom-0 bg-gray-100 overflow-y-auto z-40"
                       style={{
                         top: NAVBAR_HEIGHT,
-                        width: '16rem',
+                        width: '18rem',
                       }}
                     >
                       <SidebarComponent />
@@ -65,7 +65,7 @@ export function App() {
 
                     <main
                       className="flex-1 p-4 overflow-x-hidden"
-                      style={{ marginLeft: '16rem' }}
+                      style={{ marginLeft: '18rem' }}
                     >
                       <Routes>
                         <Route path="/" element={<Dashboard />} />

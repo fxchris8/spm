@@ -34,13 +34,15 @@ def _apply_categorization_filter(
     if not categorization:
         return df_seamen
 
+    from utils.vessel_normalizer import normalize_vessel_name, normalize_vessel_set
+
     kelompok = build_kelompok()
-    manalagi_set = frozenset(v.upper() for v in kelompok.get("manalagi", []))
-    container_set = frozenset(v.upper() for v in kelompok.get("container", []))
-    bc_set = frozenset(v.upper() for v in kelompok.get("bc", []))
-    mt_set = frozenset(v.upper() for v in kelompok.get("mt", []))
-    tb_set = frozenset(v.upper() for v in kelompok.get("tb", []))
-    tk_set = frozenset(v.upper() for v in kelompok.get("tk", []))
+    manalagi_set = frozenset(v.upper() for v in kelompok.get("manalagi", [])) | normalize_vessel_set(kelompok.get("manalagi", []))
+    container_set = frozenset(v.upper() for v in kelompok.get("container", [])) | normalize_vessel_set(kelompok.get("container", []))
+    bc_set = frozenset(v.upper() for v in kelompok.get("bc", [])) | normalize_vessel_set(kelompok.get("bc", []))
+    mt_set = frozenset(v.upper() for v in kelompok.get("mt", [])) | normalize_vessel_set(kelompok.get("mt", []))
+    tb_set = frozenset(v.upper() for v in kelompok.get("tb", [])) | normalize_vessel_set(kelompok.get("tb", []))
+    tk_set = frozenset(v.upper() for v in kelompok.get("tk", [])) | normalize_vessel_set(kelompok.get("tk", []))
 
     loc = df_seamen["last_location"].fillna("").astype(str).str.strip()
     is_darat = loc.str.upper().isin(_LOKASI_OTHERS_UPPER)
@@ -54,13 +56,14 @@ def _apply_categorization_filter(
     eff = loc.copy()
     eff.loc[is_darat] = prev.loc[is_darat]
     eff_upper = eff.str.upper()
+    eff_norm = eff.apply(normalize_vessel_name)
 
-    is_manalagi = eff_upper.isin(manalagi_set)
-    is_container = eff_upper.isin(container_set)
-    is_bc = eff_upper.isin(bc_set)
-    is_mt = eff_upper.isin(mt_set)
-    is_tb = eff_upper.isin(tb_set)
-    is_tk = eff_upper.isin(tk_set)
+    is_manalagi = eff_upper.isin(manalagi_set) | eff_norm.isin(manalagi_set)
+    is_container = eff_upper.isin(container_set) | eff_norm.isin(container_set)
+    is_bc = eff_upper.isin(bc_set) | eff_norm.isin(bc_set)
+    is_mt = eff_upper.isin(mt_set) | eff_norm.isin(mt_set)
+    is_tb = eff_upper.isin(tb_set) | eff_norm.isin(tb_set)
+    is_tk = eff_upper.isin(tk_set) | eff_norm.isin(tk_set)
 
     non_fleet = is_bc | is_mt | is_tb | is_tk
 

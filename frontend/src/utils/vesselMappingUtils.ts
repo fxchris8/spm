@@ -63,9 +63,9 @@ export function formatPositionDisplay(position: string): string {
  */
 export function formatCategorizationDisplay(categorization: string): string {
   const formatMap: Record<string, string> = {
-    container: 'Container',
+    container: 'Container, Free Cargo, RORO',
     manalagi: 'Manalagi',
-    bc: 'BC (Barge Crane)',
+    bc: 'BC, TB, TK, Service',
   };
   return formatMap[categorization] || categorization;
 }
@@ -171,3 +171,12 @@ export function getAllPositions(): string[] {
 export function getAllCategorizations(): string[] {
   return ['container', 'manalagi', 'bc'];
 }
+
+/**
+ * Mapping of categorization to relevant vesseltypeid from ship_particular table
+ */
+export const VESSEL_TYPE_IDS_BY_CATEGORY: Record<string, number[]> = {
+  container: [3, 1, 5, 16],
+  manalagi: [14],
+  bc: [12, 13, 15, -1],
+};

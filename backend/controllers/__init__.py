@@ -19,6 +19,7 @@ from .cadangan_controller import (
 from .dashboard_controller import (
     get_dashboard_data_controller,
     get_offboard_detail_controller,
+    get_ship_particular_controller,
     get_similarity_controller,
     get_vessel_stats_controller,
 )
@@ -34,7 +35,10 @@ from .promotion_controller import (
 )
 from .search_controller import manual_search_controller
 from .offduty_all_controller import get_all_offduty_controller
-from .sync_controller import manual_sync_controller
+from .sync_controller import (
+    manual_sync_controller,
+    sync_ship_particular_controller,
+)
 
 __all__ = [
     # Auth Controllers
@@ -67,4 +71,7 @@ __all__ = [
     "get_all_offduty_controller",
     # Sync Controllers
     "manual_sync_controller",
+    # Ship Particular Controllers
+    "get_ship_particular_controller",
+    "sync_ship_particular_controller",
 ]

@@ -7,7 +7,7 @@ interface DraggableShipCardProps {
   shipName: string;
   groupKey: string;
   index: number;
-  onDelete: () => void;
+  onDelete?: () => void;
   isEditMode: boolean;
 }
 
@@ -18,6 +18,7 @@ export function DraggableShipCard({
   onDelete,
   isEditMode,
 }: DraggableShipCardProps) {
+  const isUngrouped = groupKey === '__ungrouped__';
   const {
     attributes,
     listeners,
@@ -26,7 +27,7 @@ export function DraggableShipCard({
     transition,
     isDragging,
   } = useSortable({
-    id: `${groupKey}-${index}`,
+    id: `${groupKey}-${shipName}-${index}`,
     data: {
       shipName,
       groupKey,
@@ -47,12 +48,18 @@ export function DraggableShipCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200 ${
-        isEditMode ? 'cursor-move hover:bg-gray-100' : ''
-      } ${isDragging ? 'shadow-lg ring-2 ring-blue-400' : ''}`}
+      className={`flex justify-between items-center p-2 rounded border transition-all ${
+        isUngrouped
+          ? 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-sm'
+          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+      } ${isEditMode ? 'cursor-grab active:cursor-grabbing' : ''} ${
+        isDragging ? 'shadow-lg ring-2 ring-blue-400 opacity-50 z-50' : ''
+      }`}
     >
-      <span className="text-sm font-medium text-gray-900">{shipName}</span>
-      {isEditMode && (
+      <span className="text-sm font-medium text-gray-900 truncate" title={shipName}>
+        {shipName}
+      </span>
+      {isEditMode && !isUngrouped && onDelete && (
         <Button
           size="xs"
           color="failure"
@@ -60,6 +67,7 @@ export function DraggableShipCard({
             e.stopPropagation();
             onDelete();
           }}
+          className="ml-2 flex-shrink-0"
         >
           <HiTrash />
         </Button>

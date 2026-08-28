@@ -3,9 +3,15 @@ Dashboard Controller
 Handles HTTP request/response for dashboard endpoints.
 """
 
-from flask import jsonify
+from flask import jsonify, request
 
-from services import get_dashboard_data, get_offboard_detail, get_similar_seamen, get_vessel_stats
+from services import (
+    get_dashboard_data,
+    get_offboard_detail,
+    get_ship_particular_list,
+    get_similar_seamen,
+    get_vessel_stats,
+)
 
 
 def get_dashboard_data_controller():
@@ -70,3 +76,22 @@ def get_similarity_controller(seaman_code):
 
     except Exception as e:
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_ship_particular_controller():
+    """
+    Controller for GET /api/ship-particular endpoint.
+    Mengambil daftar kapal dari tabel ship_particular di database lokal.
+    Query param opsional: ?search=<nama_kapal>
+
+    Returns:
+        JSON: List kapal dengan detail lengkap
+    """
+    try:
+        search = request.args.get("search", default="", type=str)
+        ships = get_ship_particular_list(search=search)
+        return jsonify(ships), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+

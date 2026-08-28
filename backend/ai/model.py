@@ -207,8 +207,10 @@ def search_candidate(df, bagian, vessel_name, age_range):
 def filter_in_vessel(dataframe, group_name, kelompok=None):
     """
     Memfilter DataFrame agar hanya berisi baris dengan 'last_location' yang
-    termasuk dalam daftar vessel dari group yang ditentukan.
+    termasuk dalam daftar vessel dari group yang ditentukan (menggunakan pencocokan fleksibel).
     """
+    from utils.vessel_normalizer import normalize_vessel_name, normalize_vessel_set
+
     if kelompok is None:
         from repositories.vessel_repository import build_kelompok
 
@@ -218,7 +220,12 @@ def filter_in_vessel(dataframe, group_name, kelompok=None):
         raise ValueError(f"Group '{group_name}' tidak ditemukan dalam kelompok.")
 
     vessel_list = kelompok[group_name]
-    filtered_df = dataframe[dataframe["last_location"].isin(vessel_list)]
+    vessel_set_norm = normalize_vessel_set(vessel_list)
+    loc_norm = dataframe["last_location"].apply(normalize_vessel_name)
+
+    filtered_df = dataframe[
+        dataframe["last_location"].isin(vessel_list) | loc_norm.isin(vessel_set_norm)
+    ]
     return filtered_df
 
 
@@ -250,8 +257,9 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         pd.DataFrame: DataFrame dengan kolom tambahan 'VESSEL GROUP ID'.
     """
     from repositories.vessel_repository import get_vessel_config_from_db
+    from utils.vessel_normalizer import normalize_vessel_name
 
-    if vessel not in ["container", "manalagi"]:
+    if vessel not in ["container", "manalagi", "bc"]:
         dataframe = dataframe.copy()
         dataframe["VESSEL GROUP ID"] = "1"
         return dataframe
@@ -271,6 +279,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     )
 
     vessel_to_group = {}
+    vessel_norm_to_group = {}
     for idx, (group_key, ships) in enumerate(groups.items(), start=1):
         group_number = get_rotation_group_number(group_key)
         if group_number is None:
@@ -281,10 +290,17 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         group_id = f"{prefix}{group_number}"
         for ship in ships:
             vessel_to_group[ship] = group_id
+            norm_ship = normalize_vessel_name(ship)
+            if norm_ship:
+                vessel_norm_to_group[norm_ship] = group_id
 
     dataframe = dataframe.copy()
+    direct_match = dataframe["last_location"].map(vessel_to_group)
+    norm_loc = dataframe["last_location"].apply(normalize_vessel_name)
+    norm_match = norm_loc.map(vessel_norm_to_group)
+
     dataframe["VESSEL GROUP ID"] = (
-        dataframe["last_location"].map(vessel_to_group).fillna("UNKNOWN")
+        direct_match.fillna(norm_match).fillna("UNKNOWN")
     )
 
     cols = dataframe.columns.tolist()

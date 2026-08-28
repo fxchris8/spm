@@ -31,7 +31,7 @@ export function RotationBargeCraneSenior() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <Spinner size="xl" color="failure" />
-        <span className="text-gray-600">Loading barge crane rotations...</span>
+        <span className="text-gray-600">Loading BC, TB, TK, Service rotations...</span>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function RotationBargeCraneSenior() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">
-          Tidak ada konfigurasi rotasi barge crane
+          Tidak ada konfigurasi rotasi BC, TB, TK, Service
         </p>
       </div>
     );
@@ -57,7 +57,7 @@ export function RotationBargeCraneSenior() {
 
   return (
     <div className="flex flex-col gap-3 mb-0">
-      <Tabs aria-label="Barge Crane rotation tabs" variant="underline">
+      <Tabs aria-label="BC, TB, TK, Service rotation tabs" variant="underline">
         {sortedVessels.map((v, index) => (
           <Tabs.Item
             key={v.id}

@@ -378,22 +378,19 @@ def get_mutasi_filtered():
             & (df_seamen["last_position"] == job)
         ]["seamancode"].unique()
 
-        if forecast_month >= 2:
-            # Pool 2: crew di kapal dengan end_date dalam rentang forecast
-            today = pd.Timestamp.now(tz="UTC").normalize()
-            range_end = (today + pd.DateOffset(months=forecast_month)).replace(day=1)
-            df_seamen["end_date"] = pd.to_datetime(
-                df_seamen["end_date"], errors="coerce", utc=True
-            )
-            vessel_codes = df_seamen[
-                (df_seamen["last_position"] == job)
-                & (~df_seamen["last_location"].isin(lokasi_filter))
-                & (df_seamen["end_date"] >= today)
-                & (df_seamen["end_date"] <= range_end)
-            ]["seamancode"].unique()
-            seamancode_terfilter = list(set(list(status_codes) + list(vessel_codes)))
-        else:
-            seamancode_terfilter = status_codes
+        # Pool 2: crew di kapal dengan end_date dalam rentang forecast
+        today = pd.Timestamp.now(tz="UTC").normalize()
+        range_end = (today + pd.DateOffset(months=forecast_month)).replace(day=1)
+        df_seamen["end_date"] = pd.to_datetime(
+            df_seamen["end_date"], errors="coerce", utc=True
+        )
+        vessel_codes = df_seamen[
+            (df_seamen["last_position"] == job)
+            & (~df_seamen["last_location"].isin(lokasi_filter))
+            & (df_seamen["end_date"] >= today)
+            & (df_seamen["end_date"] < range_end)
+        ]["seamancode"].unique()
+        seamancode_terfilter = list(set(list(status_codes) + list(vessel_codes)))
 
         # **FILTER OUT LOCKED CODES DI SINI**
         # print(f"[DEBUG] Before filtering: {len(seamancode_terfilter)} seamen")
@@ -1994,7 +1991,7 @@ def api_soft_delete_rotation():
 if __name__ == "__main__":
     # Use port from environment variable if available, otherwise default to 5000
     # Note: docker-compose maps host:18037 to container:5000
-    port = int(os.environ.get("FLASK_RUN_PORT", 5000))
+    port = int(os.environ.get("FLASK_RUN_PORT") or 5000)
     host = "0.0.0.0"
     print(f"Flask app running on port {port}")
 
