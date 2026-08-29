@@ -6,8 +6,9 @@ dengan filter opsional berdasarkan kategori kapal sebelumnya dan forecast bulan 
 
 import pandas as pd
 
-from database.connection import get_seamen_as_data
+from database.connection import get_seamen_as_data, get_mutations_as_data
 from repositories.vessel_repository import build_kelompok
+from utils.vessel_normalizer import normalize_vessel_name, normalize_vessel_set
 
 _LOKASI_OTHERS = [
     "DARAT",
@@ -16,6 +17,7 @@ _LOKASI_OTHERS = [
     "Stand by Crew",
     "PENDING CUTI",
     "PENDING GAJI",
+    "PENDING GAJI CUTI",
 ]
 
 _LOKASI_OTHERS_UPPER = frozenset(loc.upper() for loc in _LOKASI_OTHERS)
@@ -102,34 +104,55 @@ def get_all_offduty_seamen(
             subset=["seamancode"]
         )
 
+    # --- Resolve effective previous vessel for all offboard seamen ---
+    # Load mutation history map to resolve last real vessel if prevlocation is also a land/pending status
+    last_real_vessel_map = {}
+    try:
+        df_mut = get_mutations_as_data()
+        if df_mut is not None and not df_mut.empty:
+            df_mut_sorted = df_mut.sort_values(by=["transactiondate"], ascending=True)
+            for code, group in df_mut_sorted.groupby("seamancode"):
+                real_vessels = []
+                for _, mrow in group.iterrows():
+                    for col in ["tovesselname", "fromvesselname"]:
+                        v = str(mrow.get(col) or "").strip()
+                        if v and v.upper() not in _LOKASI_OTHERS_UPPER:
+                            real_vessels.append(v)
+                if real_vessels:
+                    last_real_vessel_map[code] = real_vessels[-1]
+    except Exception as e:
+        print(f"WARN - Could not load mutation history fallback: {e}")
+
+    def resolve_effective_vessel(row):
+        loc = str(row.get("last_location") or "").strip()
+        if loc.upper() not in _LOKASI_OTHERS_UPPER:
+            return loc
+        prev = str(row.get("prevlocation") or "").strip()
+        if prev.upper() not in _LOKASI_OTHERS_UPPER and prev != "":
+            return prev
+        return last_real_vessel_map.get(row.get("seamancode"), "")
+
+    filtered = filtered.copy()
+    filtered["prevlocation"] = filtered.apply(resolve_effective_vessel, axis=1)
+
     # --- Filter by vessel category (prevlocation) ---
     if vessel_category and vessel_category.strip():
         kelompok = build_kelompok()
         cat_lower = vessel_category.strip().lower()
 
-        # Build the set of vessel names for the requested category
-        if cat_lower in kelompok:
-            target_vessels = frozenset(v.upper() for v in kelompok[cat_lower])
-        else:
-            target_vessels = frozenset()
+        # Build normalized set of vessel names for the requested category
+        # "bc" represents the combined non-container fleet (BC, TB, TK, MT, Service)
+        target_vessels_raw = set()
+        if cat_lower in ("bc", "bc_tb_tk_service"):
+            for c in ["bc", "tb", "tk", "mt"]:
+                target_vessels_raw.update(kelompok.get(c, []))
+        elif cat_lower in kelompok:
+            target_vessels_raw.update(kelompok[cat_lower])
 
-        # Determine effective previous vessel:
-        # For currently offboard seamen, use prevlocation
-        # For still-on-vessel seamen, use last_location
-        eff_loc = filtered["last_location"].fillna("").astype(str).str.strip()
-        is_darat = eff_loc.str.upper().isin(_LOKASI_OTHERS_UPPER)
+        target_vessels = normalize_vessel_set(target_vessels_raw)
 
-        prev = (
-            filtered["prevlocation"].fillna("").astype(str).str.strip()
-            if "prevlocation" in filtered.columns
-            else pd.Series("", index=filtered.index)
-        )
-
-        effective = eff_loc.copy()
-        effective.loc[is_darat] = prev.loc[is_darat]
-        effective_upper = effective.str.upper()
-
-        filtered = filtered[effective_upper.isin(target_vessels)]
+        effective_norm = filtered["prevlocation"].apply(normalize_vessel_name)
+        filtered = filtered[effective_norm.isin(target_vessels)]
 
     # --- Filter by rank ---
     if rank and rank.strip():

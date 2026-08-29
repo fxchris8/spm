@@ -167,7 +167,7 @@ export function SearchOffDutyAll() {
               onChange={e => setVesselCategory(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value="bc">Barge Crane</option>
+              <option value="bc">BC, TB, TK, Service</option>
               <option value="container">Container</option>
               <option value="manalagi">Manalagi</option>
             </Select>
