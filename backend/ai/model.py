@@ -229,7 +229,7 @@ def get_rotation_group_number(group_key):
     return str(int(match.group(1)))
 
 
-def vessel_group_id_deck(dataframe, vessel, type=None):
+def vessel_group_id_deck(dataframe, vessel, type=None, job_title=None):
     """
     Menambahkan kolom 'VESSEL GROUP ID' ke dalam DataFrame berdasarkan konfigurasi
     dari database (vessel management).
@@ -245,6 +245,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
         dataframe (pd.DataFrame): DataFrame input dengan kolom 'last_location'.
         vessel (str): Kategorisasi kapal, e.g. 'container', 'manalagi'.
         type (str): Jenis pengelompokan, 'deck' atau 'engine'.
+        job_title (str): Posisi spesifik, e.g. 'nakhoda', 'mualimI', 'KKM', 'masinisII'.
 
     Returns:
         pd.DataFrame: DataFrame dengan kolom tambahan 'VESSEL GROUP ID'.
@@ -259,7 +260,7 @@ def vessel_group_id_deck(dataframe, vessel, type=None):
     if type not in ["deck", "engine"]:
         raise ValueError("Parameter 'type' harus bernilai 'deck' atau 'engine'")
 
-    prefix, groups = get_vessel_config_from_db(vessel, type)
+    prefix, groups = get_vessel_config_from_db(vessel, type, job_title=job_title)
 
     if not groups:
         dataframe = dataframe.copy()
