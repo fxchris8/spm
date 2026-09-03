@@ -28,6 +28,7 @@ export function VesselManagement() {
   const [editedGroups, setEditedGroups] = useState<Record<string, string[]>>(
     {}
   );
+  const [groupKeyRenames, setGroupKeyRenames] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -40,6 +41,7 @@ export function VesselManagement() {
     part: string;
     categorization: string;
     groups: Record<string, string[]>;
+    group_key_renames: Record<string, string>;
   }>(null);
 
   // Find existing vessel configuration based on selection
@@ -67,11 +69,13 @@ export function VesselManagement() {
     setSelectedPosition(null);
     setIsEditMode(false);
     setEditedGroups({});
+    setGroupKeyRenames({});
   };
 
   const handlePositionChange = (position: string) => {
     setSelectedPosition(position);
     setIsEditMode(false);
+    setGroupKeyRenames({});
   };
 
   const handleEditToggle = () => {
@@ -82,6 +86,7 @@ export function VesselManagement() {
       } else {
         setEditedGroups({});
       }
+      setGroupKeyRenames({});
     }
     setIsEditMode(!isEditMode);
   };
@@ -94,6 +99,7 @@ export function VesselManagement() {
       part: string;
       categorization: string;
       groups: Record<string, string[]>;
+      group_key_renames: Record<string, string>;
     },
     alsoSyncLinked: boolean
   ) => {
@@ -147,6 +153,7 @@ export function VesselManagement() {
       }
 
       setIsEditMode(false);
+      setGroupKeyRenames({});
     } catch (error: any) {
       console.error('Error saving vessel:', error);
       toast.error(`Gagal menyimpan: ${error.message}`);
@@ -195,6 +202,7 @@ export function VesselManagement() {
       part: hiddenFields.part,
       categorization: selectedCategory,
       groups: editedGroups,
+      group_key_renames: groupKeyRenames,
     };
 
     // Check if this position has a linked pair (e.g. Nakhoda <-> Mualim I)
@@ -332,6 +340,9 @@ export function VesselManagement() {
               categorization={selectedCategory}
               isEditMode={isEditMode}
               onGroupsChange={setEditedGroups}
+              onGroupKeyRenames={updater =>
+                setGroupKeyRenames(prev => updater(prev))
+              }
             />
 
             {/* Action Buttons - Bottom Right */}

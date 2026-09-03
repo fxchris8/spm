@@ -1773,6 +1773,7 @@ def api_update_rotation_vessel(vessel_id):
             part=data["part"],
             groups=data["groups"],
             categorization=data.get("categorization"),
+            group_key_renames=data.get("group_key_renames", {}),
         )
 
         return jsonify(result), 200
@@ -1781,6 +1782,7 @@ def api_update_rotation_vessel(vessel_id):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/api/rotation-vessels/<int:vessel_id>", methods=["DELETE"])

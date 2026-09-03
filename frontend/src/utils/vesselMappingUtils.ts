@@ -101,6 +101,78 @@ export function generateNextGroupKey(
 }
 
 /**
+ * Re-number groups sequentially after a deletion.
+ * Returns { renumberedGroups, renames } where renames maps old keys → new keys
+ * (only entries where the key actually changed).
+ *
+ * Example:
+ *   input:  { container_rotation1: [...], container_rotation3: [...] }
+ *   output: { renumberedGroups: { container_rotation1: [...], container_rotation2: [...] },
+ *             renames: { container_rotation3: 'container_rotation2' } }
+ */
+export function renumberGroups(
+  groups: Record<string, string[]>,
+  categorization: string
+): { renumberedGroups: Record<string, string[]>; renames: Record<string, string> } {
+  const prefix = `${categorization}_rotation`;
+
+  const sortedEntries = Object.entries(groups)
+    .filter(([key]) => key.startsWith(prefix))
+    .sort(([a], [b]) => {
+      return (
+        parseInt(a.replace(prefix, ''), 10) -
+        parseInt(b.replace(prefix, ''), 10)
+      );
+    });
+
+  const renumberedGroups: Record<string, string[]> = {};
+  const renames: Record<string, string> = {};
+
+  sortedEntries.forEach(([oldKey, ships], index) => {
+    const newKey = `${prefix}${index + 1}`;
+    renumberedGroups[newKey] = ships;
+    if (oldKey !== newKey) {
+      renames[oldKey] = newKey;
+    }
+  });
+
+  return { renumberedGroups, renames };
+}
+
+/**
+ * Merge two rename maps, chaining renames so that intermediate keys are resolved.
+ * e.g. if existingRenames has { rotation4 → rotation3 } and newRenames has { rotation3 → rotation2 },
+ * the final map becomes { rotation4 → rotation2, rotation3 → rotation2 }.
+ */
+export function mergeRenames(
+  existing: Record<string, string>,
+  incoming: Record<string, string>
+): Record<string, string> {
+  const merged: Record<string, string> = { ...existing };
+
+  // Apply incoming renames and chain with existing
+  for (const [oldKey, newKey] of Object.entries(incoming)) {
+    // Update any existing entry that points to oldKey
+    for (const [k, v] of Object.entries(merged)) {
+      if (v === oldKey) {
+        merged[k] = newKey;
+      }
+    }
+    // If this oldKey has its own rename, chain it
+    merged[oldKey] = newKey;
+  }
+
+  // Clean up entries where old === new (no-op renames)
+  for (const k of Object.keys(merged)) {
+    if (merged[k] === k) {
+      delete merged[k];
+    }
+  }
+
+  return merged;
+}
+
+/**
  * Linked positions for container categorization:
  * Nakhoda <-> Mualim I (same vessel 'D')
  * KKM <-> Masinis II (same vessel 'E')
