@@ -47,14 +47,30 @@ def get_rotation_group_number(group_key):
     return str(int(match.group(1)))
 
 
-def get_configured_ship_names(vessel_group_id_filter, categorization, part):
+JOB_TO_TITLE = {
+    "NAKHODA": "nakhoda",
+    "KKM": "KKM",
+    "MUALIM I": "mualimI",
+    "MASINIS II": "masinisII",
+    "MUALIM II": "mualimII",
+    "MUALIM III": "mualimIII",
+    "MASINIS III": "masinisIII",
+    "MASINIS IV": "masinisIV",
+}
+
+
+def get_configured_ship_names(
+    vessel_group_id_filter, categorization, part, job_title=None
+):
     """
     Resolve ship names from vessel management config using IDs like D9/E3/F1.
     """
     try:
         from repositories.vessel_repository import get_vessel_config_from_db
 
-        prefix, groups = get_vessel_config_from_db(categorization, part)
+        prefix, groups = get_vessel_config_from_db(
+            categorization, part, job_title=job_title
+        )
         if not prefix or not groups:
             return []
 
@@ -93,7 +109,8 @@ def get_group_job_crew(
     local_df, vessel_group_id_filter, type, part, job, vessel_names=None
 ):
     filtered_df = filter_in_vessel(local_df, type)
-    filtered_df = vessel_group_id_deck(filtered_df, type, part)
+    job_title = JOB_TO_TITLE.get(job, job.lower() if job else None)
+    filtered_df = vessel_group_id_deck(filtered_df, type, part, job_title=job_title)
 
     group_crew = filtered_df[
         (filtered_df["last_position"] == job)
@@ -105,7 +122,9 @@ def get_group_job_crew(
 
     fallback_vessels = normalize_ship_names(vessel_names)
     if not fallback_vessels:
-        fallback_vessels = get_configured_ship_names(vessel_group_id_filter, type, part)
+        fallback_vessels = get_configured_ship_names(
+            vessel_group_id_filter, type, part, job_title=job_title
+        )
 
     if not fallback_vessels:
         return group_crew
@@ -205,8 +224,9 @@ def get_schedule(
     # Daftar kapal dari konfigurasi UI/DB menjadi fallback untuk grup baru
     configured_kapal_list = normalize_ship_names(vessel_names)
     if not configured_kapal_list:
+        job_title = JOB_TO_TITLE.get(job, job.lower() if job else None)
         configured_kapal_list = get_configured_ship_names(
-            vessel_group_id_filter, type, part
+            vessel_group_id_filter, type, part, job_title=job_title
         )
 
     data_kapal_list = normalize_ship_names(
