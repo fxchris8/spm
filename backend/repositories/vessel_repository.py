@@ -61,7 +61,9 @@ def build_kelompok() -> dict:
         return dict(_STATIC_KELOMPOK)
 
 
-def get_vessel_config_from_db(categorization: str, part: str) -> tuple:
+def get_vessel_config_from_db(
+    categorization: str, part: str, job_title: str = None
+) -> tuple:
     """
     Ambil prefix dan groups mapping dari DB untuk dipakai vessel_group_id_deck().
 
@@ -74,6 +76,9 @@ def get_vessel_config_from_db(categorization: str, part: str) -> tuple:
     Args:
         categorization: e.g. 'container', 'manalagi'
         part: 'deck' atau 'engine'
+        job_title: e.g. 'nakhoda', 'mualimI', 'KKM', 'masinisII'.
+                   Jika diberikan, hanya return konfigurasi spesifik untuk job ini.
+                   Jika None, return konfigurasi pertama yang cocok dengan part (backward compatible).
 
     Returns:
         tuple: (prefix, groups_dict)
@@ -83,11 +88,21 @@ def get_vessel_config_from_db(categorization: str, part: str) -> tuple:
     """
     try:
         vessels = get_rotation_vessels(categorization=categorization)
+        if job_title:
+            for v in vessels:
+                if (
+                    v["part"] == part
+                    and str(v["job_title"]).lower() == str(job_title).lower()
+                ):
+                    return v["vessel"], v["groups"]
+
+        # Fallback: jika job_title tidak diberikan atau tidak cocok spesifik
         for v in vessels:
             if v["part"] == part:
                 return v["vessel"], v["groups"]
+
         print(
-            f"WARN - No vessel config found for categorization='{categorization}' part='{part}'"
+            f"WARN - No vessel config found for categorization='{categorization}' part='{part}' job_title='{job_title}'"
         )
         return None, {}
     except Exception as e:
