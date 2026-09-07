@@ -2169,7 +2169,7 @@ def create_rotation_vessel(
 
 
 def update_rotation_vessel(
-    vessel_id, job_title, vessel, rotation_type, part, groups, categorization=None
+    vessel_id, job_title, vessel, rotation_type, part, groups, categorization=None, group_key_renames=None
 ):
     """
     Update existing rotation vessel
@@ -2177,6 +2177,9 @@ def update_rotation_vessel(
     Args:
         vessel_id: ID of vessel to update
         job_title, vessel, rotation_type, categorization, part, groups: Same as create_rotation_vessel
+        group_key_renames: Optional dict mapping old group_key -> new group_key.
+            Used to update locked_rotation_schedules when groups are re-numbered.
+            Example: {'container_rotation3': 'container_rotation2'}
 
     Returns:
         Dict dengan 'success'
@@ -2206,6 +2209,39 @@ def update_rotation_vessel(
                         "categorization": categorization,
                     },
                 )
+
+                # Update locked_rotation_schedules group_key references (before re-inserting groups)
+                # Sort descending by old key number to avoid collision (e.g. rotation3→rotation2 before rotation2→rotation1)
+                if group_key_renames:
+                    def extract_num(key):
+                        import re
+                        m = re.search(r'(\d+)$', key)
+                        return int(m.group(1)) if m else 0
+
+                    sorted_renames = sorted(
+                        group_key_renames.items(),
+                        key=lambda item: extract_num(item[0]),
+                        reverse=True,
+                    )
+
+                    rename_query = """
+                        UPDATE locked_rotation_schedules
+                        SET group_key = :new_key, updated_at = NOW()
+                        WHERE group_key = :old_key
+                          AND categorization = :categorization
+                    """
+                    for old_key, new_key in sorted_renames:
+                        conn.execute(
+                            text(rename_query),
+                            {
+                                "old_key": old_key,
+                                "new_key": new_key,
+                                "categorization": categorization,
+                            },
+                        )
+                    print(
+                        f"DONE - Updated locked_rotation_schedules group_key renames: {group_key_renames}"
+                    )
 
                 # Update groups dan ships: delete groups (ships akan CASCADE delete)
                 conn.execute(
@@ -2266,6 +2302,7 @@ def update_rotation_vessel(
     except Exception as e:
         print(f"FAIL - Database Error: {str(e)}")
         raise Exception(f"Failed to update rotation vessel: {str(e)}")
+
 
 
 def delete_rotation_vessel(vessel_id):
