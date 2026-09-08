@@ -1,91 +1,31 @@
 // src/components/barge-crane/RotationBargeCraneSenior.tsx
 'use client';
 
-import { Tabs, Spinner } from 'flowbite-react';
-import { HiUserCircle } from 'react-icons/hi';
+import { RotationTabsPage } from '../RotationTabsPage';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
-import { useRotationVessels } from '../../hooks/useRotationVessels';
-import { useMemo } from 'react';
 
-// Urutan tabs untuk barge crane
-const BARGE_CRANE_ORDER = ['nakhoda', 'KKM'];
+// Urutan tabs untuk barge crane senior (Nakhoda, KKM, Mualim I, Masinis II)
+const BARGE_CRANE_SENIOR_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
 
 export function RotationBargeCraneSenior() {
-  const { vessels, loading, error } = useRotationVessels('senior', 'bc');
-
-  // Optimized: useMemo untuk sorting
-  const sortedVessels = useMemo(() => {
-    return [...vessels].sort((a, b) => {
-      const indexA = BARGE_CRANE_ORDER.indexOf(a.job_title);
-      const indexB = BARGE_CRANE_ORDER.indexOf(b.job_title);
-
-      // Jika tidak ada di urutan, taruh di akhir
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-
-      return indexA - indexB;
-    });
-  }, [vessels]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-4">
-        <Spinner size="xl" color="failure" />
-        <span className="text-gray-600">Loading BC, TB, TK, Service rotations...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-2">Error loading data</div>
-        <p className="text-gray-600">{error}</p>
-      </div>
-    );
-  }
-
-  if (vessels.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">
-          Tidak ada konfigurasi rotasi BC, TB, TK, Service
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-3 mb-0">
-      <Tabs aria-label="BC, TB, TK, Service rotation tabs" variant="underline">
-        {sortedVessels.map((v, index) => (
-          <Tabs.Item
-            key={v.id}
-            active={index === 0}
-            title={v.job_title === 'KKM' ? 'KKM' : formatJobTitle(v.job_title)}
-            icon={HiUserCircle}
-          >
-            <BargeCraneSeniorRotation
-              vessel={v.vessel}
-              type={v.type}
-              part={v.part}
-              job={v.job_title}
-              groups={v.groups}
-              categorization={v.categorization}
-            />
-          </Tabs.Item>
-        ))}
-      </Tabs>
-    </div>
+    <RotationTabsPage
+      type="senior"
+      categorization="bc"
+      roles={BARGE_CRANE_SENIOR_ORDER}
+      ariaLabel="BC, TB, TK, Service rotation tabs"
+      loadingText="Loading BC, TB, TK, Service rotations..."
+      containerClassName="flex flex-col gap-3 mb-0"
+      renderContent={vessel => (
+        <BargeCraneSeniorRotation
+          vessel={vessel.vessel}
+          type={vessel.type}
+          part={vessel.part}
+          job={vessel.job_title}
+          groups={vessel.groups}
+          categorization={vessel.categorization}
+        />
+      )}
+    />
   );
-}
-
-function formatJobTitle(jobTitle: string): string {
-  return jobTitle
-    .replace(/([A-Z]+)/g, ' $1')
-    .replace(/([A-Z][a-z])/g, ' $1')
-    .trim()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }

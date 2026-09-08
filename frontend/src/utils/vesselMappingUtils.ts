@@ -32,10 +32,20 @@ export function getHiddenFieldsFromSelection(
     manalagi_KKM: { type: 'senior', part: 'engine', vessel: 'G' },
     manalagi_mualimI: { type: 'senior', part: 'deck', vessel: 'F' },
     manalagi_masinisII: { type: 'senior', part: 'engine', vessel: 'G' },
+    manalagi_mualimII: { type: 'junior', part: 'deck', vessel: 'F' },
+    manalagi_mualimIII: { type: 'junior', part: 'deck', vessel: 'F' },
+    manalagi_masinisIII: { type: 'junior', part: 'engine', vessel: 'G' },
+    manalagi_masinisIV: { type: 'junior', part: 'engine', vessel: 'G' },
 
     // BC (Barge-Crane) mappings
     bc_nakhoda: { type: 'senior', part: 'deck', vessel: 'F' },
     bc_KKM: { type: 'senior', part: 'engine', vessel: 'G' },
+    bc_mualimI: { type: 'senior', part: 'deck', vessel: 'F' },
+    bc_masinisII: { type: 'senior', part: 'engine', vessel: 'G' },
+    bc_mualimII: { type: 'junior', part: 'deck', vessel: 'F' },
+    bc_mualimIII: { type: 'junior', part: 'deck', vessel: 'F' },
+    bc_masinisIII: { type: 'junior', part: 'engine', vessel: 'G' },
+    bc_masinisIV: { type: 'junior', part: 'engine', vessel: 'G' },
   };
 
   return mappings[key] || null;
@@ -71,6 +81,21 @@ export function formatCategorizationDisplay(categorization: string): string {
 }
 
 /**
+ * Extract rotation number from group key (e.g., "container_rotation2" -> 2)
+ */
+export function getRotationNumber(groupKey: string): number {
+  return parseInt(groupKey.match(/rotation(\d+)$/)?.[1] || '0', 10);
+}
+
+/**
+ * Sort group keys by their rotation number in ascending order
+ */
+export function sortGroupKeys(keys: string[] | Record<string, any>): string[] {
+  const keyList = Array.isArray(keys) ? keys : Object.keys(keys);
+  return [...keyList].sort((a, b) => getRotationNumber(a) - getRotationNumber(b));
+}
+
+/**
  * Format group key to readable group name (e.g., "container_rotation1" -> "Group 1")
  */
 export function formatGroupName(groupKey: string): string {
@@ -90,10 +115,7 @@ export function generateNextGroupKey(
   // Extract numbers from existing group keys with the same categorization
   const numbers = Object.keys(existingGroups)
     .filter(key => key.startsWith(`${categorization}_rotation`))
-    .map(key => {
-      const match = key.match(/rotation(\d+)$/);
-      return match ? parseInt(match[1], 10) : 0;
-    })
+    .map(key => getRotationNumber(key))
     .filter(num => !isNaN(num) && num > 0);
 
   const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
@@ -113,24 +135,30 @@ export function generateNextGroupKey(
 export function renumberGroups(
   groups: Record<string, string[]>,
   categorization: string
-): { renumberedGroups: Record<string, string[]>; renames: Record<string, string> } {
+): {
+  renumberedGroups: Record<string, string[]>;
+  renames: Record<string, string>;
+} {
+  // Separate keys belonging to this categorization from others
   const prefix = `${categorization}_rotation`;
+  const relevantKeys = Object.keys(groups)
+    .filter(key => key.startsWith(prefix))
+    .sort((a, b) => getRotationNumber(a) - getRotationNumber(b));
 
-  const sortedEntries = Object.entries(groups)
-    .filter(([key]) => key.startsWith(prefix))
-    .sort(([a], [b]) => {
-      return (
-        parseInt(a.replace(prefix, ''), 10) -
-        parseInt(b.replace(prefix, ''), 10)
-      );
-    });
+  const otherKeys = Object.keys(groups).filter(key => !key.startsWith(prefix));
 
   const renumberedGroups: Record<string, string[]> = {};
   const renames: Record<string, string> = {};
 
-  sortedEntries.forEach(([oldKey, ships], index) => {
-    const newKey = `${prefix}${index + 1}`;
-    renumberedGroups[newKey] = ships;
+  // Preserve untouched keys from other categorizations
+  for (const key of otherKeys) {
+    renumberedGroups[key] = groups[key];
+  }
+
+  // Re-number relevant keys sequentially: 1, 2, 3, ...
+  relevantKeys.forEach((oldKey, idx) => {
+    const newKey = `${prefix}${idx + 1}`;
+    renumberedGroups[newKey] = groups[oldKey];
     if (oldKey !== newKey) {
       renames[oldKey] = newKey;
     }
@@ -173,28 +201,27 @@ export function mergeRenames(
 }
 
 /**
- * Linked positions for container categorization:
- * Nakhoda <-> Mualim I (same vessel 'D')
- * KKM <-> Masinis II (same vessel 'E')
+ * Default linked positions mapping for crew rotation (applies across container, manalagi, and bc):
+ * Nakhoda <-> Mualim I (same deck vessel)
+ * KKM <-> Masinis II (same engine vessel)
+ * Mualim II <-> Mualim III (same deck vessel)
+ * Masinis III <-> Masinis IV (same engine vessel)
  */
-const CONTAINER_LINKED_POSITIONS: Record<string, string> = {
+export const DEFAULT_LINKED_POSITIONS: Record<string, string> = {
   nakhoda: 'mualimI',
   mualimI: 'nakhoda',
   KKM: 'masinisII',
   masinisII: 'KKM',
+  mualimII: 'mualimIII',
+  mualimIII: 'mualimII',
+  masinisIII: 'masinisIV',
+  masinisIV: 'masinisIII',
 };
 
-/**
- * Linked positions for manalagi categorization:
- * Nakhoda <-> Mualim I (same vessel 'F')
- * KKM <-> Masinis II (same vessel 'G')
- */
-const MANALAGI_LINKED_POSITIONS: Record<string, string> = {
-  nakhoda: 'mualimI',
-  mualimI: 'nakhoda',
-  KKM: 'masinisII',
-  masinisII: 'KKM',
-};
+// Aliases for backwards compatibility
+export const CONTAINER_LINKED_POSITIONS = DEFAULT_LINKED_POSITIONS;
+export const MANALAGI_LINKED_POSITIONS = DEFAULT_LINKED_POSITIONS;
+export const BC_LINKED_POSITIONS = DEFAULT_LINKED_POSITIONS;
 
 /**
  * Get the linked/paired position for a given categorization + position.
@@ -204,10 +231,9 @@ export function getLinkedPosition(
   categorization: string,
   position: string
 ): string | null {
-  if (categorization === 'container')
-    return CONTAINER_LINKED_POSITIONS[position] || null;
-  if (categorization === 'manalagi')
-    return MANALAGI_LINKED_POSITIONS[position] || null;
+  if (['container', 'manalagi', 'bc'].includes(categorization)) {
+    return DEFAULT_LINKED_POSITIONS[position] || null;
+  }
   return null;
 }
 

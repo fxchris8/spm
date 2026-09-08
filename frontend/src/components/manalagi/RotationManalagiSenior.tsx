@@ -1,89 +1,30 @@
-// src/components/RotationKKM.tsx
+// src/components/manalagi/RotationManalagiSenior.tsx
 'use client';
 
-import { Tabs, Spinner } from 'flowbite-react';
-import { HiUserCircle } from 'react-icons/hi';
+import { RotationTabsPage } from '../RotationTabsPage';
 import { ManalagiSeniorRotation } from './ManalagiSeniorRotation';
-import { useRotationVessels } from '../../hooks/useRotationVessels';
-import { useMemo } from 'react';
 
-// Urutan tabs untuk manalagi
-const MANALAGI_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
+// Urutan tabs untuk manalagi senior (Nakhoda, KKM, Mualim I, Masinis II)
+const MANALAGI_SENIOR_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
 
 export function RotationManalagiSenior() {
-  const { vessels, loading, error } = useRotationVessels('senior', 'manalagi');
-
-  // ✅ Optimized: useMemo untuk sorting
-  const sortedVessels = useMemo(() => {
-    return [...vessels].sort((a, b) => {
-      const indexA = MANALAGI_ORDER.indexOf(a.job_title);
-      const indexB = MANALAGI_ORDER.indexOf(b.job_title);
-
-      // Jika tidak ada di urutan, taruh di akhir
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-
-      return indexA - indexB;
-    });
-  }, [vessels]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-4">
-        <Spinner size="xl" color="failure" />
-        <span className="text-gray-600">Loading manalagi rotations...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-2">Error loading data</div>
-        <p className="text-gray-600">{error}</p>
-      </div>
-    );
-  }
-
-  if (vessels.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Tidak ada konfigurasi rotasi manalagi</p>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <Tabs aria-label="Crew rotation tabs" variant="underline">
-        {sortedVessels.map((v, index) => (
-          <Tabs.Item
-            key={v.id}
-            active={index === 0}
-            title={v.job_title === 'KKM' ? 'KKM' : formatJobTitle(v.job_title)}
-            icon={HiUserCircle}
-          >
-            <ManalagiSeniorRotation
-              categorization={v.categorization}
-              vessel={v.vessel}
-              type={v.type}
-              part={v.part}
-              job={v.job_title}
-              groups={v.groups}
-            />
-          </Tabs.Item>
-        ))}
-      </Tabs>
-    </div>
+    <RotationTabsPage
+      type="senior"
+      categorization="manalagi"
+      roles={MANALAGI_SENIOR_ORDER}
+      ariaLabel="Manalagi senior rotation tabs"
+      loadingText="Loading manalagi rotations..."
+      renderContent={vessel => (
+        <ManalagiSeniorRotation
+          categorization={vessel.categorization}
+          vessel={vessel.vessel}
+          type={vessel.type}
+          part={vessel.part}
+          job={vessel.job_title}
+          groups={vessel.groups}
+        />
+      )}
+    />
   );
-}
-
-function formatJobTitle(jobTitle: string): string {
-  return jobTitle
-    .replace(/([A-Z]+)/g, ' $1')
-    .replace(/([A-Z][a-z])/g, ' $1')
-    .trim()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
