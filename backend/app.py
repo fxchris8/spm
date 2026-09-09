@@ -36,6 +36,7 @@ from database.connection import (
 from middlewares import init_cors
 from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
 from routes import auth_bp, cadangan_bp, dashboard_bp, offduty_all_bp, promotion_bp, search_bp
+from utils.vessel_normalizer import normalize_vessel_name
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -696,6 +697,13 @@ def filter_history():
             .reset_index()
         )
 
+        # Pre-normalisasi group vessels untuk perbandingan fleksibel (strip prefix & resolve alias)
+        norm_group_lookup = {
+            normalize_vessel_name(gv): gv
+            for gv in group_vessels
+            if normalize_vessel_name(gv)
+        }
+
         result = []
 
         for _, row in grouped.iterrows():
@@ -703,17 +711,34 @@ def filter_history():
 
             # Filter allowed_status dari history
             filtered_vessels = [v for v in history_vessels if v not in allowed_status]
-
-            # Hitung match dengan group
-            match_count = sum(1 for v in filtered_vessels if v in group_vessels)
-
-            # Join jadi string
             history_str = ", ".join(filtered_vessels)
 
             # Lihat last location
-            last_location = df_seamen[df_seamen["seamancode"] == row["seamancode"]][
-                "last_location"
-            ].values
+            last_location_vals = df_seamen[
+                df_seamen["seamancode"] == row["seamancode"]
+            ]["last_location"].values
+            last_location = (
+                last_location_vals[0]
+                if len(last_location_vals) > 0 and pd.notna(last_location_vals[0])
+                else ""
+            )
+
+            # Kumpulkan seluruh kapal yang pernah/sedang dijalani (history + aktif on board)
+            experienced_vessels = list(filtered_vessels)
+            if last_location and last_location not in allowed_status:
+                experienced_vessels.append(last_location)
+
+            # Cocokkan kapal dengan grup menggunakan nama ternormalisasi
+            matched_group_vessels = set()
+            for v in experienced_vessels:
+                nv = normalize_vessel_name(v)
+                if not nv:
+                    continue
+                for ngv in norm_group_lookup:
+                    if nv == ngv or nv in ngv or ngv in nv:
+                        matched_group_vessels.add(ngv)
+
+            match_count = len(matched_group_vessels)
 
             result.append(
                 {
@@ -721,7 +746,7 @@ def filter_history():
                     "name": row.get("name", ""),
                     "history": history_str,
                     "matchCount": match_count,
-                    "last_location": last_location[0] if len(last_location) > 0 else "",
+                    "last_location": last_location,
                 }
             )
 

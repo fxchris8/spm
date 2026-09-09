@@ -480,14 +480,54 @@ export function usePotentialPromotion(
 
       const allowed = new Set(candRowsRaw.map((item: any) => getCode(item)));
 
+      const clean = normalizeVesselName;
+      const cleanGroupShips = groupShips.map(gs => clean(gs)).filter(Boolean);
+
       const rows = histRowsRaw
-        .map((item: any) => ({
-          seamancode: getCode(item),
-          name: item?.name,
-          history: item?.history,
-          last_location: item?.last_location,
-          matchCount: item?.matchCount ?? 0,
-        }))
+        .map((item: any) => {
+          const seamancode = getCode(item);
+          const historyStr = item?.history || '';
+          const lastLoc = item?.last_location || '';
+
+          // Gather candidate experienced vessels: past history + on-board last_location
+          const histList: string[] = historyStr
+            ? historyStr.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [];
+          const allVessels = [...histList];
+          if (
+            lastLoc &&
+            !['DARAT', 'DARAT BIASA', 'DARAT STAND-BY', 'STAND BY CREW', 'PENDING CUTI', 'PENDING GAJI', 'PENDING GAJI CUTI'].includes(
+              lastLoc.toUpperCase()
+            )
+          ) {
+            allVessels.push(lastLoc);
+          }
+
+          // Count matching unique group ships
+          const matchedGroupShips = new Set<string>();
+          for (const v of allVessels) {
+            const cv = clean(v);
+            if (!cv) continue;
+            for (const cgs of cleanGroupShips) {
+              if (cv === cgs || cv.includes(cgs) || cgs.includes(cv)) {
+                matchedGroupShips.add(cgs);
+              }
+            }
+          }
+
+          const matchCount = Math.max(
+            matchedGroupShips.size,
+            item?.matchCount ?? 0
+          );
+
+          return {
+            seamancode,
+            name: item?.name,
+            history: historyStr,
+            last_location: lastLoc,
+            matchCount,
+          };
+        })
         .filter(
           (r: any) =>
             r.seamancode &&
