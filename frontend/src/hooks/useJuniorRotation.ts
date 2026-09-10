@@ -1,5 +1,6 @@
 // src/hooks/useJuniorRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { sortGroupKeys } from '../utils/vesselMappingUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -126,70 +127,141 @@ async function fetchCrewToRelieve(
   throw new Error(result.message || 'Failed to fetch crew to relieve');
 }
 
-// Calculate next group vessels and promotion info
-function calculateNextGroupInfo(
+// Calculate next group vessels and promotion info generically
+export function calculateNextGroupInfo(
   selectedGroup: string,
   groups: Record<string, string[]>,
   mappedJob: string
 ) {
-  const groupKeys = Object.keys(groups);
-  const currentGroupNum = parseInt(
-    selectedGroup.replace('container_rotation', '')
-  );
+  const sortedGroupKeys = sortGroupKeys(groups);
+
+  const T = sortedGroupKeys.length;
+  const currentIndex = sortedGroupKeys.indexOf(selectedGroup);
+
+  if (currentIndex === -1 || T === 0) {
+    return {
+      nextGroupVessels: [],
+      nextGroupKey: '',
+      promotionVessels: [],
+      promotionJob: '',
+    };
+  }
+
+  if (T === 1) {
+    return {
+      nextGroupVessels: groups[selectedGroup] || [],
+      nextGroupKey: selectedGroup,
+      promotionVessels: [],
+      promotionJob: '',
+    };
+  }
+
+  const i = currentIndex;
+  const lowerRankJob = JOB_HIERARCHY[mappedJob];
 
   let nextGroupVessels: string[] = [];
   let nextGroupKey = '';
   let promotionVessels: string[] = [];
   let promotionJob = '';
 
-  if (currentGroupNum === 1) {
-    const group2Key = groupKeys.find(k => k === 'container_rotation2') || '';
-    const group3Key = groupKeys.find(k => k === 'container_rotation3') || '';
-
-    nextGroupVessels = [
-      ...(groups[group2Key] || []),
-      ...(groups[group3Key] || []),
-    ];
-    nextGroupKey = `${group2Key},${group3Key}`;
-  } else if (currentGroupNum === 2) {
-    const group3Key = groupKeys.find(k => k === 'container_rotation3') || '';
-    const group4Key = groupKeys.find(k => k === 'container_rotation4') || '';
-
-    nextGroupVessels = [
-      ...(groups[group3Key] || []),
-      ...(groups[group4Key] || []),
-    ];
-    nextGroupKey = `${group3Key},${group4Key}`;
-  } else if (currentGroupNum === 3) {
-    const group4Key = groupKeys.find(k => k === 'container_rotation4') || '';
-    const group1Key = groupKeys.find(k => k === 'container_rotation1') || '';
-
-    const group4Vessels = [...(groups[group4Key] || [])];
-    const lowerRankJob = JOB_HIERARCHY[mappedJob];
-
-    if (lowerRankJob) {
-      promotionJob = lowerRankJob;
-      promotionVessels = [...(groups[group1Key] || [])];
-      nextGroupVessels = [...group4Vessels, ...promotionVessels];
-      nextGroupKey = `${group4Key},${group1Key}(${lowerRankJob})`;
+  if (T === 2) {
+    if (i === 0) {
+      // Group 1: next is Group 2
+      const g2 = sortedGroupKeys[1];
+      nextGroupVessels = [...(groups[g2] || [])];
+      nextGroupKey = g2;
     } else {
-      nextGroupVessels = group4Vessels;
-      nextGroupKey = group4Key;
+      // Group 2: promotion from Group 1
+      const g1 = sortedGroupKeys[0];
+      if (lowerRankJob) {
+        promotionJob = lowerRankJob;
+        promotionVessels = [...(groups[g1] || [])];
+        nextGroupVessels = [...promotionVessels];
+        nextGroupKey = `${g1}(${lowerRankJob})`;
+      } else {
+        nextGroupVessels = [...(groups[g1] || [])];
+        nextGroupKey = g1;
+      }
     }
-  } else if (currentGroupNum === 4) {
-    const group1Key = groupKeys.find(k => k === 'container_rotation1') || '';
-    const group2Key = groupKeys.find(k => k === 'container_rotation2') || '';
-
-    const lowerRankJob = JOB_HIERARCHY[mappedJob];
-
-    if (lowerRankJob) {
-      promotionJob = lowerRankJob;
-      promotionVessels = [
-        ...(groups[group1Key] || []),
-        ...(groups[group2Key] || []),
+  } else if (T === 3) {
+    if (i === 0) {
+      // Group 1: next are Group 2, 3
+      const g2 = sortedGroupKeys[1];
+      const g3 = sortedGroupKeys[2];
+      nextGroupVessels = [...(groups[g2] || []), ...(groups[g3] || [])];
+      nextGroupKey = `${g2},${g3}`;
+    } else if (i === 1) {
+      // Group 2: circular next are Group 3, 1
+      const g3 = sortedGroupKeys[2];
+      const g1 = sortedGroupKeys[0];
+      nextGroupVessels = [...(groups[g3] || []), ...(groups[g1] || [])];
+      nextGroupKey = `${g3},${g1}`;
+    } else {
+      // Group 3: Group 1, 2 + promotion from Group 1
+      const g1 = sortedGroupKeys[0];
+      const g2 = sortedGroupKeys[1];
+      if (lowerRankJob) {
+        promotionJob = lowerRankJob;
+        promotionVessels = [...(groups[g1] || [])];
+        nextGroupVessels = [
+          ...(groups[g1] || []),
+          ...(groups[g2] || []),
+        ];
+        nextGroupKey = `${g1},${g2}(${lowerRankJob})`;
+      } else {
+        nextGroupVessels = [
+          ...(groups[g1] || []),
+          ...(groups[g2] || []),
+        ];
+        nextGroupKey = `${g1},${g2}`;
+      }
+    }
+  } else {
+    // T >= 4 (standard container junior rotation behavior)
+    if (i < T - 2) {
+      // Middle groups (e.g. Group 1, Group 2 in T=4)
+      const gNext1 = sortedGroupKeys[i + 1];
+      const gNext2 = sortedGroupKeys[i + 2];
+      nextGroupVessels = [
+        ...(groups[gNext1] || []),
+        ...(groups[gNext2] || []),
       ];
-      nextGroupKey = `${group1Key},${group2Key}(${lowerRankJob})`;
-      nextGroupVessels = [...promotionVessels];
+      nextGroupKey = `${gNext1},${gNext2}`;
+    } else if (i === T - 2) {
+      // Second to last group (e.g. Group 3 in T=4): next group + promotion from Group 1
+      const gLast = sortedGroupKeys[T - 1];
+      const g1 = sortedGroupKeys[0];
+      const gLastVessels = [...(groups[gLast] || [])];
+
+      if (lowerRankJob) {
+        promotionJob = lowerRankJob;
+        promotionVessels = [...(groups[g1] || [])];
+        nextGroupVessels = [...gLastVessels, ...promotionVessels];
+        nextGroupKey = `${gLast},${g1}(${lowerRankJob})`;
+      } else {
+        nextGroupVessels = gLastVessels;
+        nextGroupKey = gLast;
+      }
+    } else {
+      // Last group (e.g. Group 4 in T=4): promotion from Group 1 and Group 2
+      const g1 = sortedGroupKeys[0];
+      const g2 = sortedGroupKeys[1];
+
+      if (lowerRankJob) {
+        promotionJob = lowerRankJob;
+        promotionVessels = [
+          ...(groups[g1] || []),
+          ...(groups[g2] || []),
+        ];
+        nextGroupKey = `${g1},${g2}(${lowerRankJob})`;
+        nextGroupVessels = [...promotionVessels];
+      } else {
+        nextGroupVessels = [
+          ...(groups[g1] || []),
+          ...(groups[g2] || []),
+        ];
+        nextGroupKey = `${g1},${g2}`;
+      }
     }
   }
 
@@ -465,21 +537,45 @@ export function useReplacementOptions(
   };
 }
 
+/**
+ * Helper to determine if a group is in the last positions (for promotion eligibility)
+ * For 2 or 3 groups: only the last group
+ * For 4+ groups: the last 2 groups (e.g. Group 3 & 4)
+ */
+export function isLastGroups(
+  groupKey: string | null,
+  groups: Record<string, string[]>
+): boolean {
+  if (!groupKey || !groups) return false;
+  const sortedKeys = sortGroupKeys(groups);
+  const T = sortedKeys.length;
+  if (T === 0) return false;
+  if (T === 1) return true;
+
+  const idx = sortedKeys.indexOf(groupKey);
+  if (idx === -1) return false;
+
+  if (T <= 3) {
+    return idx === T - 1;
+  }
+  return idx >= T - 2;
+}
+
 // Hook untuk promotion candidates (lazy load per job)
 export function usePromotionCandidates(
   job: string,
   groupKey: string | null,
+  groups: Record<string, string[]>,
   enabled: boolean = true
 ) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['junior-promotion-candidates', job],
     queryFn: () => fetchPromotionCandidates(job),
-    // Only fetch for group 3 and 4
+    // Only fetch for last groups
     enabled:
       enabled &&
       !!groupKey &&
-      (groupKey === 'container_rotation3' ||
-        groupKey === 'container_rotation4'),
+      isLastGroups(groupKey, groups),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });

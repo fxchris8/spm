@@ -17,8 +17,26 @@ interface CategoryPositionSelectorProps {
 
 // Allowed positions per category (undefined = all positions allowed)
 const ALLOWED_POSITIONS_BY_CATEGORY: Record<string, string[]> = {
-  manalagi: ['nakhoda', 'KKM', 'mualimI', 'masinisII'],
-  bc: ['nakhoda', 'KKM'],
+  manalagi: [
+    'nakhoda',
+    'KKM',
+    'mualimI',
+    'masinisII',
+    'mualimII',
+    'mualimIII',
+    'masinisIII',
+    'masinisIV',
+  ],
+  bc: [
+    'nakhoda',
+    'KKM',
+    'mualimI',
+    'masinisII',
+    'mualimII',
+    'mualimIII',
+    'masinisIII',
+    'masinisIV',
+  ],
 };
 
 export function CategoryPositionSelector({

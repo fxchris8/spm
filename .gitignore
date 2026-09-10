@@ -22,6 +22,7 @@ dist-ssr/
 build/
 .next/
 out/
+*.tsbuildinfo
 
 # Environment variables
 .env
@@ -173,7 +174,7 @@ data/reports/*.txt
 secrets/
 credentials/
 
-# ===== MISC =====
+# ===== MISC & OS =====
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -182,6 +183,8 @@ credentials/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
 # Editor backup files
 *~
@@ -196,3 +199,16 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# ===== AI ASSISTANTS & AGENT SKILLS =====
+# Personal AI tooling & local agent skills
+.agents/
+skills-lock.json
+.claude/
+.cursor/
+.gemini/
+.windsurf/
+.copilot/
+.continue/
+.supermaven/
+.codeium/

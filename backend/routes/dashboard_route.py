@@ -8,9 +8,11 @@ from flask import Blueprint
 from controllers import (
     get_dashboard_data_controller,
     get_offboard_detail_controller,
+    get_ship_particular_controller,
     get_similarity_controller,
     get_vessel_stats_controller,
     manual_sync_controller,
+    sync_ship_particular_controller,
 )
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -60,3 +62,23 @@ def get_similarity(seaman_code):
     Returns top 5 similar seamen based on rank and certificate using Word2Vec.
     """
     return get_similarity_controller(seaman_code)
+
+
+@dashboard_bp.route("/ship-particular", methods=["GET"])
+def get_ship_particular():
+    """
+    GET /api/ship-particular
+    Returns ship particular list from database.
+    Query param opsional: ?search=<nama_kapal>
+    """
+    return get_ship_particular_controller()
+
+
+@dashboard_bp.route("/ship-particular/sync", methods=["POST"])
+def sync_ship_particular():
+    """
+    POST /api/ship-particular/sync
+    Manually sync ship particular from external API to database.
+    """
+    return sync_ship_particular_controller()
+

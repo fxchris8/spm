@@ -1,6 +1,7 @@
 // src/hooks/useBargeCraneRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useVesselCategories } from './useVesselCategories';
+import { normalizeVesselName } from '../utils/vesselNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -288,14 +289,7 @@ export function useMutasiData(
   enabled: boolean = true,
   forecastMonth: number = 1
 ) {
-  const {
-    containerVessels,
-    manalagiVessels,
-    bcVessels,
-    mtVessels,
-    tbVessels,
-    tkVessels,
-  } = useVesselCategories();
+  const { bcVessels } = useVesselCategories();
   const { data, isLoading, error } = useQuery({
     queryKey: [
       'bc',
@@ -326,6 +320,7 @@ export function useMutasiData(
       if (result.status === 'success' && result.data) {
         const rawDataObject = result.data;
         const groupShips = groups[groupKey] || [];
+        const clean = normalizeVesselName;
 
         const rows = Object.entries(rawDataObject)
           .map(([seamancode, info]: [string, any]) => {
@@ -333,25 +328,10 @@ export function useMutasiData(
 
             // Skip seaman based on last vessel category
             if (vlist.length > 0) {
-              const lastVessel = vlist[vlist.length - 1];
-
-              const isNonFleet =
-                mtVessels.has(lastVessel) ||
-                tbVessels.has(lastVessel) ||
-                tkVessels.has(lastVessel);
-
               if (type === 'bc') {
-                // For BC: skip if last vessel is container, manalagi, or other non-fleet
-                if (
-                  containerVessels.has(lastVessel) ||
-                  manalagiVessels.has(lastVessel) ||
-                  isNonFleet
-                )
-                  return null;
-
                 // BC requires at least 1 history entry in a BC vessel
-                const hasBCHistory = vlist.some((v: string) =>
-                  bcVessels.has(v)
+                const hasBCHistory = vlist.some(
+                  (v: string) => bcVessels.has(clean(v)) || bcVessels.has(v)
                 );
                 if (!hasBCHistory) {
                   return null;
@@ -360,7 +340,9 @@ export function useMutasiData(
             }
 
             const matchCount = vlist.filter((v: string) =>
-              groupShips.some(gs => v.includes(gs))
+              groupShips.some(
+                gs => clean(v) === clean(gs) || v.includes(gs) || gs.includes(v)
+              )
             ).length;
 
             return {
@@ -498,14 +480,54 @@ export function usePotentialPromotion(
 
       const allowed = new Set(candRowsRaw.map((item: any) => getCode(item)));
 
+      const clean = normalizeVesselName;
+      const cleanGroupShips = groupShips.map(gs => clean(gs)).filter(Boolean);
+
       const rows = histRowsRaw
-        .map((item: any) => ({
-          seamancode: getCode(item),
-          name: item?.name,
-          history: item?.history,
-          last_location: item?.last_location,
-          matchCount: item?.matchCount ?? 0,
-        }))
+        .map((item: any) => {
+          const seamancode = getCode(item);
+          const historyStr = item?.history || '';
+          const lastLoc = item?.last_location || '';
+
+          // Gather candidate experienced vessels: past history + on-board last_location
+          const histList: string[] = historyStr
+            ? historyStr.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [];
+          const allVessels = [...histList];
+          if (
+            lastLoc &&
+            !['DARAT', 'DARAT BIASA', 'DARAT STAND-BY', 'STAND BY CREW', 'PENDING CUTI', 'PENDING GAJI', 'PENDING GAJI CUTI'].includes(
+              lastLoc.toUpperCase()
+            )
+          ) {
+            allVessels.push(lastLoc);
+          }
+
+          // Count matching unique group ships
+          const matchedGroupShips = new Set<string>();
+          for (const v of allVessels) {
+            const cv = clean(v);
+            if (!cv) continue;
+            for (const cgs of cleanGroupShips) {
+              if (cv === cgs || cv.includes(cgs) || cgs.includes(cv)) {
+                matchedGroupShips.add(cgs);
+              }
+            }
+          }
+
+          const matchCount = Math.max(
+            matchedGroupShips.size,
+            item?.matchCount ?? 0
+          );
+
+          return {
+            seamancode,
+            name: item?.name,
+            history: historyStr,
+            last_location: lastLoc,
+            matchCount,
+          };
+        })
         .filter(
           (r: any) =>
             r.seamancode &&

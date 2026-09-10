@@ -1,6 +1,7 @@
 // src/hooks/useSeniorRotation.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useVesselCategories } from './useVesselCategories';
+import { normalizeVesselName } from '../utils/vesselNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -343,6 +344,7 @@ export function useMutasiData(
       if (result.status === 'success' && result.data) {
         const rawDataObject = result.data;
         const groupShips = groups[groupKey] || [];
+        const clean = normalizeVesselName;
 
         const rows = Object.entries(rawDataObject)
           .map(([seamancode, info]: [string, any]) => {
@@ -351,20 +353,21 @@ export function useMutasiData(
             // ✅ FILTER: Skip seaman jika last vessel adalah CONTAINER
             if (vlist.length > 0) {
               const lastVessel = vlist[vlist.length - 1]; // Vessel terakhir di array
+              const cleanedLast = clean(lastVessel);
 
               const isNonFleet =
-                bcVessels.has(lastVessel) ||
-                mtVessels.has(lastVessel) ||
-                tbVessels.has(lastVessel) ||
-                tkVessels.has(lastVessel);
+                bcVessels.has(cleanedLast) ||
+                mtVessels.has(cleanedLast) ||
+                tbVessels.has(cleanedLast) ||
+                tkVessels.has(cleanedLast);
               if (type === 'senior' || type === 'junior') {
-                if (manalagiVessels.has(lastVessel) || isNonFleet) return null;
+                if (manalagiVessels.has(cleanedLast) || isNonFleet) return null;
               } else if (type === 'manalagi') {
-                if (containerVessels.has(lastVessel) || isNonFleet) return null;
+                if (containerVessels.has(cleanedLast) || isNonFleet) return null;
 
                 // New Condition: Minimal harus ada 1 history di kapal Manalagi
                 const hasManalagiHistory = vlist.some((v: string) =>
-                  manalagiVessels.has(v)
+                  manalagiVessels.has(clean(v)) || manalagiVessels.has(v)
                 );
                 if (!hasManalagiHistory) {
                   return null;
@@ -373,7 +376,9 @@ export function useMutasiData(
             }
 
             const matchCount = vlist.filter((v: string) =>
-              groupShips.some(gs => v.includes(gs))
+              groupShips.some(
+                gs => clean(v) === clean(gs) || v.includes(gs) || gs.includes(v)
+              )
             ).length;
 
             return {
@@ -517,14 +522,54 @@ export function usePotentialPromotion(
 
       const allowed = new Set(candRowsRaw.map((item: any) => getCode(item)));
 
+      const clean = normalizeVesselName;
+      const cleanGroupShips = groupShips.map(gs => clean(gs)).filter(Boolean);
+
       const rows = histRowsRaw
-        .map((item: any) => ({
-          seamancode: getCode(item),
-          name: item?.name,
-          history: item?.history,
-          last_location: item?.last_location,
-          matchCount: item?.matchCount ?? 0,
-        }))
+        .map((item: any) => {
+          const seamancode = getCode(item);
+          const historyStr = item?.history || '';
+          const lastLoc = item?.last_location || '';
+
+          // Gather candidate experienced vessels: past history + on-board last_location
+          const histList: string[] = historyStr
+            ? historyStr.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [];
+          const allVessels = [...histList];
+          if (
+            lastLoc &&
+            !['DARAT', 'DARAT BIASA', 'DARAT STAND-BY', 'STAND BY CREW', 'PENDING CUTI', 'PENDING GAJI', 'PENDING GAJI CUTI'].includes(
+              lastLoc.toUpperCase()
+            )
+          ) {
+            allVessels.push(lastLoc);
+          }
+
+          // Count matching unique group ships
+          const matchedGroupShips = new Set<string>();
+          for (const v of allVessels) {
+            const cv = clean(v);
+            if (!cv) continue;
+            for (const cgs of cleanGroupShips) {
+              if (cv === cgs || cv.includes(cgs) || cgs.includes(cv)) {
+                matchedGroupShips.add(cgs);
+              }
+            }
+          }
+
+          const matchCount = Math.max(
+            matchedGroupShips.size,
+            item?.matchCount ?? 0
+          );
+
+          return {
+            seamancode,
+            name: item?.name,
+            history: historyStr,
+            last_location: lastLoc,
+            matchCount,
+          };
+        })
         .filter(
           (r: any) =>
             r.seamancode &&

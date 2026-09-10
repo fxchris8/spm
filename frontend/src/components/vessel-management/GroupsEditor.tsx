@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Button, TextInput } from 'flowbite-react';
+import { useState, useMemo } from 'react';
+import { Button, TextInput, Spinner } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
+import { useShipParticular } from '../../hooks/useShipParticular';
 import {
   DndContext,
   DragEndEvent,
@@ -17,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { DraggableShipCard } from './DraggableShipCard';
 import { EmptyGroupDropZone } from './EmptyGroupDropZone';
+import { UngroupedVesselsPanel } from './UngroupedVesselsPanel';
 import {
   formatGroupName,
   generateNextGroupKey,
@@ -46,6 +48,33 @@ export function GroupsEditor({
     shipName: string;
     groupKey: string;
   } | null>(null);
+  // Autocomplete: filtered suggestions per group
+  const [filteredSuggestions, setFilteredSuggestions] = useState<
+    Record<string, string[]>
+  >({});
+
+  // Ambil daftar kapal dari ship_particular
+  const { ships, vesselNames, loading: loadingShips } = useShipParticular();
+
+  // Set of ship names already assigned to groups
+  const groupedShipNames = useMemo(() => {
+    const names = new Set<string>();
+    Object.values(groups).forEach(shipList => {
+      shipList.forEach(name => {
+        if (name) names.add(name);
+      });
+    });
+    return names;
+  }, [groups]);
+
+  // Sorted group entries
+  const sortedGroupEntries = useMemo(() => {
+    return Object.entries(groups).sort(([keyA], [keyB]) => {
+      const numA = parseInt(keyA.match(/rotation(\d+)$/)?.[1] || '0', 10);
+      const numB = parseInt(keyB.match(/rotation(\d+)$/)?.[1] || '0', 10);
+      return numA - numB;
+    });
+  }, [groups]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -81,8 +110,29 @@ export function GroupsEditor({
     newGroups[groupKey] = [...(newGroups[groupKey] || []), shipName];
     onGroupsChange(newGroups);
 
-    // Clear input
+    // Clear input & suggestions
     setNewShipInputs(prev => ({ ...prev, [groupKey]: '' }));
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
+  };
+
+  const handleShipInputChange = (groupKey: string, value: string) => {
+    setNewShipInputs(prev => ({ ...prev, [groupKey]: value }));
+    if (!value) {
+      setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
+      return;
+    }
+    const filtered = vesselNames.filter(name =>
+      name.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: filtered.slice(0, 10) }));
+  };
+
+  const handleSelectSuggestion = (groupKey: string, shipName: string) => {
+    const newGroups = { ...groups };
+    newGroups[groupKey] = [...(newGroups[groupKey] || []), shipName];
+    onGroupsChange(newGroups);
+    setNewShipInputs(prev => ({ ...prev, [groupKey]: '' }));
+    setFilteredSuggestions(prev => ({ ...prev, [groupKey]: [] }));
   };
 
   const handleRemoveShip = (groupKey: string, index: number) => {
@@ -117,32 +167,72 @@ export function GroupsEditor({
     const sourceIndex = activeData.index;
     const shipName = activeData.shipName;
 
-    // Determine target group key (handle both empty and non-empty drops)
     const targetGroupKey = overData.groupKey;
     const targetIndex = overData.index;
     const isTargetEmpty = overData.isEmpty === true;
 
-    if (sourceGroupKey === targetGroupKey && sourceIndex === targetIndex) {
+    // Case 1: Dragging within ungrouped -> no-op
+    if (sourceGroupKey === '__ungrouped__' && targetGroupKey === '__ungrouped__') {
       return;
     }
 
     const newGroups = { ...groups };
 
-    // Remove from source
-    newGroups[sourceGroupKey] = newGroups[sourceGroupKey].filter(
-      (_, i) => i !== sourceIndex
-    );
-
-    // Add to target
-    if (isTargetEmpty || sourceGroupKey !== targetGroupKey) {
-      // Different group or empty group, append to end
-      newGroups[targetGroupKey] = [...newGroups[targetGroupKey], shipName];
-    } else {
-      // Same group, reorder
-      newGroups[targetGroupKey].splice(targetIndex, 0, shipName);
+    // Case 2: Dragging from ungrouped -> into a group
+    if (sourceGroupKey === '__ungrouped__' && targetGroupKey !== '__ungrouped__') {
+      if (!newGroups[targetGroupKey]) {
+        newGroups[targetGroupKey] = [];
+      }
+      if (!newGroups[targetGroupKey].includes(shipName)) {
+        if (isTargetEmpty || targetIndex === undefined) {
+          newGroups[targetGroupKey] = [...newGroups[targetGroupKey], shipName];
+        } else {
+          newGroups[targetGroupKey] = [...newGroups[targetGroupKey]];
+          newGroups[targetGroupKey].splice(targetIndex, 0, shipName);
+        }
+        onGroupsChange(newGroups);
+      }
+      return;
     }
 
-    onGroupsChange(newGroups);
+    // Case 3: Dragging from a group -> back into ungrouped panel
+    if (sourceGroupKey !== '__ungrouped__' && targetGroupKey === '__ungrouped__') {
+      if (newGroups[sourceGroupKey]) {
+        newGroups[sourceGroupKey] = newGroups[sourceGroupKey].filter(
+          (_, i) => i !== sourceIndex
+        );
+        onGroupsChange(newGroups);
+      }
+      return;
+    }
+
+    // Case 4: Dragging from group to group or reordering within a group
+    if (sourceGroupKey !== '__ungrouped__' && targetGroupKey !== '__ungrouped__') {
+      if (sourceGroupKey === targetGroupKey && sourceIndex === targetIndex) {
+        return;
+      }
+
+      // Remove from source
+      if (newGroups[sourceGroupKey]) {
+        newGroups[sourceGroupKey] = newGroups[sourceGroupKey].filter(
+          (_, i) => i !== sourceIndex
+        );
+      }
+
+      // Add to target
+      if (!newGroups[targetGroupKey]) {
+        newGroups[targetGroupKey] = [];
+      }
+
+      if (isTargetEmpty || sourceGroupKey !== targetGroupKey || targetIndex === undefined) {
+        newGroups[targetGroupKey] = [...newGroups[targetGroupKey], shipName];
+      } else {
+        newGroups[targetGroupKey] = [...newGroups[targetGroupKey]];
+        newGroups[targetGroupKey].splice(targetIndex, 0, shipName);
+      }
+
+      onGroupsChange(newGroups);
+    }
   };
 
   const handleKeyPress = (
@@ -155,19 +245,6 @@ export function GroupsEditor({
     }
   };
 
-  if (Object.keys(groups).length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 mb-4">
-          Belum ada konfigurasi untuk kategori dan position ini.
-        </p>
-        {isEditMode && (
-          <Button onClick={handleAddGroup}>Buat Group Pertama</Button>
-        )}
-      </div>
-    );
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -175,104 +252,156 @@ export function GroupsEditor({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Groups Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.entries(groups)
-          .sort(([keyA], [keyB]) => {
-            const numA = parseInt(keyA.match(/rotation(\d+)$/)?.[1] || '0', 10);
-            const numB = parseInt(keyB.match(/rotation(\d+)$/)?.[1] || '0', 10);
-            return numA - numB;
-          })
-          .map(([groupKey, ships]) => (
-            <div
-              key={groupKey}
-              className="relative bg-white border border-gray-200 rounded-lg p-4"
-            >
-              {/* Group Header */}
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="font-bold text-gray-900 text-lg">
-                  {formatGroupName(groupKey)}
-                </h4>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                    {ships.length} kapal
-                  </span>
-                  {isEditMode && (
-                    <Button
-                      size="xs"
-                      color="failure"
-                      onClick={() => handleRemoveGroup(groupKey)}
-                    >
-                      Hapus
-                    </Button>
-                  )}
-                </div>
-              </div>
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Column: Ungrouped Vessels Panel */}
+        <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
+          <UngroupedVesselsPanel
+            ships={ships}
+            groupedShipNames={groupedShipNames}
+            categorization={categorization}
+            isEditMode={isEditMode}
+            loading={loadingShips}
+          />
+        </div>
 
-              {/* Add Ship Input (Edit Mode Only) */}
+        {/* Right Column: Groups Grid */}
+        <div className="flex-1 min-w-0 w-full">
+          {sortedGroupEntries.length === 0 ? (
+            <div className="text-center py-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl">
+              <p className="text-gray-500 mb-4 font-medium">
+                Belum ada group untuk konfigurasi kategori dan posisi ini.
+              </p>
               {isEditMode && (
-                <div className="flex gap-2 mb-3">
-                  <TextInput
-                    value={newShipInputs[groupKey] || ''}
-                    onChange={e =>
-                      setNewShipInputs(prev => ({
-                        ...prev,
-                        [groupKey]: e.target.value,
-                      }))
-                    }
-                    onKeyPress={e => handleKeyPress(e, groupKey)}
-                    placeholder="Nama Kapal (e.g., KM. ORIENTAL EMERALD)"
-                    className="flex-1"
-                    sizing="sm"
-                  />
-                  <Button size="sm" onClick={() => handleAddShip(groupKey)}>
-                    <HiPlus />
-                  </Button>
-                </div>
+                <Button onClick={handleAddGroup}>Buat Group Pertama</Button>
               )}
-
-              {/* Ships List */}
-              <SortableContext
-                items={ships.map((_, idx) => `${groupKey}-${idx}`)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {ships.length === 0 ? (
-                    <EmptyGroupDropZone groupKey={groupKey} />
-                  ) : (
-                    ships.map((ship, index) => (
-                      <DraggableShipCard
-                        key={`${groupKey}-${index}`}
-                        shipName={ship}
-                        groupKey={groupKey}
-                        index={index}
-                        onDelete={() => handleRemoveShip(groupKey, index)}
-                        isEditMode={isEditMode}
-                      />
-                    ))
-                  )}
-                </div>
-              </SortableContext>
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {sortedGroupEntries.map(([groupKey, shipsInGroup]) => (
+                <div
+                  key={groupKey}
+                  className="relative bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-slate-300 transition-colors"
+                >
+                  {/* Group Header */}
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-bold text-gray-900 text-base">
+                      {formatGroupName(groupKey)}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                        {shipsInGroup.length} kapal
+                      </span>
+                      {isEditMode && (
+                        <Button
+                          size="xs"
+                          color="failure"
+                          onClick={() => handleRemoveGroup(groupKey)}
+                        >
+                          Hapus
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-        {/* Add Group Card - appears as last item in grid */}
-        {isEditMode && (
-          <button
-            onClick={handleAddGroup}
-            className="flex flex-col items-center justify-center min-h-[150px] border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
-          >
-            <HiPlus className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-gray-500 font-medium">Tambah Group</span>
-          </button>
-        )}
+                  {/* Add Ship Input (Edit Mode Only) */}
+                  {isEditMode && (
+                    <div className="flex flex-col gap-2 mb-3">
+                      <div className="relative">
+                        <div className="flex gap-2">
+                          <div className="flex-1 relative">
+                            <TextInput
+                              value={newShipInputs[groupKey] || ''}
+                              onChange={e =>
+                                handleShipInputChange(groupKey, e.target.value)
+                              }
+                              onKeyPress={e => handleKeyPress(e, groupKey)}
+                              placeholder={
+                                loadingShips
+                                  ? 'Loading kapal...'
+                                  : 'Cari atau ketik nama kapal...'
+                              }
+                              sizing="sm"
+                              disabled={loadingShips}
+                              rightIcon={
+                                loadingShips ? () => <Spinner size="xs" /> : undefined
+                              }
+                            />
+                            {/* Autocomplete dropdown */}
+                            {(filteredSuggestions[groupKey] ?? []).length > 0 && (
+                              <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto mt-1">
+                                {(filteredSuggestions[groupKey] ?? []).map(
+                                  (name, idx) => (
+                                    <div
+                                      key={idx}
+                                      onClick={() =>
+                                        handleSelectSuggestion(groupKey, name)
+                                      }
+                                      className="px-3 py-2 text-sm text-gray-800 hover:bg-blue-50 hover:text-blue-700 cursor-pointer border-b border-gray-100 last:border-0"
+                                    >
+                                      {name}
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button size="sm" onClick={() => handleAddShip(groupKey)}>
+                            <HiPlus />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ships List in Group */}
+                  <SortableContext
+                    items={shipsInGroup.map(
+                      (ship, idx) => `${groupKey}-${ship}-${idx}`
+                    )}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                      {shipsInGroup.length === 0 ? (
+                        <EmptyGroupDropZone groupKey={groupKey} />
+                      ) : (
+                        shipsInGroup.map((ship, index) => (
+                          <DraggableShipCard
+                            key={`${groupKey}-${ship}-${index}`}
+                            shipName={ship}
+                            groupKey={groupKey}
+                            index={index}
+                            onDelete={() => handleRemoveShip(groupKey, index)}
+                            isEditMode={isEditMode}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              ))}
+
+              {/* Add Group Card - appears as last item in grid */}
+              {isEditMode && (
+                <button
+                  onClick={handleAddGroup}
+                  className="flex flex-col items-center justify-center min-h-[160px] border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer"
+                >
+                  <HiPlus className="h-7 w-7 text-gray-400 mb-1.5" />
+                  <span className="text-gray-600 font-medium text-sm">
+                    Tambah Group
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Drag Overlay */}
       <DragOverlay>
         {activeShip ? (
-          <div className="p-2 bg-blue-100 rounded border-2 border-blue-400">
-            <span className="text-sm font-medium text-gray-900">
+          <div className="p-2.5 bg-blue-100 rounded-lg border-2 border-blue-500 shadow-xl opacity-95 flex items-center gap-2">
+            <span className="text-sm font-semibold text-blue-900">
               {activeShip.shipName}
             </span>
           </div>
@@ -281,3 +410,4 @@ export function GroupsEditor({
     </DndContext>
   );
 }
+

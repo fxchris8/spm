@@ -3,7 +3,10 @@ Module ini menangani akses data konfigurasi grup kapal dari database,
 termasuk pembangunan KELOMPOK dan mapping vessel group untuk rotasi kapal.
 """
 
+from sqlalchemy import text
+
 from database.connection import get_rotation_vessels
+from database.database import get_db_connection
 
 _STATIC_KELOMPOK = {
     "mt": ["MT. GLOBAL", "MT. PANTAI LAMONG"],
@@ -105,3 +108,44 @@ def get_vessel_config_from_db(
     except Exception as e:
         print(f"WARN - Could not load vessel config from DB: {e}")
         return None, {}
+
+
+def get_ship_particular_from_db(search: str = ""):
+    """
+    Ambil daftar kapal dari tabel ship_particular di database lokal.
+
+    Args:
+        search: String untuk filter nama kapal (opsional, case-insensitive)
+
+    Returns:
+        list[dict]: List kapal dengan field vesselid, vesselname, vesseltypeid, dll.
+    """
+    try:
+        if search:
+            query = """
+                SELECT vesselid, vesselname, companyid, dblgrosstonnage,
+                       inidnationality, vcmainpower, vesseltypeid, synced_at
+                FROM ship_particular
+                WHERE UPPER(vesselname) LIKE UPPER(:search)
+                ORDER BY vesselname
+            """
+            params = {"search": f"%{search}%"}
+        else:
+            query = """
+                SELECT vesselid, vesselname, companyid, dblgrosstonnage,
+                       inidnationality, vcmainpower, vesseltypeid, synced_at
+                FROM ship_particular
+                ORDER BY vesselname
+            """
+            params = {}
+
+        with get_db_connection() as conn:
+            result = conn.execute(text(query), params)
+            rows = result.fetchall()
+            columns = result.keys()
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        print(f"FAIL - Error querying ship_particular from DB: {str(e)}")
+        return []
+

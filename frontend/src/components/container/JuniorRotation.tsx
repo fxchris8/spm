@@ -24,7 +24,9 @@ import {
   useJobSubmitted,
   usePendingChanges,
   formatJobName,
+  isLastGroups,
 } from '../../hooks/useJuniorRotation';
+import { sortGroupKeys } from '../../utils/vesselMappingUtils';
 
 interface JuniorProps {
   groups: Record<string, string[]>;
@@ -52,12 +54,18 @@ interface ReplacementOption {
 interface PromotionTableProps {
   job: string;
   groupKey: string | null;
+  groups: Record<string, string[]>;
 }
 
-function PromotionCandidatesTable({ job, groupKey }: PromotionTableProps) {
+function PromotionCandidatesTable({
+  job,
+  groupKey,
+  groups,
+}: PromotionTableProps) {
   const { promotionCandidates, loading } = usePromotionCandidates(
     job,
     groupKey,
+    groups,
     true
   );
 
@@ -456,7 +464,7 @@ export function JuniorRotation({
                     key={groupKey}
                     className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded"
                   >
-                    {groupKey.replace('container_rotation', 'Grup ')}
+                    {`Grup ${groupKey.match(/rotation(\d+)$/)?.[1] || groupKey}`}
                   </span>
                 ))}
               </div>
@@ -467,15 +475,10 @@ export function JuniorRotation({
 
       {/* Card for group selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {Object.entries(groups)
-          .sort(([keyA], [keyB]) => {
-            const numA = parseInt(keyA.match(/rotation(\d+)$/)?.[1] || '0', 10);
-            const numB = parseInt(keyB.match(/rotation(\d+)$/)?.[1] || '0', 10);
-            return numA - numB;
-          })
-          .map(([groupKey, vessels]) => {
-            const isLocked = isGroupLocked(groupKey);
-            const hasPendingChange = affectedGroups.includes(groupKey);
+        {sortGroupKeys(groups).map((groupKey) => {
+          const vessels = groups[groupKey];
+          const isLocked = isGroupLocked(groupKey);
+          const hasPendingChange = affectedGroups.includes(groupKey);
 
             return (
               <div key={groupKey} className="relative">
@@ -494,10 +497,7 @@ export function JuniorRotation({
                 )}
 
                 <CardComponent
-                  groupName={`Group ${groupKey.replace(
-                    'container_rotation',
-                    ''
-                  )}`}
+                  groupName={`Group ${groupKey.match(/rotation(\d+)$/)?.[1] || groupKey}`}
                   listShip={vessels}
                   isActive={selectedGroup === groupKey}
                   onClick={() => handleCardClick(groupKey)}
@@ -803,10 +803,7 @@ export function JuniorRotation({
                                     {isLockedElsewhere && lockedInGroup && (
                                       <span className="text-[10px] text-orange-600 font-medium">
                                         Locked di Group{' '}
-                                        {lockedInGroup.group_key.replace(
-                                          'container_rotation',
-                                          ''
-                                        )}{' '}
+                                        {lockedInGroup.group_key.match(/rotation(\d+)$/)?.[1] || lockedInGroup.group_key}{' '}
                                         - {lockedInGroup.job}
                                       </span>
                                     )}
@@ -828,10 +825,13 @@ export function JuniorRotation({
                 </div>
               </div>
 
-              {/* Promotion Candidates Table (Group 3 & 4 only) */}
-              {(selectedGroup === 'container_rotation3' ||
-                selectedGroup === 'container_rotation4') && (
-                <PromotionCandidatesTable job={job} groupKey={selectedGroup} />
+              {/* Promotion Candidates Table (Last groups only) */}
+              {isLastGroups(selectedGroup, groups) && (
+                <PromotionCandidatesTable
+                  job={job}
+                  groupKey={selectedGroup}
+                  groups={groups}
+                />
               )}
 
               {/* Action Buttons */}

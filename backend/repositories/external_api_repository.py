@@ -1,6 +1,6 @@
 """
 Module ini menangani pengambilan data dari API eksternal (API Pusat),
-meliputi data seamen dan data mutasi pelaut.
+meliputi data seamen, data mutasi pelaut, dan data ship particular.
 """
 
 import json
@@ -107,3 +107,49 @@ def fetch_mutations_from_api():
     except Exception as e:
         print(f"FAIL - Error fetching from ORIGINAL API: {str(e)}")
         return None
+
+
+def fetch_ship_particular_from_api():
+    """
+    Fetch data Ship Particular dari API Pusat.
+
+    Returns:
+        DataFrame: DataFrame berisi data kapal, atau None jika gagal
+    """
+    print(f"START - [{datetime.now()}] Fetching Ship Particular from API...")
+
+    try:
+        url = f"{API_BASE_URL_PUSAT}/get-list-ship-particular"
+        payload = json.dumps(
+            {
+                "pemilik": "",
+                "nama_kapal": "",
+                "jenis_kapal": "",
+                "kode": "",
+            }
+        )
+        headers = {"Content-Type": "application/json"}
+
+        response = requests.get(url, headers=headers, data=payload, timeout=30)
+
+        if response.status_code == 200:
+            response_dict = response.json()
+            data_ship = response_dict.get("data_ship", [])
+
+            if data_ship:
+                df = pd.DataFrame(data_ship)
+                print(f"DONE - Fetched {len(df)} ship records from Ship Particular API")
+                return df
+            else:
+                print("WARNING - Ship Particular API returned empty data")
+                return None
+        else:
+            print(
+                f"FAIL - Ship Particular API returned status code {response.status_code}"
+            )
+            return None
+
+    except Exception as e:
+        print(f"FAIL - Error fetching from Ship Particular API: {str(e)}")
+        return None
+

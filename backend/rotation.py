@@ -4,6 +4,7 @@ import pandas as pd
 
 from ai.model import filter_in_vessel, vessel_group_id_deck
 from database.connection import get_seamen_as_data
+from utils.vessel_normalizer import normalize_vessel_name, normalize_vessel_set
 
 # ============================================================================
 # GLOBAL VARIABLES & CONFIGURATIONS
@@ -129,9 +130,12 @@ def get_group_job_crew(
     if not fallback_vessels:
         return group_crew
 
+    fallback_norm = normalize_vessel_set(fallback_vessels)
+    loc_norm = filtered_df["last_location"].apply(normalize_vessel_name)
+
     return filtered_df[
         (filtered_df["last_position"] == job)
-        & (filtered_df["last_location"].isin(fallback_vessels))
+        & (filtered_df["last_location"].isin(fallback_vessels) | loc_norm.isin(fallback_norm))
     ].copy()
 
 
