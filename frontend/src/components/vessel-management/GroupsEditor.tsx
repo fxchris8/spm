@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button, TextInput, Spinner } from 'flowbite-react';
 import { HiPlus } from 'react-icons/hi';
 import { useShipParticular } from '../../hooks/useShipParticular';
@@ -52,6 +52,14 @@ export function GroupsEditor({
   const [filteredSuggestions, setFilteredSuggestions] = useState<
     Record<string, string[]>
   >({});
+  // Toggle Ungrouped panel visibility (default closed in view mode so groups have maximum width)
+  const [showUngrouped, setShowUngrouped] = useState(false);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setShowUngrouped(true);
+    }
+  }, [isEditMode]);
 
   // Ambil daftar kapal dari ship_particular
   const { ships, vesselNames, loading: loadingShips } = useShipParticular();
@@ -252,17 +260,31 @@ export function GroupsEditor({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      <div className="flex justify-between items-center mb-4">
+        <button
+          type="button"
+          onClick={() => setShowUngrouped(!showUngrouped)}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          {showUngrouped
+            ? 'Sembunyikan Kapal Ungrouped'
+            : 'Tampilkan Kapal Ungrouped'}
+        </button>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Ungrouped Vessels Panel */}
-        <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-          <UngroupedVesselsPanel
-            ships={ships}
-            groupedShipNames={groupedShipNames}
-            categorization={categorization}
-            isEditMode={isEditMode}
-            loading={loadingShips}
-          />
-        </div>
+        {/* Left Column: Ungrouped Vessels Panel (toggleable) */}
+        {showUngrouped && (
+          <div className="w-full lg:w-72 xl:w-80 flex-shrink-0">
+            <UngroupedVesselsPanel
+              ships={ships}
+              groupedShipNames={groupedShipNames}
+              categorization={categorization}
+              isEditMode={isEditMode}
+              loading={loadingShips}
+            />
+          </div>
+        )}
 
         {/* Right Column: Groups Grid */}
         <div className="flex-1 min-w-0 w-full">
@@ -276,7 +298,7 @@ export function GroupsEditor({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
               {sortedGroupEntries.map(([groupKey, shipsInGroup]) => (
                 <div
                   key={groupKey}
@@ -353,14 +375,14 @@ export function GroupsEditor({
                     </div>
                   )}
 
-                  {/* Ships List in Group */}
+                  {/* Ships List in Group (Non-scrollable, fully expanded) */}
                   <SortableContext
                     items={shipsInGroup.map(
                       (ship, idx) => `${groupKey}-${ship}-${idx}`
                     )}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    <div className="space-y-1.5">
                       {shipsInGroup.length === 0 ? (
                         <EmptyGroupDropZone groupKey={groupKey} />
                       ) : (

@@ -312,6 +312,22 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_sso_id ON users(sso_id);
 """
 
+CREATE_TABLE_ROLE_SETTINGS = """
+-- Table: role_settings
+CREATE TABLE IF NOT EXISTS role_settings (
+    id BIGSERIAL PRIMARY KEY,
+    categorization VARCHAR(50) NOT NULL,
+    position VARCHAR(50) NOT NULL,
+    role_type VARCHAR(20) NOT NULL DEFAULT 'junior',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(categorization, position)
+);
+
+-- Indexes for role_settings
+CREATE INDEX IF NOT EXISTS idx_role_settings_cat_pos ON role_settings(categorization, position);
+"""
+
 
 def create_database():
     """Create database if not exists"""
@@ -357,11 +373,12 @@ def create_tables():
             ("rotation_submissions", CREATE_TABLE_ROTATION_SUBMISSIONS),
             ("users", CREATE_TABLE_USERS),
             ("ship_particular", CREATE_TABLE_SHIP_PARTICULAR),
+            ("role_settings", CREATE_TABLE_ROLE_SETTINGS),
         ]
 
         with engine.connect() as conn:
             for idx, (table_name, sql) in enumerate(tables, start=2):
-                print(f"\n[{idx}/10] Creating table: {table_name}...")
+                print(f"\n[{idx}/11] Creating table: {table_name}...")
                 conn.execute(text(sql))
                 conn.commit()
                 print(f"[SUCCES] Table '{table_name}' created successfully")
@@ -389,7 +406,7 @@ def create_tables():
 def verify_database():
     """Verify all tables are created"""
     try:
-        print("\n[11/10] Verifying database setup...")
+        print("\n[12/11] Verifying database setup...")
         engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
         expected_tables = [
@@ -403,6 +420,7 @@ def verify_database():
             "rotation_submissions",
             "users",
             "ship_particular",
+            "role_settings",
         ]
 
         with engine.connect() as conn:

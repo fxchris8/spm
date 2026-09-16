@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { JuniorRotation } from '../container/JuniorRotation';
-
-// Urutan tabs untuk schedule Manalagi Junior (4 posisi lengkap)
-const MANALAGI_JUNIOR_ORDER = ['mualimII', 'mualimIII', 'masinisIII', 'masinisIV'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationManalagiJunior() {
+  const { getJuniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const juniorRoles = getJuniorRoles('manalagi');
+
   return (
     <RotationTabsPage
       type="junior"
       categorization="manalagi"
-      roles={MANALAGI_JUNIOR_ORDER}
+      roles={juniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="Manalagi junior rotation tabs"
       loadingText="Loading Manalagi junior rotations..."
       renderContent={vessel => (

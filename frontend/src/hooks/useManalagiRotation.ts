@@ -39,6 +39,11 @@ async function fetchCadanganData(
   forecastMonth: number = 1,
   categorization?: string
 ): Promise<any[]> {
+  const CADANGAN_SUPPORTED_JOBS = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
+  if (!CADANGAN_SUPPORTED_JOBS.includes(job)) {
+    return [];
+  }
+
   // Build query params
   const params = new URLSearchParams();
   if (lockedCadanganCodes.length > 0) {
@@ -432,19 +437,21 @@ export function usePotentialPromotion(
         .join('&');
       const historyUrl = `${API_BASE_URL}/filter_history?${queryParams}`;
 
-      const getPromotionEndpoint = (job: string): string => {
+      const getPromotionEndpoint = (job: string): string | null => {
         const endpoints: Record<string, string> = {
           nakhoda: `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`,
           KKM: `${API_BASE_URL}/seamen/promotion-candidates-kkm`,
           mualimI: `${API_BASE_URL}/seamen/promotion-candidates-mualimI`,
           masinisII: `${API_BASE_URL}/seamen/promotion-candidates-masinisII`,
+          mualimII: `${API_BASE_URL}/seamen/promotion-candidates-mualimII`,
+          mualimIII: `${API_BASE_URL}/seamen/promotion-candidates-mualimIII`,
+          masinisIII: `${API_BASE_URL}/seamen/promotion-candidates-masinisIII`,
+          masinisIV: `${API_BASE_URL}/seamen/promotion-candidates-masinisIV`,
         };
-        return (
-          endpoints[job] ||
-          `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`
-        );
+        return endpoints[job] || null;
       };
       const candidateUrl = getPromotionEndpoint(job);
+      if (!candidateUrl) return [];
 
       const getCode = (x: any) =>
         String(
@@ -462,6 +469,10 @@ export function usePotentialPromotion(
             return 'MUALIMII';
           case 'MASINISII':
             return 'MASINISIII';
+          case 'MUALIMII':
+            return 'MUALIMIII';
+          case 'MASINISIII':
+            return 'MASINISIV';
           default:
             return null;
         }
@@ -625,7 +636,10 @@ export function useCadanganData(
         forecastMonth,
         categorization
       ),
-    enabled: enabled && !!groupKey, // Only fetch when group is selected
+    enabled:
+      enabled &&
+      !!groupKey &&
+      ['nakhoda', 'KKM', 'mualimI', 'masinisII'].includes(job),
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
   });

@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { BargeCraneSeniorRotation } from './BargeCraneSeniorRotation';
-
-// Urutan tabs untuk barge crane senior (Nakhoda, KKM, Mualim I, Masinis II)
-const BARGE_CRANE_SENIOR_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationBargeCraneSenior() {
+  const { getSeniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const seniorRoles = getSeniorRoles('bc');
+
   return (
     <RotationTabsPage
       type="senior"
       categorization="bc"
-      roles={BARGE_CRANE_SENIOR_ORDER}
+      roles={seniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="BC, TB, TK, Service rotation tabs"
       loadingText="Loading BC, TB, TK, Service rotations..."
       containerClassName="flex flex-col gap-3 mb-0"

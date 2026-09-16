@@ -16,6 +16,8 @@ export interface RotationTabsPageProps {
   loadingText?: string;
   containerClassName?: string;
   renderContent: (vessel: RotationVessel) => React.ReactNode;
+  rolesError?: Error | null;
+  onRetryRoles?: () => void;
 }
 
 export function RotationTabsPage({
@@ -26,8 +28,28 @@ export function RotationTabsPage({
   loadingText,
   containerClassName,
   renderContent,
+  rolesError,
+  onRetryRoles,
 }: RotationTabsPageProps) {
   const { vessels, loading, error } = useRotationVessels(type, categorization);
+
+  if (rolesError) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-red-600 font-semibold mb-2">Gagal memuat konfigurasi role</div>
+        <p className="text-gray-600 mb-4">{rolesError.message || 'Koneksi ke server bermasalah'}</p>
+        {onRetryRoles && (
+          <button
+            type="button"
+            onClick={onRetryRoles}
+            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded text-sm font-medium cursor-pointer"
+          >
+            Coba Lagi
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (loading) {
     return (

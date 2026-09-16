@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -2060,249 +2061,297 @@ def get_rotation_vessel_by_id(vessel_id):
 
 
 def create_rotation_vessel(
-    job_title, vessel, rotation_type, part, groups, categorization=None
+    job_title, vessel, rotation_type=None, part=None, groups=None, categorization=None, **kwargs
 ):
     """
-    Create new rotation vessel dengan groups dan ships
-
-    Args:
-        job_title: Job title (e.g. 'mualimII')
-        vessel: Vessel code ('D', 'E', 'F', 'G')
-        rotation_type: Type ('senior' atau 'junior')
-        categorization: Categorization ('container', 'manalagi', 'barge_crane', etc.)
-        part: Part ('deck' atau 'engine')
-        groups: Dict dengan format:
-            {
-                'container_rotation1': ['KM. SHIP1', 'KM. SHIP2'],
-                'container_rotation2': ['KM. SHIP3', 'KM. SHIP4']
-            }
-
-    Returns:
-        Dict dengan 'success' dan 'id'
+    Legacy wrapper delegating to authoritative create_rotation_vessel_with_role.
+    Derives role classification authoritatively from role_settings, ignoring caller-provided rotation_type.
     """
-    try:
-        # Validate input first
-        validate_rotation_vessel(vessel, rotation_type, part, groups)
-
-        with engine.connect() as conn:
-            # Start transaction
-            trans = conn.begin()
-
-            try:
-                # Insert vessel
-                vessel_query = """
-                    INSERT INTO vessels (job_title, vessel, type, part, categorization)
-                    VALUES (:job_title, :vessel, :type, :part, :categorization)
-                    RETURNING id
-                """
-                result = conn.execute(
-                    text(vessel_query),
-                    {
-                        "job_title": job_title,
-                        "vessel": vessel,
-                        "type": rotation_type,
-                        "part": part,
-                        "categorization": categorization,
-                    },
-                )
-                vessel_id = result.fetchone()[0]
-
-                # Insert groups dan ships
-                for group_key, ships in groups.items():
-                    # Extract group number dari group_key
-                    group_number = int("".join(filter(str.isdigit, group_key)))
-
-                    # Insert group
-                    group_query = """
-                        INSERT INTO vessels_groups (vessel_id, group_key, group_number)
-                        VALUES (:vessel_id, :group_key, :group_number)
-                        RETURNING id
-                    """
-                    group_result = conn.execute(
-                        text(group_query),
-                        {
-                            "vessel_id": vessel_id,
-                            "group_key": group_key,
-                            "group_number": group_number,
-                        },
-                    )
-                    group_id = group_result.fetchone()[0]
-
-                    # Insert ships (dengan group_id)
-                    for idx, ship_name in enumerate(ships):
-                        ship_query = """
-                            INSERT INTO vessels_ships (group_id, ship_name, order_index)
-                            VALUES (:group_id, :ship_name, :order_index)
-                        """
-                        conn.execute(
-                            text(ship_query),
-                            {
-                                "group_id": group_id,
-                                "ship_name": ship_name,
-                                "order_index": idx,
-                            },
-                        )
-
-                # Commit transaction
-                trans.commit()
-
-                print(
-                    f"DONE - Created rotation vessel '{job_title}' with ID {vessel_id}"
-                )
-                return {
-                    "success": True,
-                    "message": f"Konfigurasi rotasi {job_title} berhasil di-create",
-                    "id": vessel_id,
-                }
-
-            except Exception as e:
-                trans.rollback()
-                raise e
-
-    except ValueError as e:
-        # Validation error
-        print(f"FAIL - Validation Error: {str(e)}")
-        raise ValueError(f"Validation failed: {str(e)}")
-    except Exception as e:
-        print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to create rotation vessel: {str(e)}")
+    return create_rotation_vessel_with_role(
+        job_title=job_title,
+        vessel=vessel,
+        part=part,
+        groups=groups,
+        categorization=categorization,
+    )
 
 
 def update_rotation_vessel(
-    vessel_id, job_title, vessel, rotation_type, part, groups, categorization=None, group_key_renames=None
+    vessel_id, job_title, vessel, rotation_type=None, part=None, groups=None, categorization=None, group_key_renames=None, **kwargs
 ):
     """
-    Update existing rotation vessel
+    Legacy wrapper delegating to authoritative update_rotation_vessel_with_role.
+    Derives role classification authoritatively from role_settings, ignoring caller-provided rotation_type.
+    """
+    return update_rotation_vessel_with_role(
+        vessel_id=vessel_id,
+        job_title=job_title,
+        vessel=vessel,
+        part=part,
+        groups=groups,
+        categorization=categorization,
+        group_key_renames=group_key_renames,
+    )
+
+
+def create_rotation_vessel_with_role(
+    job_title, vessel, part, groups, categorization=None
+):
+    """
+    Create new rotation vessel dengan klasifikasi role dari role_settings dalam SATU transaksi atomik.
+    Mengunci baris role_settings dengan FOR UPDATE terlebih dahulu untuk memastikan konsistensi
+    dan mencegah race condition dengan role mutation.
 
     Args:
-        vessel_id: ID of vessel to update
-        job_title, vessel, rotation_type, categorization, part, groups: Same as create_rotation_vessel
-        group_key_renames: Optional dict mapping old group_key -> new group_key.
-            Used to update locked_rotation_schedules when groups are re-numbered.
-            Example: {'container_rotation3': 'container_rotation2'}
+        job_title: Job title (e.g. 'mualimI', 'KKM')
+        vessel: Vessel code ('D', 'E', 'F', 'G')
+        part: Part ('deck' atau 'engine')
+        groups: Dict groups dan ships
+        categorization: 'container', 'manalagi', atau 'bc'
 
     Returns:
-        Dict dengan 'success'
+        Dict dengan success, id, type, dan message
     """
-    try:
-        # Validate input
-        validate_rotation_vessel(vessel, rotation_type, part, groups)
+    from repositories.role_repository import (
+        CANONICAL_POSITION_MAP,
+        VALID_CATEGORIES,
+        VALID_POSITIONS,
+        get_position_classification,
+        RoleIntegrityError,
+    )
 
-        with engine.connect() as conn:
-            trans = conn.begin()
-            try:
-                # Update main vessel
-                query = """
-                    UPDATE vessels
-                    SET job_title = :job_title, vessel = :vessel, type = :type,
-                        part = :part, categorization = :categorization, updated_at = NOW()
-                    WHERE id = :vessel_id
+    cat = (categorization or "container").lower().strip()
+    norm_pos = CANONICAL_POSITION_MAP.get(job_title.strip().lower())
+    if not norm_pos:
+        raise ValueError(f"Invalid position '{job_title}'. Must be one of {list(VALID_POSITIONS)}")
+    if cat not in VALID_CATEGORIES:
+        raise ValueError(f"Invalid categorization '{categorization}'. Must be one of {list(VALID_CATEGORIES)}")
+
+    with engine.connect() as conn:
+        trans = conn.begin()
+        try:
+            # 1. Lock role_settings row to get authoritative role_type
+            authoritative_type = get_position_classification(
+                categorization=cat,
+                position=norm_pos,
+                conn=conn,
+                for_update=True,
+            )
+
+            # 2. Validate rotation vessel schema & groups
+            validate_rotation_vessel(vessel, authoritative_type, part, groups)
+
+            # 3. Insert vessel
+            vessel_query = """
+                INSERT INTO vessels (job_title, vessel, type, part, categorization)
+                VALUES (:job_title, :vessel, :type, :part, :categorization)
+                RETURNING id
+            """
+            result = conn.execute(
+                text(vessel_query),
+                {
+                    "job_title": norm_pos,
+                    "vessel": vessel,
+                    "type": authoritative_type,
+                    "part": part,
+                    "categorization": cat,
+                },
+            )
+            vessel_id = result.fetchone()[0]
+
+            # 4. Insert groups dan ships
+            for group_key, ships in groups.items():
+                group_number = int("".join(filter(str.isdigit, group_key)))
+                group_query = """
+                    INSERT INTO vessels_groups (vessel_id, group_key, group_number)
+                    VALUES (:vessel_id, :group_key, :group_number)
+                    RETURNING id
                 """
-                conn.execute(
-                    text(query),
+                group_result = conn.execute(
+                    text(group_query),
                     {
                         "vessel_id": vessel_id,
-                        "job_title": job_title,
-                        "vessel": vessel,
-                        "type": rotation_type,
-                        "part": part,
-                        "categorization": categorization,
+                        "group_key": group_key,
+                        "group_number": group_number,
                     },
                 )
+                group_id = group_result.fetchone()[0]
 
-                # Update locked_rotation_schedules group_key references (before re-inserting groups)
-                # Sort descending by old key number to avoid collision (e.g. rotation3→rotation2 before rotation2→rotation1)
-                if group_key_renames:
-                    def extract_num(key):
-                        import re
-                        m = re.search(r'(\d+)$', key)
-                        return int(m.group(1)) if m else 0
-
-                    sorted_renames = sorted(
-                        group_key_renames.items(),
-                        key=lambda item: extract_num(item[0]),
-                        reverse=True,
-                    )
-
-                    rename_query = """
-                        UPDATE locked_rotation_schedules
-                        SET group_key = :new_key, updated_at = NOW()
-                        WHERE group_key = :old_key
-                          AND categorization = :categorization
+                for idx, ship_name in enumerate(ships):
+                    ship_query = """
+                        INSERT INTO vessels_ships (group_id, ship_name, order_index)
+                        VALUES (:group_id, :ship_name, :order_index)
                     """
-                    for old_key, new_key in sorted_renames:
-                        conn.execute(
-                            text(rename_query),
-                            {
-                                "old_key": old_key,
-                                "new_key": new_key,
-                                "categorization": categorization,
-                            },
-                        )
-                    print(
-                        f"DONE - Updated locked_rotation_schedules group_key renames: {group_key_renames}"
-                    )
-
-                # Update groups dan ships: delete groups (ships akan CASCADE delete)
-                conn.execute(
-                    text("DELETE FROM vessels_groups WHERE vessel_id = :vessel_id"),
-                    {"vessel_id": vessel_id},
-                )
-
-                # Re-insert groups dan ships
-                for group_key, ships in groups.items():
-                    group_number = int("".join(filter(str.isdigit, group_key)))
-                    group_query = """
-                        INSERT INTO vessels_groups (vessel_id, group_key, group_number)
-                        VALUES (:vessel_id, :group_key, :group_number)
-                        RETURNING id
-                    """
-                    group_result = conn.execute(
-                        text(group_query),
+                    conn.execute(
+                        text(ship_query),
                         {
-                            "vessel_id": vessel_id,
-                            "group_key": group_key,
-                            "group_number": group_number,
+                            "group_id": group_id,
+                            "ship_name": ship_name,
+                            "order_index": idx,
                         },
                     )
-                    group_id = group_result.fetchone()[0]
 
-                    # Insert ships dengan group_id
-                    for idx, ship_name in enumerate(ships):
-                        ship_query = """
-                            INSERT INTO vessels_ships (group_id, ship_name, order_index)
-                            VALUES (:group_id, :ship_name, :order_index)
-                        """
-                        conn.execute(
-                            text(ship_query),
-                            {
-                                "group_id": group_id,
-                                "ship_name": ship_name,
-                                "order_index": idx,
-                            },
-                        )
+            trans.commit()
+            print(f"DONE - Created rotation vessel '{norm_pos}' with ID {vessel_id} (type: {authoritative_type})")
+            return {
+                "success": True,
+                "message": f"Konfigurasi rotasi {norm_pos} berhasil di-create",
+                "id": vessel_id,
+                "type": authoritative_type,
+            }
+        except (ValueError, RoleIntegrityError):
+            trans.rollback()
+            raise
+        except Exception as e:
+            trans.rollback()
+            print(f"FAIL - Error in create_rotation_vessel_with_role: {str(e)}")
+            raise
 
-                # Commit transaction
-                trans.commit()
 
-                print(f"DONE - Updated rotation vessel ID {vessel_id}")
-                return {
-                    "success": True,
-                    "message": "Konfigurasi rotasi berhasil diupdate",
-                }
+def update_rotation_vessel_with_role(
+    vessel_id, job_title, vessel, part, groups, categorization=None, group_key_renames=None
+):
+    """
+    Update existing rotation vessel dengan klasifikasi role dari role_settings dalam SATU transaksi atomik.
+    Mengunci baris role_settings terlebih dahulu (FOR UPDATE), lalu mengunci dan mengupdate vessels.
+    """
+    from repositories.role_repository import (
+        CANONICAL_POSITION_MAP,
+        VALID_CATEGORIES,
+        VALID_POSITIONS,
+        get_position_classification,
+        RoleIntegrityError,
+    )
 
-            except Exception as e:
-                trans.rollback()
-                raise e
+    cat = (categorization or "container").lower().strip()
+    norm_pos = CANONICAL_POSITION_MAP.get(job_title.strip().lower())
+    if not norm_pos:
+        raise ValueError(f"Invalid position '{job_title}'. Must be one of {list(VALID_POSITIONS)}")
+    if cat not in VALID_CATEGORIES:
+        raise ValueError(f"Invalid categorization '{categorization}'. Must be one of {list(VALID_CATEGORIES)}")
 
-    except ValueError as e:
-        # Validation error
-        print(f"FAIL - Validation Error: {str(e)}")
-        raise ValueError(f"Validation failed: {str(e)}")
-    except Exception as e:
-        print(f"FAIL - Database Error: {str(e)}")
-        raise Exception(f"Failed to update rotation vessel: {str(e)}")
+    with engine.connect() as conn:
+        trans = conn.begin()
+        try:
+            # 1. Lock role_settings row to get authoritative role_type
+            authoritative_type = get_position_classification(
+                categorization=cat,
+                position=norm_pos,
+                conn=conn,
+                for_update=True,
+            )
 
+            # 2. Validate rotation vessel schema & groups
+            validate_rotation_vessel(vessel, authoritative_type, part, groups)
+
+            # 3. Lock & verify existing vessel row
+            vessel_check = conn.execute(
+                text("SELECT id FROM vessels WHERE id = :vessel_id FOR UPDATE"),
+                {"vessel_id": vessel_id},
+            ).fetchone()
+            if not vessel_check:
+                raise ValueError(f"Rotation vessel with ID {vessel_id} not found")
+
+            # 4. Update main vessel
+            query = """
+                UPDATE vessels
+                SET job_title = :job_title, vessel = :vessel, type = :type,
+                    part = :part, categorization = :categorization, updated_at = NOW()
+                WHERE id = :vessel_id
+            """
+            conn.execute(
+                text(query),
+                {
+                    "vessel_id": vessel_id,
+                    "job_title": norm_pos,
+                    "vessel": vessel,
+                    "type": authoritative_type,
+                    "part": part,
+                    "categorization": cat,
+                },
+            )
+
+            # 5. Handle group_key_renames
+            if group_key_renames:
+                def extract_num(key):
+                    import re
+                    m = re.search(r'(\d+)$', key)
+                    return int(m.group(1)) if m else 0
+
+                sorted_renames = sorted(
+                    group_key_renames.items(),
+                    key=lambda item: extract_num(item[0]),
+                    reverse=True,
+                )
+
+                rename_query = """
+                    UPDATE locked_rotation_schedules
+                    SET group_key = :new_key, updated_at = NOW()
+                    WHERE group_key = :old_key
+                      AND categorization = :categorization
+                """
+                for old_key, new_key in sorted_renames:
+                    conn.execute(
+                        text(rename_query),
+                        {
+                            "old_key": old_key,
+                            "new_key": new_key,
+                            "categorization": cat,
+                        },
+                    )
+
+            # 6. Delete existing groups (ships will cascade)
+            conn.execute(
+                text("DELETE FROM vessels_groups WHERE vessel_id = :vessel_id"),
+                {"vessel_id": vessel_id},
+            )
+
+            # 7. Re-insert groups and ships
+            for group_key, ships in groups.items():
+                group_number = int("".join(filter(str.isdigit, group_key)))
+                group_query = """
+                    INSERT INTO vessels_groups (vessel_id, group_key, group_number)
+                    VALUES (:vessel_id, :group_key, :group_number)
+                    RETURNING id
+                """
+                group_result = conn.execute(
+                    text(group_query),
+                    {
+                        "vessel_id": vessel_id,
+                        "group_key": group_key,
+                        "group_number": group_number,
+                    },
+                )
+                group_id = group_result.fetchone()[0]
+
+                for idx, ship_name in enumerate(ships):
+                    ship_query = """
+                        INSERT INTO vessels_ships (group_id, ship_name, order_index)
+                        VALUES (:group_id, :ship_name, :order_index)
+                    """
+                    conn.execute(
+                        text(ship_query),
+                        {
+                            "group_id": group_id,
+                            "ship_name": ship_name,
+                            "order_index": idx,
+                        },
+                    )
+
+            trans.commit()
+            print(f"DONE - Updated rotation vessel ID {vessel_id} (type: {authoritative_type})")
+            return {
+                "success": True,
+                "message": f"Konfigurasi rotasi {norm_pos} berhasil diupdate",
+                "type": authoritative_type,
+            }
+        except (ValueError, RoleIntegrityError):
+            trans.rollback()
+            raise
+        except Exception as e:
+            trans.rollback()
+            print(f"FAIL - Error in update_rotation_vessel_with_role: {str(e)}")
+            raise
 
 
 def delete_rotation_vessel(vessel_id):

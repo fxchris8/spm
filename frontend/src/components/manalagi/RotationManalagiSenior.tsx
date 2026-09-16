@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { ManalagiSeniorRotation } from './ManalagiSeniorRotation';
-
-// Urutan tabs untuk manalagi senior (Nakhoda, KKM, Mualim I, Masinis II)
-const MANALAGI_SENIOR_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationManalagiSenior() {
+  const { getSeniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const seniorRoles = getSeniorRoles('manalagi');
+
   return (
     <RotationTabsPage
       type="senior"
       categorization="manalagi"
-      roles={MANALAGI_SENIOR_ORDER}
+      roles={seniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="Manalagi senior rotation tabs"
       loadingText="Loading manalagi rotations..."
       renderContent={vessel => (

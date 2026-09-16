@@ -1,5 +1,5 @@
 // src/hooks/useRotationVessels.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -15,46 +15,42 @@ export interface RotationVessel {
   updated_at?: string;
 }
 
+async function fetchVesselsApi(
+  type?: string,
+  categorization?: string
+): Promise<RotationVessel[]> {
+  const params = new URLSearchParams();
+  if (type) params.append('type', type);
+  if (categorization) params.append('categorization', categorization);
+
+  const url = `${API_BASE_URL}/rotation-vessels?${params.toString()}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export function useRotationVessels(type?: string, categorization?: string) {
-  const [vessels, setVessels] = useState<RotationVessel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = ['rotation-vessels', type, categorization].filter(Boolean);
 
-  const fetchVessels = useCallback(async () => {
-    try {
-      setLoading(true);
+  const {
+    data: vessels = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchVesselsApi(type, categorization),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
 
-      const params = new URLSearchParams();
-      if (type) params.append('type', type);
-      if (categorization) params.append('categorization', categorization);
-
-      const url = `${API_BASE_URL}/rotation-vessels?${params.toString()}`;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      setVessels(data);
-      setError(null);
-    } catch (err: any) {
-      console.error('Error fetching vessels:', err);
-      console.error('URL attempted:', `${API_BASE_URL}/rotation-vessels`);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [type, categorization]);
-
-  useEffect(() => {
-    fetchVessels();
-  }, [fetchVessels]);
-
-  const createVessel = async (data: Omit<RotationVessel, 'id'>) => {
-    try {
+  const createMutation = useMutation({
+    mutationFn: async (data: Omit<RotationVessel, 'id'>) => {
       const response = await fetch(`${API_BASE_URL}/rotation-vessels`, {
         method: 'POST',
         headers: {
@@ -62,23 +58,25 @@ export function useRotationVessels(type?: string, categorization?: string) {
         },
         body: JSON.stringify(data),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create vessel');
       }
-
-      await fetchVessels();
       return result;
-    } catch (err: any) {
-      console.error('Error creating vessel:', err);
-      throw new Error(err.message || 'Failed to create vessel');
-    }
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
+    },
+  });
 
-  const updateVessel = async (id: number, data: Omit<RotationVessel, 'id'>) => {
-    try {
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Omit<RotationVessel, 'id'>;
+    }) => {
       const response = await fetch(`${API_BASE_URL}/rotation-vessels/${id}`, {
         method: 'PUT',
         headers: {
@@ -86,48 +84,42 @@ export function useRotationVessels(type?: string, categorization?: string) {
         },
         body: JSON.stringify(data),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update vessel');
       }
-
-      await fetchVessels();
       return result;
-    } catch (err: any) {
-      console.error('Error updating vessel:', err);
-      throw new Error(err.message || 'Failed to update vessel');
-    }
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
+    },
+  });
 
-  const deleteVessel = async (id: number) => {
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
       const response = await fetch(`${API_BASE_URL}/rotation-vessels/${id}`, {
         method: 'DELETE',
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete vessel');
       }
-
-      await fetchVessels();
       return result;
-    } catch (err: any) {
-      console.error('Error deleting vessel:', err);
-      throw new Error(err.message || 'Failed to delete vessel');
-    }
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rotation-vessels'] });
+    },
+  });
 
   return {
     vessels,
     loading,
-    error,
-    refetch: fetchVessels,
-    createVessel,
-    updateVessel,
-    deleteVessel,
+    error: error ? (error as Error).message : null,
+    refetch,
+    createVessel: (data: Omit<RotationVessel, 'id'>) =>
+      createMutation.mutateAsync(data),
+    updateVessel: (id: number, data: Omit<RotationVessel, 'id'>) =>
+      updateMutation.mutateAsync({ id, data }),
+    deleteVessel: (id: number) => deleteMutation.mutateAsync(id),
   };
 }

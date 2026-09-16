@@ -16,7 +16,7 @@ export interface RotationVessel {
 interface CreateVesselData {
   job_title: string;
   vessel: string;
-  type: string;
+  type?: string;
   part: string;
   categorization: string;
   groups: Record<string, string[]>;
@@ -55,8 +55,8 @@ async function createRotationVessel(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create config');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.message || 'Failed to create config');
   }
 
   return response.json();
@@ -74,8 +74,8 @@ async function updateRotationVessel(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update vessel');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.message || 'Failed to update vessel');
   }
 
   return response.json();
@@ -88,8 +88,8 @@ async function deleteRotationVessel(id: number): Promise<ApiResponse> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to delete vessel');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.message || 'Failed to delete vessel');
   }
 
   return response.json();

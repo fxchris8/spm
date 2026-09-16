@@ -318,19 +318,24 @@ async function fetchReplacementOptions(
 async function fetchPromotionCandidates(
   job: string
 ): Promise<PromotionCandidate[]> {
-  const getPromotionEndpoint = (job: string): string => {
+  const getPromotionEndpoint = (job: string): string | null => {
     const endpoints: Record<string, string> = {
+      nakhoda: `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`,
+      KKM: `${API_BASE_URL}/seamen/promotion-candidates-kkm`,
+      mualimI: `${API_BASE_URL}/seamen/promotion-candidates-mualimI`,
+      masinisII: `${API_BASE_URL}/seamen/promotion-candidates-masinisII`,
       mualimII: `${API_BASE_URL}/seamen/promotion-candidates-mualimII`,
       mualimIII: `${API_BASE_URL}/seamen/promotion-candidates-mualimIII`,
       masinisIII: `${API_BASE_URL}/seamen/promotion-candidates-masinisIII`,
       masinisIV: `${API_BASE_URL}/seamen/promotion-candidates-masinisIV`,
     };
-    return (
-      endpoints[job] || `${API_BASE_URL}/seamen/promotion-candidates-nakhoda`
-    );
+    return endpoints[job] || null;
   };
 
   const endpoint = getPromotionEndpoint(job);
+  if (!endpoint) {
+    return [];
+  }
   const response = await fetch(endpoint);
 
   if (!response.ok) {

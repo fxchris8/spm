@@ -701,6 +701,9 @@ if __name__ == "__main__":
         selected = list(SEEDERS.keys())
 
     try:
+        from repositories.role_repository import ensure_role_settings_table
+        ensure_role_settings_table()
+
         for name in selected:
             SEEDERS[name]()
         print("\n" + "=" * 50)

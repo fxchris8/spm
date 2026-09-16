@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { JuniorRotation } from '../container/JuniorRotation';
-
-// Urutan tabs untuk schedule BC Junior (4 posisi lengkap: Mualim II, III & Masinis III, IV)
-const BARGE_CRANE_JUNIOR_ORDER = ['mualimII', 'mualimIII', 'masinisIII', 'masinisIV'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationBargeCraneJunior() {
+  const { getJuniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const juniorRoles = getJuniorRoles('bc');
+
   return (
     <RotationTabsPage
       type="junior"
       categorization="bc"
-      roles={BARGE_CRANE_JUNIOR_ORDER}
+      roles={juniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="BC junior rotation tabs"
       loadingText="Loading BC junior rotations..."
       renderContent={vessel => (

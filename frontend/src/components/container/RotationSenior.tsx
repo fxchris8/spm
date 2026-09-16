@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { SeniorRotation } from './SeniorRotation';
-
-// Urutan tabs untuk container senior (Nakhoda, KKM, Mualim I, Masinis II)
-const CONTAINER_SENIOR_ORDER = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationSenior() {
+  const { getSeniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const seniorRoles = getSeniorRoles('container');
+
   return (
     <RotationTabsPage
       type="senior"
       categorization="container"
-      roles={CONTAINER_SENIOR_ORDER}
+      roles={seniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="Crew rotation tabs"
       loadingText="Loading senior rotations..."
       renderContent={vessel => (

@@ -17,6 +17,7 @@ from database.connection import (
     check_has_pending_changes,
     check_job_submitted,
     create_rotation_vessel,
+    create_rotation_vessel_with_role,
     delete_rotation_vessel,
     get_all_locked_seaman_codes,
     get_all_rotation_submissions,
@@ -32,8 +33,17 @@ from database.connection import (
     unlock_rotation,
     update_rotation_status_change,
     update_rotation_vessel,
+    update_rotation_vessel_with_role,
 )
 from middlewares import init_cors
+from repositories.role_repository import (
+    get_all_role_settings,
+    get_position_classification,
+    save_role_setting,
+    reset_role_settings,
+    ensure_role_settings_table,
+    RoleIntegrityError,
+)
 from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
 from routes import auth_bp, cadangan_bp, dashboard_bp, offduty_all_bp, promotion_bp, search_bp
 from utils.vessel_normalizer import normalize_vessel_name
@@ -43,6 +53,10 @@ app.secret_key = "supersecretkey"
 
 init_cors(app)
 load_word2vec_model()
+try:
+    ensure_role_settings_table()
+except Exception as e:
+    print(f"WARNING - Failed to ensure role_settings table at startup: {e}")
 
 
 # ============================================================================
@@ -72,6 +86,43 @@ def index():
         str: Simple status message
     """
     return "Flask app is running!"
+
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    """
+    Application readiness check endpoint.
+    Verifies:
+    1. Database connectivity.
+    2. Role-settings bootstrap completed and passes operational integrity check (all 24 rows).
+    Returns 200 if operational, 503 if database unreachable or role data corrupted/missing.
+    """
+    try:
+        from database.database import get_db_connection
+        from sqlalchemy import text
+
+        with get_db_connection() as conn:
+            conn.execute(text("SELECT 1"))
+
+        # Verify all 24 canonical positions exist and are valid (raises RoleIntegrityError if corrupt)
+        get_all_role_settings()
+
+        return jsonify({
+            "status": "healthy",
+            "message": "Application and role settings are operational"
+        }), 200
+    except RoleIntegrityError as rie:
+        print(f"HEALTH CHECK FAILED (RoleIntegrityError): {rie}")
+        return jsonify({
+            "status": "unhealthy",
+            "message": "Role settings integrity check failed"
+        }), 503
+    except Exception as e:
+        print(f"HEALTH CHECK FAILED: {e}")
+        return jsonify({
+            "status": "unhealthy",
+            "message": "Service unavailable"
+        }), 503
 
 
 # ============================================================================
@@ -1749,62 +1800,82 @@ def api_get_rotation_vessel(vessel_id):
 
 @app.route("/api/rotation-vessels", methods=["POST"])
 def api_create_rotation_vessel():
-    """POST - Create new rotation vessel"""
+    """POST - Create new rotation vessel (atomic single-transaction with role classification lock)"""
     try:
-        data = request.json
+        data = request.json or {}
 
-        # Validasi required fields
-        required_fields = ["job_title", "vessel", "type", "part", "groups"]
+        # Validasi required fields (type is derived server-side)
+        required_fields = ["job_title", "vessel", "part", "groups"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
-        result = create_rotation_vessel(
-            job_title=data["job_title"],
+        job_title = data["job_title"]
+        categorization = data.get("categorization", "container") or "container"
+
+        result = create_rotation_vessel_with_role(
+            job_title=job_title,
             vessel=data["vessel"],
-            rotation_type=data["type"],
             part=data["part"],
             groups=data["groups"],
-            categorization=data.get("categorization", "container"),
+            categorization=categorization,
         )
 
         return jsonify(result), 201
 
-    except ValueError as e:  # ✅ TAMBAHKAN INI - Handle validation errors
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except RoleIntegrityError as rie:
+        print(f"ERROR - Role integrity failure in create_rotation_vessel: {rie}")
+        return jsonify({
+            "error": "Service temporarily unavailable. Role integrity check failed."
+        }), 503
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"ERROR - Failed to create rotation vessel: {e}")
+        return jsonify({
+            "error": "Failed to create rotation vessel. Please try again later."
+        }), 503
 
 
 @app.route("/api/rotation-vessels/<int:vessel_id>", methods=["PUT"])
 def api_update_rotation_vessel(vessel_id):
-    """PUT - Update existing rotation vessel"""
+    """PUT - Update existing rotation vessel (atomic single-transaction with role classification lock)"""
     try:
-        data = request.json
+        data = request.json or {}
 
-        # Validasi required fields
-        required_fields = ["job_title", "vessel", "type", "part", "groups"]
+        # Validasi required fields (type is derived server-side)
+        required_fields = ["job_title", "vessel", "part", "groups"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
-        result = update_rotation_vessel(
+        job_title = data["job_title"]
+        categorization = data.get("categorization", "container") or "container"
+
+        result = update_rotation_vessel_with_role(
             vessel_id=vessel_id,
-            job_title=data["job_title"],
+            job_title=job_title,
             vessel=data["vessel"],
-            rotation_type=data["type"],
             part=data["part"],
             groups=data["groups"],
-            categorization=data.get("categorization"),
+            categorization=categorization,
             group_key_renames=data.get("group_key_renames", {}),
         )
 
         return jsonify(result), 200
 
-    except ValueError as e:  # ✅ TAMBAHKAN INI - Handle validation errors
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except RoleIntegrityError as rie:
+        print(f"ERROR - Role integrity failure in update_rotation_vessel: {rie}")
+        return jsonify({
+            "error": "Service temporarily unavailable. Role integrity check failed."
+        }), 503
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"ERROR - Failed to update rotation vessel: {e}")
+        return jsonify({
+            "error": "Failed to update rotation vessel. Please try again later."
+        }), 503
 
 
 
@@ -1842,6 +1913,91 @@ def api_vessel_categories():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/role-settings", methods=["GET"])
+def api_get_role_settings():
+    """GET - Ambil semua pengaturan role per kategori"""
+    try:
+        settings = get_all_role_settings()
+        return jsonify({"status": "success", "data": settings}), 200
+    except RoleIntegrityError as rie:
+        print(f"ERROR - Role integrity check failed in api_get_role_settings: {rie}")
+        return jsonify({"status": "error", "message": "Role settings data integrity check failed."}), 503
+    except Exception as e:
+        print(f"ERROR - Failed to get role settings: {e}")
+        return jsonify({"status": "error", "message": "Failed to retrieve role settings."}), 503
+
+
+@app.route("/api/role-settings", methods=["POST", "PUT"])
+def api_save_role_setting():
+    """POST/PUT - Simpan pengaturan role untuk posisi & kategori tertentu"""
+    try:
+        data = request.json or {}
+        categorization = data.get("categorization")
+        position = data.get("position")
+        role_type = data.get("role_type")
+
+        if not categorization or not position or not role_type:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Missing required fields: categorization, position, role_type",
+                    }
+                ),
+                400,
+            )
+
+        updated_settings = save_role_setting(categorization, position, role_type)
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"Role {position} pada {categorization} berhasil diubah ke {role_type}",
+                    "data": updated_settings,
+                }
+            ),
+            200,
+        )
+    except ValueError as ve:
+        msg = str(ve)
+        status_code = 409 if "minimal harus memiliki 1 posisi perwira" in msg else 400
+        return jsonify({"status": "error", "message": msg}), status_code
+    except RoleIntegrityError as rie:
+        print(f"ERROR - Role integrity check failed in api_save_role_setting: {rie}")
+        return jsonify({"status": "error", "message": "Role settings data integrity check failed."}), 503
+    except Exception as e:
+        print(f"ERROR - Failed to save role setting: {e}")
+        return jsonify({"status": "error", "message": "Failed to save role setting."}), 503
+
+
+@app.route("/api/role-settings/reset", methods=["POST"])
+def api_reset_role_settings():
+    """POST - Reset konfigurasi role ke default untuk kategori tertentu atau semua"""
+    try:
+        data = request.json or {}
+        categorization = data.get("categorization")
+        updated_settings = reset_role_settings(categorization)
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"Pengaturan role {categorization or 'semua'} berhasil dikembalikan ke default",
+                    "data": updated_settings,
+                }
+            ),
+            200,
+        )
+    except ValueError as ve:
+        return jsonify({"status": "error", "message": str(ve)}), 400
+    except RoleIntegrityError as rie:
+        print(f"ERROR - Role integrity check failed in api_reset_role_settings: {rie}")
+        return jsonify({"status": "error", "message": "Role settings data integrity check failed."}), 503
+    except Exception as e:
+        print(f"ERROR - Failed to reset role settings: {e}")
+        return jsonify({"status": "error", "message": "Failed to reset role settings."}), 503
+
 
 
 # ============================================================================

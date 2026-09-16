@@ -1,11 +1,25 @@
 import { Label, Select, Tabs } from 'flowbite-react';
-import { FaShip } from 'react-icons/fa';
+import { HiOutlineCube } from 'react-icons/hi2';
+import { GiShipWheel, GiCargoCrane } from 'react-icons/gi';
 import {
   formatCategorizationDisplay,
   formatPositionDisplay,
   getAllCategorizations,
   getAllPositions,
 } from '../../utils/vesselMappingUtils';
+
+const getCategoryIcon = (category: string) => {
+  switch (category.toLowerCase()) {
+    case 'container':
+      return HiOutlineCube;
+    case 'manalagi':
+      return GiShipWheel;
+    case 'bc':
+      return GiCargoCrane;
+    default:
+      return HiOutlineCube;
+  }
+};
 
 interface CategoryPositionSelectorProps {
   selectedCategory: string | null;
@@ -78,7 +92,7 @@ export function CategoryPositionSelector({
             key={cat}
             active={selectedCategory === cat}
             title={formatCategorizationDisplay(cat)}
-            icon={FaShip}
+            icon={getCategoryIcon(cat)}
           >
             {/* Position Selection */}
             <div className="pt-4">

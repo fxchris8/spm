@@ -1,13 +1,12 @@
 // Utility functions for vessel management mapping and helpers
 
 export interface HiddenFields {
-  type: 'senior' | 'junior';
   part: 'deck' | 'engine';
   vessel: 'D' | 'E' | 'F' | 'G';
 }
 
 /**
- * Get hidden fields (type, part, vessel) based on categorization and position selection
+ * Get hidden fields (part, vessel) based on categorization and position selection
  * This mapping is based on business logic to simplify user experience
  */
 export function getHiddenFieldsFromSelection(
@@ -18,34 +17,34 @@ export function getHiddenFieldsFromSelection(
 
   const mappings: Record<string, HiddenFields> = {
     // Container mappings
-    container_nakhoda: { type: 'senior', part: 'deck', vessel: 'D' },
-    container_mualimI: { type: 'senior', part: 'deck', vessel: 'D' },
-    container_KKM: { type: 'senior', part: 'engine', vessel: 'E' },
-    container_masinisII: { type: 'senior', part: 'engine', vessel: 'E' },
-    container_mualimII: { type: 'junior', part: 'deck', vessel: 'D' },
-    container_mualimIII: { type: 'junior', part: 'deck', vessel: 'D' },
-    container_masinisIII: { type: 'junior', part: 'engine', vessel: 'E' },
-    container_masinisIV: { type: 'junior', part: 'engine', vessel: 'E' },
+    container_nakhoda: { part: 'deck', vessel: 'D' },
+    container_mualimI: { part: 'deck', vessel: 'D' },
+    container_KKM: { part: 'engine', vessel: 'E' },
+    container_masinisII: { part: 'engine', vessel: 'E' },
+    container_mualimII: { part: 'deck', vessel: 'D' },
+    container_mualimIII: { part: 'deck', vessel: 'D' },
+    container_masinisIII: { part: 'engine', vessel: 'E' },
+    container_masinisIV: { part: 'engine', vessel: 'E' },
 
     // Manalagi mappings
-    manalagi_nakhoda: { type: 'senior', part: 'deck', vessel: 'F' },
-    manalagi_KKM: { type: 'senior', part: 'engine', vessel: 'G' },
-    manalagi_mualimI: { type: 'senior', part: 'deck', vessel: 'F' },
-    manalagi_masinisII: { type: 'senior', part: 'engine', vessel: 'G' },
-    manalagi_mualimII: { type: 'junior', part: 'deck', vessel: 'F' },
-    manalagi_mualimIII: { type: 'junior', part: 'deck', vessel: 'F' },
-    manalagi_masinisIII: { type: 'junior', part: 'engine', vessel: 'G' },
-    manalagi_masinisIV: { type: 'junior', part: 'engine', vessel: 'G' },
+    manalagi_nakhoda: { part: 'deck', vessel: 'F' },
+    manalagi_KKM: { part: 'engine', vessel: 'G' },
+    manalagi_mualimI: { part: 'deck', vessel: 'F' },
+    manalagi_masinisII: { part: 'engine', vessel: 'G' },
+    manalagi_mualimII: { part: 'deck', vessel: 'F' },
+    manalagi_mualimIII: { part: 'deck', vessel: 'F' },
+    manalagi_masinisIII: { part: 'engine', vessel: 'G' },
+    manalagi_masinisIV: { part: 'engine', vessel: 'G' },
 
     // BC (Barge-Crane) mappings
-    bc_nakhoda: { type: 'senior', part: 'deck', vessel: 'F' },
-    bc_KKM: { type: 'senior', part: 'engine', vessel: 'G' },
-    bc_mualimI: { type: 'senior', part: 'deck', vessel: 'F' },
-    bc_masinisII: { type: 'senior', part: 'engine', vessel: 'G' },
-    bc_mualimII: { type: 'junior', part: 'deck', vessel: 'F' },
-    bc_mualimIII: { type: 'junior', part: 'deck', vessel: 'F' },
-    bc_masinisIII: { type: 'junior', part: 'engine', vessel: 'G' },
-    bc_masinisIV: { type: 'junior', part: 'engine', vessel: 'G' },
+    bc_nakhoda: { part: 'deck', vessel: 'F' },
+    bc_KKM: { part: 'engine', vessel: 'G' },
+    bc_mualimI: { part: 'deck', vessel: 'F' },
+    bc_masinisII: { part: 'engine', vessel: 'G' },
+    bc_mualimII: { part: 'deck', vessel: 'F' },
+    bc_mualimIII: { part: 'deck', vessel: 'F' },
+    bc_masinisIII: { part: 'engine', vessel: 'G' },
+    bc_masinisIV: { part: 'engine', vessel: 'G' },
   };
 
   return mappings[key] || null;

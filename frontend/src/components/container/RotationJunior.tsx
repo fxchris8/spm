@@ -3,16 +3,19 @@
 
 import { RotationTabsPage } from '../RotationTabsPage';
 import { JuniorRotation } from './JuniorRotation';
-
-// Urutan tabs untuk schedule Container Junior (4 posisi lengkap)
-const CONTAINER_JUNIOR_ORDER = ['mualimII', 'mualimIII', 'masinisIII', 'masinisIV'];
+import { useRoleSettings } from '../../hooks/useRoleSettings';
 
 export function RotationJunior() {
+  const { getJuniorRoles, error: rolesError, refetch: onRetryRoles } = useRoleSettings();
+  const juniorRoles = getJuniorRoles('container');
+
   return (
     <RotationTabsPage
       type="junior"
       categorization="container"
-      roles={CONTAINER_JUNIOR_ORDER}
+      roles={juniorRoles}
+      rolesError={rolesError}
+      onRetryRoles={onRetryRoles}
       ariaLabel="Crew rotation tabs"
       loadingText="Loading junior rotations..."
       renderContent={vessel => (
