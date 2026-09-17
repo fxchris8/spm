@@ -38,8 +38,7 @@ async function fetchCadanganData(
   forecastMonth: number = 1,
   categorization?: string
 ): Promise<any[]> {
-  const CADANGAN_SUPPORTED_JOBS = ['nakhoda', 'KKM', 'mualimI', 'masinisII'];
-  if (!CADANGAN_SUPPORTED_JOBS.includes(job)) {
+  if (!job) {
     return [];
   }
 
@@ -625,7 +624,7 @@ export function useCadanganData(
     enabled:
       enabled &&
       !!groupKey &&
-      ['nakhoda', 'KKM', 'mualimI', 'masinisII'].includes(job),
+      !!job,
     staleTime: 10 * 60 * 1000, // Fresh 10 menit
     gcTime: 30 * 60 * 1000, // Cache 30 menit
   });

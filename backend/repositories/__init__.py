@@ -7,7 +7,11 @@ Repositories handle all database queries and external API calls.
 from .cadangan_repository import (
     get_cadangan_kkm,
     get_cadangan_masinis_ii,
+    get_cadangan_masinis_iii,
+    get_cadangan_masinis_iv,
     get_cadangan_mualim_i,
+    get_cadangan_mualim_ii,
+    get_cadangan_mualim_iii,
     get_cadangan_nakhoda,
 )
 from .dashboard_repository import get_offboard_seamen_by_location, get_seaman_by_code, get_seamen_data, get_vessels_data
@@ -40,6 +44,10 @@ __all__ = [
     "get_cadangan_nakhoda",
     "get_cadangan_mualim_i",
     "get_cadangan_masinis_ii",
+    "get_cadangan_mualim_ii",
+    "get_cadangan_mualim_iii",
+    "get_cadangan_masinis_iii",
+    "get_cadangan_masinis_iv",
     # Dashboard Repositories
     "get_seamen_data",
     "get_vessels_data",

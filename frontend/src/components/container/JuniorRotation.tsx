@@ -70,17 +70,7 @@ function PromotionCandidatesTable({
   );
 
   const formatJobForPromotion = (jobName: string): string => {
-    const jobMapping: Record<string, string> = {
-      mualimII: 'MUALIM II',
-      mualimIII: 'MUALIM III',
-      masinisIII: 'MASINIS III',
-      masinisIV: 'MASINIS IV',
-      'MUALIM II': 'MUALIM III',
-      'MUALIM III': 'MUALIM II',
-      'MASINIS III': 'MASINIS IV',
-      'MASINIS IV': 'MASINIS III',
-    };
-    return jobMapping[jobName] || jobName;
+    return formatJobName(jobName);
   };
 
   if (loading) {

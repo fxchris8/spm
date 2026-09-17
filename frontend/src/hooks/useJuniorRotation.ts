@@ -66,6 +66,10 @@ export const JOB_MAPPING: Record<string, string> = {
 };
 
 export const JOB_HIERARCHY: Record<string, string> = {
+  NAKHODA: 'MUALIM I',
+  KKM: 'MASINIS II',
+  'MUALIM I': 'MUALIM II',
+  'MASINIS II': 'MASINIS III',
   'MUALIM II': 'MUALIM III',
   'MUALIM III': 'JURU MUDI',
   'MASINIS III': 'MASINIS IV',

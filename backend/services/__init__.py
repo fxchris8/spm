@@ -23,7 +23,11 @@ from .auth_service import (
 from .cadangan_service import (
     get_cadangan_kkm_data,
     get_cadangan_masinis_ii_data,
+    get_cadangan_masinis_iii_data,
+    get_cadangan_masinis_iv_data,
     get_cadangan_mualim_i_data,
+    get_cadangan_mualim_ii_data,
+    get_cadangan_mualim_iii_data,
     get_cadangan_nakhoda_data,
 )
 from .dashboard_service import (
@@ -68,6 +72,10 @@ __all__ = [
     "get_cadangan_nakhoda_data",
     "get_cadangan_mualim_i_data",
     "get_cadangan_masinis_ii_data",
+    "get_cadangan_mualim_ii_data",
+    "get_cadangan_mualim_iii_data",
+    "get_cadangan_masinis_iii_data",
+    "get_cadangan_masinis_iv_data",
     # Dashboard Services
     "get_dashboard_data",
     "get_vessel_stats",

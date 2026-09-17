@@ -174,3 +174,51 @@ def get_cadangan_masinis_ii(
         DataFrame: Cadangan crew data for MASINIS II
     """
     return _get_cadangan_by_position("MASINIS II", forecast_month, categorization)
+
+
+def get_cadangan_mualim_ii(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
+    """
+    Retrieve backup crew data for MUALIM II position.
+
+    Returns:
+        DataFrame: Cadangan crew data for MUALIM II
+    """
+    return _get_cadangan_by_position("MUALIM II", forecast_month, categorization)
+
+
+def get_cadangan_mualim_iii(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
+    """
+    Retrieve backup crew data for MUALIM III position.
+
+    Returns:
+        DataFrame: Cadangan crew data for MUALIM III
+    """
+    return _get_cadangan_by_position("MUALIM III", forecast_month, categorization)
+
+
+def get_cadangan_masinis_iii(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
+    """
+    Retrieve backup crew data for MASINIS III position.
+
+    Returns:
+        DataFrame: Cadangan crew data for MASINIS III
+    """
+    return _get_cadangan_by_position("MASINIS III", forecast_month, categorization)
+
+
+def get_cadangan_masinis_iv(
+    forecast_month: int = 1, categorization: str | None = None
+) -> pd.DataFrame:
+    """
+    Retrieve backup crew data for MASINIS IV position.
+
+    Returns:
+        DataFrame: Cadangan crew data for MASINIS IV
+    """
+    return _get_cadangan_by_position("MASINIS IV", forecast_month, categorization)

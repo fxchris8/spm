@@ -8,7 +8,11 @@ from flask import jsonify
 from services import (
     get_cadangan_kkm_data,
     get_cadangan_masinis_ii_data,
+    get_cadangan_masinis_iii_data,
+    get_cadangan_masinis_iv_data,
     get_cadangan_mualim_i_data,
+    get_cadangan_mualim_ii_data,
+    get_cadangan_mualim_iii_data,
     get_cadangan_nakhoda_data,
 )
 
@@ -72,6 +76,70 @@ def get_cadangan_masinis_ii_controller(
     """
     try:
         data = get_cadangan_masinis_ii_data(forecast_month, categorization)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_cadangan_mualim_ii_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
+    """
+    Controller for GET /api/cadangan-mualimII endpoint.
+
+    Returns:
+        JSON: Cadangan crew data for MUALIM II
+    """
+    try:
+        data = get_cadangan_mualim_ii_data(forecast_month, categorization)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_cadangan_mualim_iii_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
+    """
+    Controller for GET /api/cadangan-mualimIII endpoint.
+
+    Returns:
+        JSON: Cadangan crew data for MUALIM III
+    """
+    try:
+        data = get_cadangan_mualim_iii_data(forecast_month, categorization)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_cadangan_masinis_iii_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
+    """
+    Controller for GET /api/cadangan-masinisIII endpoint.
+
+    Returns:
+        JSON: Cadangan crew data for MASINIS III
+    """
+    try:
+        data = get_cadangan_masinis_iii_data(forecast_month, categorization)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"message": "Internal Server Error", "error": str(e)}), 500
+
+
+def get_cadangan_masinis_iv_controller(
+    forecast_month: int = 1, categorization: str | None = None
+):
+    """
+    Controller for GET /api/cadangan-masinisIV endpoint.
+
+    Returns:
+        JSON: Cadangan crew data for MASINIS IV
+    """
+    try:
+        data = get_cadangan_masinis_iv_data(forecast_month, categorization)
         return jsonify(data)
     except Exception as e:
         return jsonify({"message": "Internal Server Error", "error": str(e)}), 500

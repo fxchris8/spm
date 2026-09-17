@@ -44,7 +44,7 @@ from repositories.role_repository import (
     ensure_role_settings_table,
     RoleIntegrityError,
 )
-from rotation import get_kkm, get_masinisII, get_mualimI, get_nahkoda, get_schedule
+from rotation import get_crew_for_job, get_schedule
 from routes import auth_bp, cadangan_bp, dashboard_bp, offduty_all_bp, promotion_bp, search_bp
 from utils.vessel_normalizer import normalize_vessel_name
 
@@ -223,16 +223,26 @@ def container_rotation_api():
         # LOGGING untuk debugging
         # print(f"[DEBUG] Query parameter 'job' yang diterima: '{job_raw}'")
 
-        # Mapping konsisten
+        # Mapping konsisten untuk semua 8 posisi jabatan
         job_mapping = {
             "NAKHODA": "NAKHODA",
             "KKM": "KKM",
             "MUALIMI": "MUALIM I",
+            "MUALIM I": "MUALIM I",
             "MASINISII": "MASINIS II",
+            "MASINIS II": "MASINIS II",
+            "MUALIMII": "MUALIM II",
+            "MUALIM II": "MUALIM II",
+            "MUALIMIII": "MUALIM III",
+            "MUALIM III": "MUALIM III",
+            "MASINISIII": "MASINIS III",
+            "MASINIS III": "MASINIS III",
+            "MASINISIV": "MASINIS IV",
+            "MASINIS IV": "MASINIS IV",
         }
 
         # Konversi ke uppercase dan validasi
-        job_raw_upper = job_raw.upper()
+        job_raw_upper = job_raw.upper().strip()
 
         if job_raw_upper not in job_mapping:
             return (
@@ -266,7 +276,6 @@ def container_rotation_api():
         kapal = data.get("kapal", [])
         cadangan = data.get("cadangan", [])
         cadangan2 = data.get("cadangan2", [])
-        kapal = data.get("kapal", [])
         type_vessel = data.get("categorization")
         part = data.get("part")
         forecast_month = int(data.get("forecast_month", 1))
@@ -285,54 +294,25 @@ def container_rotation_api():
             vessel_names=kapal,
         )
 
-        # PILIH FUNGSI YANG TEPAT BERDASARKAN JOB
-        # print(f"[DEBUG] Memanggil fungsi crew untuk job='{job}'")
-
-        if job == "NAKHODA":
-            crew_df = get_nahkoda(
-                selected_group, cadangan, type_vessel, part, vessel_names=kapal
-            )
-        elif job == "KKM":
-            crew_df = get_kkm(
-                selected_group, cadangan, type_vessel, part, vessel_names=kapal
-            )
-        elif job == "MUALIM I":
-            crew_df = get_mualimI(
-                selected_group, cadangan, type_vessel, part, vessel_names=kapal
-            )
-        elif job == "MASINIS II":
-            crew_df = get_masinisII(
-                selected_group, cadangan, type_vessel, part, vessel_names=kapal
-            )
-        else:
-            return jsonify({"error": f"Fungsi untuk job {job} belum tersedia"}), 400
+        # Dapatkan data crew secara generik untuk job apapun
+        crew_df = get_crew_for_job(
+            job, selected_group, cadangan, type_vessel, part, vessel_names=kapal
+        )
 
         # print(f"[DEBUG] Crew DataFrame shape: {crew_df.shape}")
 
         # Konversi ke JSON
         schedule_json = df_to_json(schedule_df)
-        nahkoda_json = df_to_json(crew_df)  # ← Tetap pakai nama variable "nahkoda_json"
+        nahkoda_json = df_to_json(crew_df)  # Tetap pakai nama variable "nahkoda_json"
 
         # Jika ada cadangan2 (reliever data)
         darat_json = None
         if cadangan2:
             # print(f"[DEBUG] Memproses cadangan2 (reliever) untuk job='{job}'")
-
             # Parameter "ONE" akan membuat fungsi menghasilkan index Z0, Z1, Z2...
-            if job == "NAKHODA":
-                darat_df = get_nahkoda(
-                    selected_group, cadangan2, type_vessel, part, "ONE"
-                )
-            elif job == "KKM":
-                darat_df = get_kkm(selected_group, cadangan2, type_vessel, part, "ONE")
-            elif job == "MUALIM I":
-                darat_df = get_mualimI(
-                    selected_group, cadangan2, type_vessel, part, "ONE"
-                )
-            elif job == "MASINIS II":
-                darat_df = get_masinisII(
-                    selected_group, cadangan2, type_vessel, part, "ONE"
-                )
+            darat_df = get_crew_for_job(
+                job, selected_group, cadangan2, type_vessel, part, "ONE"
+            )
 
             darat_json = df_to_json(darat_df)
             # print(f"[DEBUG] Darat DataFrame shape: {darat_df.shape}")
@@ -391,18 +371,39 @@ def get_mutasi_filtered():
             "NAKHODA": "NAKHODA",
             "KKM": "KKM",
             "MUALIMI": "MUALIM I",
+            "MUALIM I": "MUALIM I",
             "MASINISII": "MASINIS II",
+            "MASINIS II": "MASINIS II",
+            "MUALIMII": "MUALIM II",
+            "MUALIM II": "MUALIM II",
+            "MUALIMIII": "MUALIM III",
+            "MUALIM III": "MUALIM III",
+            "MASINISIII": "MASINIS III",
+            "MASINIS III": "MASINIS III",
+            "MASINISIV": "MASINIS IV",
+            "MASINIS IV": "MASINIS IV",
         }
 
-        job = job_mapping.get(job_raw.upper() if job_raw else None)
+        job = job_mapping.get(job_raw.upper().strip() if job_raw else None)
+
+        allowed_jobs = [
+            "NAKHODA",
+            "KKM",
+            "MUALIM I",
+            "MASINIS II",
+            "MUALIM II",
+            "MUALIM III",
+            "MASINIS III",
+            "MASINIS IV",
+        ]
 
         # Validasi job yang diterima
-        if job not in ["NAKHODA", "KKM", "MUALIM I", "MASINIS II"]:
+        if job not in allowed_jobs:
             return (
                 jsonify(
                     {
                         "status": "error",
-                        "message": "Job tidak valid. Pilih antara 'NAKHODA', 'KKM', 'MUALIM I' atau 'MASINIS II'.",
+                        "message": f"Job tidak valid. Pilih antara: {', '.join(allowed_jobs)}.",
                     }
                 ),
                 400,

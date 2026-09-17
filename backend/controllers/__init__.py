@@ -13,7 +13,11 @@ from .auth_controller import (
 from .cadangan_controller import (
     get_cadangan_kkm_controller,
     get_cadangan_masinis_ii_controller,
+    get_cadangan_masinis_iii_controller,
+    get_cadangan_masinis_iv_controller,
     get_cadangan_mualim_i_controller,
+    get_cadangan_mualim_ii_controller,
+    get_cadangan_mualim_iii_controller,
     get_cadangan_nakhoda_controller,
 )
 from .dashboard_controller import (
@@ -51,6 +55,10 @@ __all__ = [
     "get_cadangan_nakhoda_controller",
     "get_cadangan_mualim_i_controller",
     "get_cadangan_masinis_ii_controller",
+    "get_cadangan_mualim_ii_controller",
+    "get_cadangan_mualim_iii_controller",
+    "get_cadangan_masinis_iii_controller",
+    "get_cadangan_masinis_iv_controller",
     # Dashboard Controllers
     "get_dashboard_data_controller",
     "get_vessel_stats_controller",

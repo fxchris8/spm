@@ -391,32 +391,41 @@ def get_schedule(
 # ============================================================================
 
 
-def get_nahkoda(
-    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+def get_crew_for_job(
+    job,
+    vessel_group_id_filter,
+    new_nahkoda,
+    type,
+    part,
+    quantity="ALL",
+    vessel_names=None,
 ):
+    """
+    Generic function to retrieve and format crew for any job position.
+    """
     # Load from Supabase instead of Excel
     local_df = get_seamen_as_data()
 
     if quantity != "ONE":
-        filtered_df_nahkoda = get_group_job_crew(
-            local_df, vessel_group_id_filter, type, part, "NAKHODA", vessel_names
+        filtered_df_crew = get_group_job_crew(
+            local_df, vessel_group_id_filter, type, part, job, vessel_names
         )
     else:
-        filtered_df_nahkoda = pd.DataFrame()
+        filtered_df_crew = pd.DataFrame()
 
     # Convert 'end_date' to datetime if exists
-    if "end_date" in filtered_df_nahkoda.columns:
-        filtered_df_nahkoda["end_date"] = pd.to_datetime(
-            filtered_df_nahkoda["end_date"], errors="coerce", dayfirst=True
+    if "end_date" in filtered_df_crew.columns:
+        filtered_df_crew["end_date"] = pd.to_datetime(
+            filtered_df_crew["end_date"], errors="coerce", dayfirst=True
         )
-        filtered_df_nahkoda = filtered_df_nahkoda.sort_values(
+        filtered_df_crew = filtered_df_crew.sort_values(
             by="end_date", ascending=True
         )
-        filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
+        filtered_df_crew["end_date"] = filtered_df_crew["end_date"].dt.strftime(
             "%a, %d %b %Y %H:%M:%S GMT"
         )
     else:
-        filtered_df_nahkoda["end_date"] = ""
+        filtered_df_crew["end_date"] = ""
 
     # Add cadangan (new_nahkoda)
     cadangan_list = []
@@ -435,28 +444,28 @@ def get_nahkoda(
 
     if cadangan_list:
         cadangan_df = pd.DataFrame(cadangan_list)
-        filtered_df_nahkoda = pd.concat(
-            [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
+        filtered_df_crew = pd.concat(
+            [filtered_df_crew, cadangan_df], ignore_index=True, sort=False
         )
 
     # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
     if quantity == "ONE":
         # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
-        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
+        index_list = [f"Z{i}" for i in range(len(filtered_df_crew))]
     else:
         # Untuk crew biasa, gunakan A, B, C...
-        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", index_list)
+        index_list = [chr(65 + i) for i in range(len(filtered_df_crew))]
+    filtered_df_crew.insert(0, "Index", index_list)
 
     # Pastikan kolom lengkap
     for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
-        if col not in filtered_df_nahkoda.columns:
-            filtered_df_nahkoda[col] = ""
+        if col not in filtered_df_crew.columns:
+            filtered_df_crew[col] = ""
 
     # Add first_rotation_date column
-    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
+    filtered_df_crew = add_first_rotation_date_column(filtered_df_crew)
 
-    return filtered_df_nahkoda[
+    return filtered_df_crew[
         [
             "Index",
             "name",
@@ -467,237 +476,59 @@ def get_nahkoda(
             "first_rotation_date",
         ]
     ]
+
+
+def get_nahkoda(
+    vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
+):
+    return get_crew_for_job(
+        "NAKHODA",
+        vessel_group_id_filter,
+        new_nahkoda,
+        type,
+        part,
+        quantity=quantity,
+        vessel_names=vessel_names,
+    )
 
 
 def get_kkm(
     vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
 ):
-    # Load from Supabase instead of Excel
-    local_df = get_seamen_as_data()
-
-    if quantity != "ONE":
-        filtered_df_nahkoda = get_group_job_crew(
-            local_df, vessel_group_id_filter, type, part, "KKM", vessel_names
-        )
-    else:
-        filtered_df_nahkoda = pd.DataFrame()
-
-    # Convert 'end_date' to datetime if exists
-    if "end_date" in filtered_df_nahkoda.columns:
-        filtered_df_nahkoda["end_date"] = pd.to_datetime(
-            filtered_df_nahkoda["end_date"], errors="coerce", dayfirst=True
-        )
-        filtered_df_nahkoda = filtered_df_nahkoda.sort_values(
-            by="end_date", ascending=True
-        )
-        filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%a, %d %b %Y %H:%M:%S GMT"
-        )
-    else:
-        filtered_df_nahkoda["end_date"] = ""
-
-    # Add cadangan (new_nahkoda)
-    cadangan_list = []
-    for code in new_nahkoda or []:
-        person = local_df[local_df["seamancode"] == int(code)]
-        if not person.empty:
-            person_data = person.iloc[0]
-            row = {
-                "seamancode": code,
-                "last_location": person_data.get("last_location", ""),
-                "name": person_data.get("name", ""),
-                "start_date": person_data.get("start_date", ""),
-                "end_date": person_data.get("end_date", ""),
-            }
-            cadangan_list.append(row)
-
-    if cadangan_list:
-        cadangan_df = pd.DataFrame(cadangan_list)
-        filtered_df_nahkoda = pd.concat(
-            [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
-        )
-
-    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
-    if quantity == "ONE":
-        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
-        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
-    else:
-        # Untuk crew biasa, gunakan A, B, C...
-        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", index_list)
-
-    # Pastikan kolom lengkap
-    for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
-        if col not in filtered_df_nahkoda.columns:
-            filtered_df_nahkoda[col] = ""
-
-    # Add first_rotation_date column
-    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
-
-    return filtered_df_nahkoda[
-        [
-            "Index",
-            "name",
-            "last_location",
-            "seamancode",
-            "start_date",
-            "end_date",
-            "first_rotation_date",
-        ]
-    ]
+    return get_crew_for_job(
+        "KKM",
+        vessel_group_id_filter,
+        new_nahkoda,
+        type,
+        part,
+        quantity=quantity,
+        vessel_names=vessel_names,
+    )
 
 
 def get_mualimI(
     vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
 ):
-    # Load from Supabase instead of Excel
-    local_df = get_seamen_as_data()
-
-    if quantity != "ONE":
-        filtered_df_nahkoda = get_group_job_crew(
-            local_df, vessel_group_id_filter, type, part, "MUALIM I", vessel_names
-        )
-    else:
-        filtered_df_nahkoda = pd.DataFrame()
-
-    # Convert 'end_date' to datetime if exists
-    if "end_date" in filtered_df_nahkoda.columns:
-        filtered_df_nahkoda["end_date"] = pd.to_datetime(
-            filtered_df_nahkoda["end_date"], errors="coerce", dayfirst=True
-        )
-        filtered_df_nahkoda = filtered_df_nahkoda.sort_values(
-            by="end_date", ascending=True
-        )
-        filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%a, %d %b %Y %H:%M:%S GMT"
-        )
-    else:
-        filtered_df_nahkoda["end_date"] = ""
-
-    # Add cadangan (new_nahkoda)
-    cadangan_list = []
-    for code in new_nahkoda or []:
-        person = local_df[local_df["seamancode"] == int(code)]
-        if not person.empty:
-            person_data = person.iloc[0]
-            row = {
-                "seamancode": code,
-                "last_location": person_data.get("last_location", ""),
-                "name": person_data.get("name", ""),
-                "start_date": person_data.get("start_date", ""),
-                "end_date": person_data.get("end_date", ""),
-            }
-            cadangan_list.append(row)
-
-    if cadangan_list:
-        cadangan_df = pd.DataFrame(cadangan_list)
-        filtered_df_nahkoda = pd.concat(
-            [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
-        )
-
-    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
-    if quantity == "ONE":
-        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
-        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
-    else:
-        # Untuk crew biasa, gunakan A, B, C...
-        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", index_list)
-
-    # Pastikan kolom lengkap
-    for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
-        if col not in filtered_df_nahkoda.columns:
-            filtered_df_nahkoda[col] = ""
-
-    # Add first_rotation_date column
-    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
-
-    return filtered_df_nahkoda[
-        [
-            "Index",
-            "name",
-            "last_location",
-            "seamancode",
-            "start_date",
-            "end_date",
-            "first_rotation_date",
-        ]
-    ]
+    return get_crew_for_job(
+        "MUALIM I",
+        vessel_group_id_filter,
+        new_nahkoda,
+        type,
+        part,
+        quantity=quantity,
+        vessel_names=vessel_names,
+    )
 
 
 def get_masinisII(
     vessel_group_id_filter, new_nahkoda, type, part, quantity="ALL", vessel_names=None
 ):
-    # Load from Supabase instead of Excel
-    local_df = get_seamen_as_data()
-
-    if quantity != "ONE":
-        filtered_df_nahkoda = get_group_job_crew(
-            local_df, vessel_group_id_filter, type, part, "MASINIS II", vessel_names
-        )
-    else:
-        filtered_df_nahkoda = pd.DataFrame()
-
-    # Convert 'end_date' to datetime if exists
-    if "end_date" in filtered_df_nahkoda.columns:
-        filtered_df_nahkoda["end_date"] = pd.to_datetime(
-            filtered_df_nahkoda["end_date"], errors="coerce", dayfirst=True
-        )
-        filtered_df_nahkoda = filtered_df_nahkoda.sort_values(
-            by="end_date", ascending=True
-        )
-        filtered_df_nahkoda["end_date"] = filtered_df_nahkoda["end_date"].dt.strftime(
-            "%a, %d %b %Y %H:%M:%S GMT"
-        )
-    else:
-        filtered_df_nahkoda["end_date"] = ""
-
-    # Add cadangan (new_nahkoda)
-    cadangan_list = []
-    for code in new_nahkoda or []:
-        person = local_df[local_df["seamancode"] == int(code)]
-        if not person.empty:
-            person_data = person.iloc[0]
-            row = {
-                "seamancode": code,
-                "last_location": person_data.get("last_location", ""),
-                "name": person_data.get("name", ""),
-                "start_date": person_data.get("start_date", ""),
-                "end_date": person_data.get("end_date", ""),
-            }
-            cadangan_list.append(row)
-
-    if cadangan_list:
-        cadangan_df = pd.DataFrame(cadangan_list)
-        filtered_df_nahkoda = pd.concat(
-            [filtered_df_nahkoda, cadangan_df], ignore_index=True, sort=False
-        )
-
-    # Tambah Index huruf (A, B, C... untuk crew biasa, Z0, Z1, Z2... untuk reliever)
-    if quantity == "ONE":
-        # Untuk reliever (cadangan2), gunakan Z0, Z1, Z2...
-        index_list = [f"Z{i}" for i in range(len(filtered_df_nahkoda))]
-    else:
-        # Untuk crew biasa, gunakan A, B, C...
-        index_list = [chr(65 + i) for i in range(len(filtered_df_nahkoda))]
-    filtered_df_nahkoda.insert(0, "Index", index_list)
-
-    # Pastikan kolom lengkap
-    for col in ["name", "last_location", "seamancode", "start_date", "end_date"]:
-        if col not in filtered_df_nahkoda.columns:
-            filtered_df_nahkoda[col] = ""
-
-    # Add first_rotation_date column
-    filtered_df_nahkoda = add_first_rotation_date_column(filtered_df_nahkoda)
-
-    return filtered_df_nahkoda[
-        [
-            "Index",
-            "name",
-            "last_location",
-            "seamancode",
-            "start_date",
-            "end_date",
-            "first_rotation_date",
-        ]
-    ]
+    return get_crew_for_job(
+        "MASINIS II",
+        vessel_group_id_filter,
+        new_nahkoda,
+        type,
+        part,
+        quantity=quantity,
+        vessel_names=vessel_names,
+    )
