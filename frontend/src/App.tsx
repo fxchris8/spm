@@ -15,7 +15,9 @@ import { RotationManalagiJunior } from './components/manalagi/RotationManalagiJu
 import { RotationBargeCraneSenior } from './components/barge-crane/RotationBargeCraneSenior';
 import { RotationBargeCraneJunior } from './components/barge-crane/RotationBargeCraneJunior';
 import { SearchOnDuty } from './components/search/SearchOnDuty';
+import { SearchOnDutyNew } from './components/search/SearchOnDutyNew';
 import { SearchOffDuty } from './components/search/SearchOffDuty';
+
 import { AllMessage } from './components/message/AllMessage';
 import { InMessage } from './components/message/InMessage';
 import { OutMessage } from './components/message/OutMessage';
@@ -74,9 +76,14 @@ export function App() {
                           element={<SearchOnDuty />}
                         />
                         <Route
+                          path="/search-onduty-new"
+                          element={<SearchOnDutyNew />}
+                        />
+                        <Route
                           path="/search-offduty"
                           element={<SearchOffDuty />}
                         />
+
                         <Route
                           path="/vessel-management"
                           element={<VesselManagement />}

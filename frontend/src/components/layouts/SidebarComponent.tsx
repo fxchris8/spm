@@ -164,7 +164,7 @@ export function SidebarComponent() {
       const next = { ...prev };
 
       if (
-        isParentActive(['/search-onduty', '/search-offduty']) &&
+        isParentActive(['/search-onduty', '/search-onduty-new', '/search-offduty']) &&
         !prev.search
       ) {
         next.search = true;
@@ -225,7 +225,15 @@ export function SidebarComponent() {
               active={isActive('/search-onduty')}
               className="cursor-pointer"
             >
-              On Duty
+              On Duty (Old)
+            </Sidebar.Item>
+            <Sidebar.Item
+              onClick={() => handleNavigation('/search-onduty-new')}
+              icon={() => <HiOutlineBriefcase className="w-6 h-6 flex-shrink-0" />}
+              active={isActive('/search-onduty-new')}
+              className="cursor-pointer"
+            >
+              On Duty (New)
             </Sidebar.Item>
             <Sidebar.Item
               onClick={() => handleNavigation('/search-offduty')}
@@ -235,6 +243,7 @@ export function SidebarComponent() {
             >
               Off Duty
             </Sidebar.Item>
+
           </Sidebar.Collapse>
 
           <Sidebar.Item

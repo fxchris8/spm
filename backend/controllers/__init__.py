@@ -35,12 +35,15 @@ from .promotion_controller import (
 )
 from .search_controller import manual_search_controller
 from .offduty_all_controller import get_all_offduty_controller
+from .onduty_all_controller import get_all_onduty_controller
 from .sync_controller import (
     manual_sync_controller,
     sync_ship_particular_controller,
 )
 
 __all__ = [
+    "get_all_onduty_controller",
+
     # Auth Controllers
     "login_controller",
     "logout_controller",

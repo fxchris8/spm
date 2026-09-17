@@ -45,9 +45,12 @@ from .promotion_service import (
 )
 from .search_service import manual_search
 from .offduty_all_service import get_all_offduty_seamen
+from .onduty_all_service import get_all_onduty_seamen
 from .sync_service import manual_sync, sync_ship_particular
 
 __all__ = [
+    "get_all_onduty_seamen",
+
     # Auth Services
     "login_user",
     "login_user_with_sso_code",
